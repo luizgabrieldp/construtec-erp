@@ -9,10 +9,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>CONSTRUTEC ERP — Construção e reformas em geral</title>
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <!-- Favicons adaptativos para navegadores (Safari, Chrome, Firefox) -->
+    <link rel="icon" id="favicon-32" type="image/png" sizes="32x32" href="/favicon-dark-32x32.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-light-32x32.png" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-dark-32x32.png" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192-transparent.png" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Ícone PWA e Apple Touch Icon adaptativo (Branco no Modo Claro / Preto no Modo Escuro) -->
+    <link rel="apple-touch-icon" id="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-dark.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-light.png" media="(prefers-color-scheme: light)" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon-dark.png" media="(prefers-color-scheme: dark)" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -36,7 +43,15 @@
           }
           var metaTheme = document.querySelector('meta[name="theme-color"]');
           if (metaTheme) {
-            metaTheme.content = dark ? '#111A24' : '#F8FAFC';
+            metaTheme.content = dark ? '#111A24' : '#FFFFFF';
+          }
+          var appleTouch = document.getElementById('apple-touch-icon');
+          if (appleTouch) {
+            appleTouch.href = dark ? '/apple-touch-icon-dark.png' : '/apple-touch-icon-light.png';
+          }
+          var fav32 = document.getElementById('favicon-32');
+          if (fav32) {
+            fav32.href = dark ? '/favicon-dark-32x32.png' : '/favicon-light-32x32.png';
           }
         } catch (e) {}
       }

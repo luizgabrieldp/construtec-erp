@@ -65,9 +65,13 @@ function Topbar() {
         <Menu className="size-5" />
       </button>
 
-      {/* Logo visível em telas mobile/tablet */}
-      <div className="lg:hidden flex items-center">
-        <Logo size="sm" />
+      {/* Ícone oficial CONSTRUTEC isolado (sem texto escrito) no topo */}
+      <div className="flex items-center">
+        <img
+          src="/logo-emblema-trim.png"
+          alt="CONSTRUTEC"
+          className="size-8 object-contain shrink-0 select-none"
+        />
       </div>
 
       {/* Título e data da página no desktop */}
@@ -77,7 +81,7 @@ function Topbar() {
       </div>
 
       {/* Título sucinto no tablet/mobile */}
-      <div className="hidden sm:block lg:hidden min-w-0 flex-1 truncate text-xs font-semibold text-fg">
+      <div className="min-w-0 flex-1 truncate text-xs font-semibold text-fg lg:hidden">
         {atual?.label}
       </div>
 

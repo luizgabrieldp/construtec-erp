@@ -18,7 +18,18 @@ export function useThemeEffect() {
       root.classList.add(dark ? 'dark' : 'light');
       const meta = document.querySelector<HTMLMetaElement>('meta[name="color-scheme"]');
       if (meta) meta.content = theme === 'system' ? 'light dark' : theme;
-      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', dark ? '#111A24' : '#F8FAFC');
+      const themeColor = dark ? '#111A24' : '#FFFFFF';
+      document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', themeColor);
+
+      const appleIcon = document.getElementById('apple-touch-icon') || document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
+      if (appleIcon) {
+        appleIcon.setAttribute('href', dark ? '/apple-touch-icon-dark.png' : '/apple-touch-icon-light.png');
+      }
+
+      const fav32 = document.getElementById('favicon-32') || document.querySelector<HTMLLinkElement>('link[rel="icon"][sizes="32x32"]');
+      if (fav32) {
+        fav32.setAttribute('href', dark ? '/favicon-dark-32x32.png' : '/favicon-light-32x32.png');
+      }
     };
     apply();
     if (mq.addEventListener) {

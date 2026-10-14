@@ -19,17 +19,27 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
   }
 };
 
+const getNotificationAssets = () => {
+  const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
+  return {
+    icon: origin ? `${origin}/icon-192-transparent.png` : '/icon-192-transparent.png',
+    badge: origin ? `${origin}/favicon-32x32.png` : '/favicon-32x32.png',
+  };
+};
+
 export const sendNotification = async (title: string, options?: NotificationOptions) => {
   if (!isNotificationSupported()) return;
   if (Notification.permission !== 'granted') return;
+
+  const { icon, badge } = getNotificationAssets();
 
   try {
     if ('serviceWorker' in navigator) {
       const reg = await navigator.serviceWorker.ready;
       if (reg && reg.showNotification) {
         await reg.showNotification(title, {
-          icon: '/favicon.svg',
-          badge: '/favicon.svg',
+          icon,
+          badge,
           ...options,
         });
         return;
@@ -41,7 +51,8 @@ export const sendNotification = async (title: string, options?: NotificationOpti
 
   try {
     new Notification(title, {
-      icon: '/favicon.svg',
+      icon,
+      badge,
       ...options,
     });
   } catch (e) {
