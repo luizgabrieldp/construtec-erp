@@ -9,6 +9,7 @@ import type { Funcionario } from '@/domain/types';
 import { LABEL_FUNCAO, getLabelFuncao } from '@/domain/labels';
 import { chaveApontamento } from '@/domain/engine';
 import { fmtBRL } from '@/lib/format';
+import { normalizarTexto } from '@/lib/utils';
 import { ApontamentoGrade } from '@/features/folha/ApontamentoGrade';
 import { FuncionarioFormDialog } from '@/features/folha/FuncionarioFormDialog';
 
@@ -55,14 +56,19 @@ export function EquipePage() {
     if (filtroStatus === 'inativos' && f.ativo) return false;
     if (filtroFuncao !== 'todos' && f.funcao !== filtroFuncao) return false;
     if (busca.trim()) {
-      const q = busca.toLowerCase();
-      return (
-        f.nome.toLowerCase().includes(q) ||
-        (f.apelido && f.apelido.toLowerCase().includes(q)) ||
-        f.telefone.includes(q) ||
-        (f.cpf && f.cpf.includes(q)) ||
-        (f.chavePix && f.chavePix.toLowerCase().includes(q))
-      );
+      const qNorm = normalizarTexto(busca);
+      const qDigits = busca.replace(/\D/g, '');
+      const matchNome = normalizarTexto(f.nome).includes(qNorm);
+      const matchApelido = f.apelido?.trim() ? normalizarTexto(f.apelido).includes(qNorm) : false;
+      const matchTelefone =
+        f.telefone.includes(busca.trim()) ||
+        (qDigits.length > 0 && f.telefone.replace(/\D/g, '').includes(qDigits));
+      const matchCpf = f.cpf
+        ? f.cpf.includes(busca.trim()) || (qDigits.length > 0 && f.cpf.replace(/\D/g, '').includes(qDigits))
+        : false;
+      const matchPix = f.chavePix ? normalizarTexto(f.chavePix).includes(qNorm) : false;
+
+      return matchNome || matchApelido || matchTelefone || matchCpf || matchPix;
     }
     return true;
   });
@@ -185,16 +191,16 @@ export function EquipePage() {
                   return (
                     <tr key={f.id} className="hover:bg-surface-2/40 transition-colors">
                       <td className="py-3.5 pr-4">
-                        {f.apelido ? (
+                        {f.apelido?.trim() ? (
                           <>
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="font-semibold text-fg">{f.apelido}</span>
+                            <div className="flex flex-wrap items-center gap-2" title={`${f.apelido.trim()} (${f.nome})`}>
+                              <span className="font-semibold text-fg">{f.apelido.trim()}</span>
                               <WhatsAppBadge telefone={f.telefone} />
                             </div>
-                            <div className="text-xs text-muted font-normal mt-0.5">{f.nome}</div>
+                            <div className="text-xs text-muted font-normal mt-0.5" title={f.nome}>{f.nome}</div>
                           </>
                         ) : (
-                          <div className="flex flex-wrap items-center gap-2">
+                          <div className="flex flex-wrap items-center gap-2" title={f.nome}>
                             <span className="font-semibold text-fg">{f.nome}</span>
                             <WhatsAppBadge telefone={f.telefone} />
                           </div>
@@ -209,7 +215,7 @@ export function EquipePage() {
                         )}
                         {empreiteiroResp && (
                           <div className="text-[10px] text-brand font-medium mt-0.5">
-                            Empreiteiro: {empreiteiroResp.nome}
+                            Empreiteiro: {empreiteiroResp.apelido?.trim() ? `${empreiteiroResp.apelido.trim()} (${empreiteiroResp.nome})` : empreiteiroResp.nome}
                           </div>
                         )}
                       </td>

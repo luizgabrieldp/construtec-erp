@@ -462,7 +462,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
                 <option value="">Nenhum (Diretor da Construtora / Próprio)</option>
                 {empreiteiros.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.nome} ({getLabelFuncao(emp.funcao)})
+                    {emp.apelido?.trim() ? `${emp.apelido.trim()} (${emp.nome})` : emp.nome} ({getLabelFuncao(emp.funcao)})
                   </option>
                 ))}
               </Select>

@@ -15,3 +15,13 @@ export function waUrl(telefone?: string | null): string | null {
   const numero = digits.length >= 12 && digits.startsWith('55') ? digits : `55${digits}`;
   return `https://wa.me/${numero}`;
 }
+
+export function normalizarTexto(texto?: string | null): string {
+  if (!texto) return '';
+  return texto
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+

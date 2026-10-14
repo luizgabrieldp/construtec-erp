@@ -271,7 +271,7 @@ export function ObraDetalhesDialog({ obra, onClose }: ObraDetalhesDialogProps) {
             <div className="flex flex-wrap gap-2">
               {operariosObra.map((op) => (
                 <span key={op.id} className="inline-flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1 text-xs">
-                  <span className="font-medium text-fg">{op.apelido ? `${op.apelido} (${op.nome})` : op.nome}</span>
+                  <span className="font-medium text-fg">{op.apelido?.trim() ? `${op.apelido.trim()} (${op.nome})` : op.nome}</span>
                   <span className="text-[10px] text-muted uppercase">({op.funcao})</span>
                 </span>
               ))}
