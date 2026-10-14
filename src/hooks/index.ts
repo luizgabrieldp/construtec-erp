@@ -23,12 +23,12 @@ export function useThemeEffect() {
 
       const appleIcon = document.getElementById('apple-touch-icon') || document.querySelector<HTMLLinkElement>('link[rel="apple-touch-icon"]');
       if (appleIcon) {
-        appleIcon.setAttribute('href', (dark ? '/apple-touch-icon-dark.png' : '/apple-touch-icon-light.png') + '?v=2');
+        appleIcon.setAttribute('href', (dark ? '/apple-touch-icon-dark.png' : '/apple-touch-icon-light.png') + '?v=3');
       }
 
       const fav32 = document.getElementById('favicon-32') || document.querySelector<HTMLLinkElement>('link[rel="icon"][sizes="32x32"]');
       if (fav32) {
-        fav32.setAttribute('href', (dark ? '/favicon-dark-32x32.png' : '/favicon-light-32x32.png') + '?v=2');
+        fav32.setAttribute('href', (dark ? '/favicon-dark-32x32.png' : '/favicon-light-32x32.png') + '?v=3');
       }
     };
     apply();

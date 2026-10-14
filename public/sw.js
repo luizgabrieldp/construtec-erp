@@ -1,5 +1,5 @@
-// CONSTRUTEC ERP - Service Worker v2
-const CACHE_NAME = 'construtec-pwa-v2';
+// CONSTRUTEC ERP - Service Worker v3
+const CACHE_NAME = 'construtec-pwa-v3';
 const STATIC_ASSETS = [
   '/',
   '/favicon.ico',
@@ -7,6 +7,10 @@ const STATIC_ASSETS = [
   '/favicon-16x16.png',
   '/icon-192.png',
   '/apple-touch-icon.png',
+  '/apple-touch-icon-precomposed.png',
+  '/apple-touch-icon-dark.png',
+  '/apple-touch-icon-light.png',
+  '/logo-emblema-trim.png',
   '/manifest.json'
 ];
 
@@ -25,6 +29,31 @@ self.addEventListener('activate', (event) => {
       );
     }).then(() => self.clients.claim())
   );
+});
+
+// Listener para push notifications nativas
+self.addEventListener('push', (event) => {
+  if (event.data) {
+    try {
+      const data = event.data.json();
+      event.waitUntil(
+        self.registration.showNotification(data.title || 'CONSTRUTEC ERP', {
+          body: data.body || '',
+          icon: '/apple-touch-icon-dark.png',
+          badge: '/favicon-32x32.png',
+          data: data.data || {},
+        })
+      );
+    } catch {
+      event.waitUntil(
+        self.registration.showNotification('CONSTRUTEC ERP', {
+          body: event.data.text(),
+          icon: '/apple-touch-icon-dark.png',
+          badge: '/favicon-32x32.png',
+        })
+      );
+    }
+  }
 });
 
 // Listener para cliques em notificações disparadas pelo sistema

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Menu, ShieldAlert, LogOut, Plus, X } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
@@ -56,23 +56,24 @@ function Topbar() {
 
   return (
     <header
-      className="no-print sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md px-4 md:px-6"
+      className="no-print sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-md px-4 md:px-6"
       style={{
-        paddingTop: 'env(safe-area-inset-top, 0px)',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+        paddingBottom: '0.375rem',
       }}
     >
-      <div className="flex h-16 items-center gap-3">
-        {/* Botão Hambúrguer para telas mobile e tablet */}
+      <div className="flex h-14 md:h-16 items-center gap-3">
+        {/* Botão Hambúrguer acessível com alvo de toque padrão Apple HIG (44x44px) */}
         <button
           type="button"
           onClick={() => open('menu')}
-          className="lg:hidden size-10 inline-flex items-center justify-center rounded-xl border border-line bg-surface-2/60 text-fg hover:bg-surface-2 active:scale-95 transition-all cursor-pointer shrink-0"
+          className="lg:hidden size-11 inline-flex items-center justify-center rounded-xl border border-line bg-surface-2/70 text-fg hover:bg-surface-2 active:scale-95 transition-all cursor-pointer shrink-0 shadow-xs"
           aria-label="Abrir menu de navegação"
         >
           <Menu className="size-5" />
         </button>
 
-        {/* Ícone oficial CONSTRUTEC isolado (sem texto escrito) no topo */}
+        {/* Ícone oficial CONSTRUTEC isolado no topo */}
         <div className="flex items-center">
           <img
             src="/logo-emblema-trim.png"
@@ -105,6 +106,25 @@ function MobileDrawer() {
   const close = useQuick((s) => s.close);
   const open = useQuick((s) => s.open);
   const logout = useAuth((s) => s.logout);
+  const touchStartX = useRef<number | null>(null);
+
+  // Controle de gesto swipe para fechar deslizando para a esquerda
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = e.touches[0].clientX - touchStartX.current;
+    if (diff < -50) {
+      touchStartX.current = null;
+      close('menu');
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStartX.current = null;
+  };
 
   // Trava de rolagem corporal do iOS/navegadores e atalho de teclado Esc
   useEffect(() => {
@@ -126,16 +146,19 @@ function MobileDrawer() {
   return (
     <div
       className={cn(
-        'fixed inset-0 z-50 lg:hidden transition-all duration-300',
-        openMenu ? 'visible' : 'invisible pointer-events-none'
+        'fixed inset-0 z-50 lg:hidden transition-[visibility] duration-300',
+        openMenu ? 'visible pointer-events-auto' : 'invisible pointer-events-none'
       )}
+      style={{
+        transitionDelay: openMenu ? '0ms' : '300ms',
+      }}
       aria-hidden={!openMenu}
     >
       {/* Backdrop escurecido suave e com blur */}
       <div
         className={cn(
           'fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 ease-out',
-          openMenu ? 'opacity-100' : 'opacity-0'
+          openMenu ? 'opacity-100' : 'opacity-0 pointer-events-none'
         )}
         onClick={() => close('menu')}
         aria-hidden="true"
@@ -145,12 +168,15 @@ function MobileDrawer() {
       <aside
         className={cn(
           'fixed inset-y-0 left-0 flex h-dvh w-[min(340px,85vw)] flex-col border-r border-line bg-surface shadow-2xl transition-transform duration-300 ease-out',
-          openMenu ? 'translate-x-0' : '-translate-x-full'
+          openMenu ? 'translate-x-0' : '-translate-x-full pointer-events-none'
         )}
         style={{
-          paddingTop: 'env(safe-area-inset-top, 0px)',
-          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
+          paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.5rem)',
         }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         role="dialog"
         aria-modal="true"
         aria-label="Menu de Navegação do Sistema"
@@ -164,7 +190,7 @@ function MobileDrawer() {
           <button
             type="button"
             onClick={() => close('menu')}
-            className="size-10 inline-flex items-center justify-center rounded-xl border border-line bg-surface-2/60 text-muted hover:bg-surface-2 hover:text-fg active:scale-95 transition-all cursor-pointer"
+            className="size-11 inline-flex items-center justify-center rounded-xl border border-line bg-surface-2/60 text-muted hover:bg-surface-2 hover:text-fg active:scale-95 transition-all cursor-pointer"
             aria-label="Fechar menu"
           >
             <X className="size-5" />

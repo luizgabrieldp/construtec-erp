@@ -22,7 +22,7 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
 const getNotificationAssets = () => {
   const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
   return {
-    icon: origin ? `${origin}/icon-192.png` : '/icon-192.png',
+    icon: origin ? `${origin}/apple-touch-icon-dark.png` : '/apple-touch-icon-dark.png',
     badge: origin ? `${origin}/favicon-32x32.png` : '/favicon-32x32.png',
   };
 };
@@ -41,11 +41,16 @@ export const sendNotification = async (title: string, options?: NotificationOpti
   try {
     if ('serviceWorker' in navigator) {
       let reg: ServiceWorkerRegistration | undefined = await navigator.serviceWorker.getRegistration();
-      if (!reg) {
-        reg = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 800)),
-        ]);
+      if (!reg || !reg.active) {
+        try {
+          reg = await navigator.serviceWorker.register('/sw.js');
+        } catch {}
+        if (!reg?.active) {
+          reg = await Promise.race([
+            navigator.serviceWorker.ready,
+            new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 1500)),
+          ]);
+        }
       }
       if (reg && reg.showNotification) {
         await reg.showNotification(title, notificationOptions);
