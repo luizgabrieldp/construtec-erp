@@ -39,9 +39,9 @@ function carregarInicial(): ErpData {
     salvo.funcoesCustomizadas ??= [];
     return sincronizarRecorrencias(salvo);
   }
-  const demo = gerarDadosDemo();
-  repository.save(demo);
-  return demo;
+  const vazio = dadosVazios();
+  repository.save(vazio);
+  return vazio;
 }
 
 function entradaAuditoria(info: AuditInfo): AuditEntry {
