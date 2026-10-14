@@ -431,7 +431,7 @@ export function ApresentacaoPage() {
                 <h3 className="text-lg font-bold text-white">No Canteiro (Mobile)</h3>
                 <p className="text-xs text-slate-300 leading-relaxed">
                   Interface ultrarrápida pensada para uso no celular sob a luz do sol: apontamento de presença com 1
-                  clique, solicitação de material e lançamento de despesa rápida com comprovante.
+                  clique, gestão ágil da equipe e acompanhamento de tarefas da obra.
                 </p>
                 <div className="rounded-xl bg-[#18222F] p-3 text-xs text-slate-400">
                   ✨ Sem burocracia para o mestre e engenheiro.
