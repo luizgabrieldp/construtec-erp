@@ -3,6 +3,8 @@ import { persist } from 'zustand/middleware';
 import type { Perfil } from '@/domain/types';
 import { useUi } from './ui';
 import { uid } from '@/lib/utils';
+import { db } from '@/lib/firebase';
+import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 
 export interface Usuario {
   id: string;
@@ -60,6 +62,17 @@ const CONVITES_PADRAO: ConviteAcesso[] = [
     criadoEm: '2026-01-01T00:00:00.000Z',
   },
 ];
+
+const AUTH_DOC_REF = doc(db, 'erp', 'auth');
+
+function sincronizarAuthNuvem(usuarios: Usuario[], convites: ConviteAcesso[]) {
+  try {
+    setDoc(AUTH_DOC_REF, {
+      usuarios: JSON.parse(JSON.stringify(usuarios)),
+      convites: JSON.parse(JSON.stringify(convites)),
+    }).catch(() => {});
+  } catch {}
+}
 
 interface AuthState {
   usuarioAtual: Usuario | null;
@@ -134,10 +147,14 @@ export const useAuth = create<AuthState>()(
           senha: dados.senha?.trim() || atual.senha,
         };
 
-        set((state) => ({
+        const novaLista = get().usuarios.map((u) => (u.id === atual.id ? atualizado : u));
+
+        set({
           usuarioAtual: atualizado,
-          usuarios: state.usuarios.map((u) => (u.id === atual.id ? atualizado : u)),
-        }));
+          usuarios: novaLista,
+        });
+
+        sincronizarAuthNuvem(novaLista, get().convites);
       },
 
       criarConvite: (perfil) => {
@@ -153,10 +170,10 @@ export const useAuth = create<AuthState>()(
           criadoEm: new Date().toISOString(),
         };
 
-        set((state) => ({
-          convites: [novoConvite, ...state.convites],
-        }));
+        const novosConvites = [novoConvite, ...get().convites];
+        set({ convites: novosConvites });
 
+        sincronizarAuthNuvem(get().usuarios, novosConvites);
         return novoConvite;
       },
 
@@ -188,24 +205,28 @@ export const useAuth = create<AuthState>()(
           criadoEm: new Date().toISOString(),
         };
 
-        set((state) => ({
-          usuarios: [...state.usuarios, novoUsuario],
-          convites: state.convites.map((c) =>
-            c.id === convite.id ? { ...c, usado: true, usadoPor: novoUsuario.nome } : c
-          ),
+        const novosUsuarios = [...get().usuarios, novoUsuario];
+        const novosConvites = get().convites.map((c) =>
+          c.id === convite.id ? { ...c, usado: true, usadoPor: novoUsuario.nome } : c
+        );
+
+        set({
+          usuarios: novosUsuarios,
+          convites: novosConvites,
           usuarioAtual: novoUsuario,
-        }));
+        });
 
         useUi.getState().setPerfil(novoUsuario.perfil);
+        sincronizarAuthNuvem(novosUsuarios, novosConvites);
         return { ok: true };
       },
 
       alternarStatusUsuario: (usuarioId) => {
-        set((state) => ({
-          usuarios: state.usuarios.map((u) =>
-            u.id === usuarioId ? { ...u, ativo: !u.ativo } : u
-          ),
-        }));
+        const novosUsuarios = get().usuarios.map((u) =>
+          u.id === usuarioId ? { ...u, ativo: !u.ativo } : u
+        );
+        set({ usuarios: novosUsuarios });
+        sincronizarAuthNuvem(novosUsuarios, get().convites);
       },
     }),
     {
@@ -218,3 +239,24 @@ export const useAuth = create<AuthState>()(
     }
   )
 );
+
+// Listener do Cloud Firestore para sincronização em tempo real de usuários e convites
+try {
+  onSnapshot(
+    AUTH_DOC_REF,
+    (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        if (data && Array.isArray(data.usuarios) && data.usuarios.length > 0) {
+          useAuth.setState((s) => ({
+            usuarios: data.usuarios,
+            convites: Array.isArray(data.convites) ? data.convites : s.convites,
+          }));
+        }
+      } else {
+        sincronizarAuthNuvem(USUARIOS_PADRAO, CONVITES_PADRAO);
+      }
+    },
+    () => {}
+  );
+} catch {}

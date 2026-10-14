@@ -1,0 +1,58 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection / Document: erp
+    // Path: /erp/{document=**}
+    // Context: Sincronização e persistência do estado global do ERP CONSTRUTEC
+    //
+    // Documentos / coleções gerenciados:
+    //   - erp/{docId} (ex: 'dados', 'global', etc.)
+    //   - erp/{docId}/{subcollection}/{subDoc}
+    //
+    // Estrutura de campos suportada (ErpData):
+    //   - version: int - Versão do esquema de dados
+    //   - config: map - Configurações gerais da empresa (nome, saldo inicial, data)
+    //   - obras: list - Lista de obras e projetos
+    //   - fornecedores: list - Lista de fornecedores parceiros
+    //   - materiais: list - Catálogo de materiais e estoque mínimo
+    //   - compras: list - Pedidos de compras e rateios por centro de custo
+    //   - movimentos: list - Movimentações de estoque
+    //   - locacoes: list - Locações de máquinas e equipamentos
+    //   - funcionarios: list - Funcionários, regimes e dados de pagamento
+    //   - funcoesCustomizadas: list - Funções/cargos adicionais
+    //   - apontamentos: map - Apontamentos diários de presenças por funcionário
+    //   - fechamentos: list - Fechamentos de folha de pagamento
+    //   - servicos: list - Contratos e serviços por empreitada
+    //   - tarefas: list - Cronograma de tarefas operacionais
+    //   - contasPagar: list - Contas a pagar e lançamentos financeiros
+    //   - contasReceber: list - Medições e recebimentos previstos
+    //   - recorrencias: list - Despesas fixas e recorrentes
+    //   - audit: list - Trilha de auditoria das ações realizadas
+    //   - usuarios: list - Usuários e permissões de acesso
+    //
+    // ===============================================================
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Validador de payload do ERP
+    function isValidErpPayload() {
+      return request.resource.data is map;
+    }
+
+    // Regras de acesso para o documento/coleção 'erp' e quaisquer subcoleções
+    match /erp/{document=**} {
+      allow read: if true;
+      allow create, update: if isValidErpPayload();
+      allow delete: if true;
+    }
+  }
+}
