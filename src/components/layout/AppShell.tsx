@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Menu, ShieldAlert, LogOut, Plus, X } from 'lucide-react';
+import { Menu, ShieldAlert, LogOut, X } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
 import { UserInfoCard, ThemeSwitcher } from './Switchers';
 import { useQuick } from './quick';
@@ -8,7 +8,6 @@ import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui';
 import { acquireScrollLock, releaseScrollLock } from '@/components/ui/Dialog';
 import { Toaster } from '@/components/ui/Toast';
-import { DespesaRapidaDialog } from '@/features/despesas/DespesaRapidaDialog';
 import { NAV, navDoPerfil, podeAcessar } from '@/app/nav';
 import { useUi } from '@/data/ui';
 import { useAuth } from '@/data/auth';
@@ -23,7 +22,6 @@ function useAtalhos() {
   const navigate = useNavigate();
   const perfil = useUi((s) => s.perfil);
   const toggle = useUi((s) => s.toggleSidebar);
-  const open = useQuick((s) => s.open);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (isTyping(e) || e.metaKey || e.ctrlKey) return;
@@ -32,9 +30,6 @@ function useAtalhos() {
         if (item) {
           e.preventDefault();
           navigate(item.to);
-        } else if (e.code === 'KeyD') {
-          e.preventDefault();
-          open('despesa');
         }
         return;
       }
@@ -45,7 +40,7 @@ function useAtalhos() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [navigate, perfil, toggle, open]);
+  }, [navigate, perfil, toggle]);
 }
 
 function Topbar() {
@@ -104,7 +99,6 @@ function Topbar() {
 function MobileDrawer() {
   const openMenu = useQuick((s) => s.menu);
   const close = useQuick((s) => s.close);
-  const open = useQuick((s) => s.open);
   const logout = useAuth((s) => s.logout);
   const touchStartX = useRef<number | null>(null);
 
@@ -207,22 +201,6 @@ function MobileDrawer() {
             </div>
           </div>
 
-          {/* Atalho rápido para lançar despesa no canteiro */}
-          <button
-            type="button"
-            onClick={() => {
-              close('menu');
-              open('despesa');
-            }}
-            className="flex items-center justify-between rounded-xl border border-brand/30 bg-brand/10 px-4 py-3 text-xs font-semibold text-brand hover:bg-brand/20 active:scale-[0.99] transition-all cursor-pointer shadow-xs"
-          >
-            <span className="flex items-center gap-2.5">
-              <Plus className="size-4" />
-              Lançar Despesa Rápida (Canteiro)
-            </span>
-            <span className="text-[10px] text-muted font-mono bg-surface/60 px-1.5 py-0.5 rounded border border-brand/20">Alt+D</span>
-          </button>
-
           <NavList onNavigate={() => close('menu')} />
         </div>
 
@@ -293,7 +271,6 @@ export function AppShell() {
         </main>
       </div>
       <MobileDrawer />
-      <DespesaRapidaDialog />
       <Toaster />
     </div>
   );

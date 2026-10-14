@@ -33,6 +33,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
+import { WhatsAppIcon } from '@/components/brand/WhatsAppIcon';
 import { Button, Badge } from '@/components/ui';
 import { fmtBRL, fmtPct } from '@/lib/format';
 
@@ -277,7 +278,7 @@ export function ApresentacaoPage() {
             rel="noreferrer"
             className="hidden sm:inline-flex"
           >
-            <Button size="sm" icon={<MessageCircle className="size-4 text-emerald-400" />}>
+            <Button size="sm" icon={<WhatsAppIcon className="size-4" />}>
               Falar no WhatsApp
             </Button>
           </a>
@@ -1305,7 +1306,7 @@ export function ApresentacaoPage() {
                 target="_blank"
                 rel="noreferrer"
               >
-                <Button size="lg" icon={<MessageCircle className="size-5 text-emerald-400" />}>
+                <Button size="lg" icon={<WhatsAppIcon className="size-5" />}>
                   Iniciar Implantação no WhatsApp
                 </Button>
               </a>

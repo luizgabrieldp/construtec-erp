@@ -1,14 +1,14 @@
 import { useState } from 'react';
-import { HardHat, Plus, Search, UserCheck, Users, UserX, Phone, Edit, MessageCircle } from 'lucide-react';
+import { HardHat, Plus, Search, UserCheck, Users, UserX, Edit } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Select } from '@/components/ui';
 import { StatCard } from '@/components/ui/StatCard';
+import { WhatsAppBadge } from '@/components/brand/WhatsAppIcon';
 import { useData, useErp } from '@/data/store';
 import { useHoje, useIsAdmin } from '@/hooks';
 import type { Funcionario } from '@/domain/types';
 import { LABEL_FUNCAO, getLabelFuncao } from '@/domain/labels';
 import { chaveApontamento } from '@/domain/engine';
 import { fmtBRL } from '@/lib/format';
-import { waUrl } from '@/lib/utils';
 import { ApontamentoGrade } from '@/features/folha/ApontamentoGrade';
 import { FuncionarioFormDialog } from '@/features/folha/FuncionarioFormDialog';
 
@@ -184,22 +184,9 @@ export function EquipePage() {
                   return (
                     <tr key={f.id} className="hover:bg-surface-2/40 transition-colors">
                       <td className="py-3.5 pr-4">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <span className="font-semibold text-fg">{f.nome}</span>
-                          {f.telefone && waUrl(f.telefone) && (
-                            <a
-                              href={waUrl(f.telefone)!}
-                              target="_blank"
-                              rel="noreferrer"
-                              title={`Conversar no WhatsApp (${f.telefone})`}
-                              className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shadow-2xs cursor-pointer"
-                            >
-                              <svg className="size-3.5 fill-current" viewBox="0 0 24 24">
-                                <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.669-.699c.969.529 1.831.815 2.791.815 3.18 0 5.767-2.587 5.767-5.767.001-3.18-2.586-5.766-5.767-5.766zm10.026 5.766c-.004 5.565-4.524 10.083-10.088 10.083-1.745 0-3.415-.45-4.89-1.285l-7.079 1.856 1.89-6.897c-.928-1.528-1.426-3.29-1.427-5.109.004-5.564 4.526-10.086 10.09-10.086 2.693 0 5.226 1.05 7.133 2.956 1.905 1.907 2.954 4.439 2.951 7.132z" />
-                              </svg>
-                              <span className="sr-only">WhatsApp: {f.telefone}</span>
-                            </a>
-                          )}
+                          <WhatsAppBadge telefone={f.telefone} />
                         </div>
                         {f.cpf && (
                           <div className="text-[11px] text-muted font-normal mt-0.5">CPF: {f.cpf}</div>

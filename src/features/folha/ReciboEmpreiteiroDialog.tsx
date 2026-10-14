@@ -10,6 +10,7 @@ import { getLabelFuncao } from '@/domain/labels';
 import { calcularFolha } from '@/domain/engine';
 import { addDays, startOfWeek, endOfMonth, startOfMonth, today } from '@/lib/dates';
 import { fmtBRL, fmtDate, round2 } from '@/lib/format';
+import { WhatsAppBadge } from '@/components/brand/WhatsAppIcon';
 import { imprimirHtmlIframe, gerarHtmlReciboEmpreiteiro, type DadosEmpreiteiroImpressao } from '@/lib/print';
 
 interface ReciboEmpreiteiroDialogProps {
@@ -239,7 +240,11 @@ export function ReciboEmpreiteiroDialog({
               </div>
               <div>
                 <span className="text-[10px] text-muted block uppercase font-bold">Telefone / WhatsApp</span>
-                <span>{empreiteiro.telefone || 'Não informado'}</span>
+                {empreiteiro.telefone ? (
+                  <WhatsAppBadge telefone={empreiteiro.telefone} />
+                ) : (
+                  <span>Não informado</span>
+                )}
               </div>
               <div>
                 <span className="text-[10px] text-muted block uppercase font-bold">CPF</span>

@@ -24,7 +24,8 @@ import { LABEL_FUNCAO, getLabelFuncao } from '@/domain/labels';
 import { calcularFolha } from '@/domain/engine';
 import { addDays, endOfMonth, startOfMonth, startOfWeek, today } from '@/lib/dates';
 import { fmtBRL, fmtDate, round2 } from '@/lib/format';
-import { uid, waUrl } from '@/lib/utils';
+import { uid } from '@/lib/utils';
+import { WhatsAppButton } from '@/components/brand/WhatsAppIcon';
 import { RecibosFolhaDialog, type DadosRecibo } from './RecibosFolhaDialog';
 import { ReciboEmpreiteiroDialog } from './ReciboEmpreiteiroDialog';
 
@@ -601,21 +602,7 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
                         <td className="p-3 font-semibold text-fg">
                           <div className="flex items-center gap-1.5">
                             <span>{funcionario.nome}</span>
-                            {funcionario.telefone && waUrl(funcionario.telefone) && (
-                              <a
-                                href={waUrl(funcionario.telefone)!}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                title={`Conversar no WhatsApp (${funcionario.telefone})`}
-                                className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shadow-2xs cursor-pointer"
-                              >
-                                <svg className="size-3 fill-current" viewBox="0 0 24 24">
-                                  <path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.711 2.598 2.669-.699c.969.529 1.831.815 2.791.815 3.18 0 5.767-2.587 5.767-5.767.001-3.18-2.586-5.766-5.767-5.766zm10.026 5.766c-.004 5.565-4.524 10.083-10.088 10.083-1.745 0-3.415-.45-4.89-1.285l-7.079 1.856 1.89-6.897c-.928-1.528-1.426-3.29-1.427-5.109.004-5.564 4.526-10.086 10.09-10.086 2.693 0 5.226 1.05 7.133 2.956 1.905 1.907 2.954 4.439 2.951 7.132z" />
-                                </svg>
-                                <span className="sr-only">WhatsApp: {funcionario.telefone}</span>
-                              </a>
-                            )}
+                            <WhatsAppButton telefone={funcionario.telefone} />
                           </div>
                         </td>
                         <td className="p-3">
