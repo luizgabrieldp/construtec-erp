@@ -23,6 +23,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
   const mutate = useErp((s) => s.mutate);
 
   const [nome, setNome] = useState('');
+  const [apelido, setApelido] = useState('');
   const [funcao, setFuncao] = useState<string>('pedreiro');
   const [regime, setRegime] = useState<Regime>('diarista');
   const [salario, setSalario] = useState('');
@@ -40,7 +41,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
   const [nomeNovaFuncao, setNomeNovaFuncao] = useState('');
 
   // Permissões do encarregado ao editar:
-  // Encarregado NÃO pode editar diária/salário, função e regime. Pode editar nome, telefone, CPF, Pix e obra padrão.
+  // Encarregado NÃO pode editar diária/salário, função e regime. Pode editar nome, apelido, telefone, CPF, Pix e obra padrão.
   const isEdicao = !!funcionarioParaEditar;
   const podeEditarRemuneracao = isAdmin || !isEdicao;
   const podeEditarFuncaoRegime = isAdmin || !isEdicao;
@@ -62,6 +63,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
   useEffect(() => {
     if (funcionarioParaEditar) {
       setNome(funcionarioParaEditar.nome);
+      setApelido(funcionarioParaEditar.apelido || '');
       setFuncao(funcionarioParaEditar.funcao);
       setRegime(funcionarioParaEditar.regime || 'diarista');
       setSalario(String(funcionarioParaEditar.salario || '3500'));
@@ -75,6 +77,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
       setObraPadraoId(funcionarioParaEditar.obraPadraoId || '');
     } else {
       setNome('');
+      setApelido('');
       setFuncao('pedreiro');
       setRegime('diarista');
       setSalario('3500');
@@ -143,6 +146,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
 
     const dadosFuncionario = {
       nome: nome.trim(),
+      apelido: apelido.trim() || undefined,
       funcao,
       regime,
       salario: regime === 'mensalista' ? salNum : 0,
@@ -166,6 +170,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
               d.funcionarios[idx] = {
                 ...d.funcionarios[idx],
                 nome: dadosFuncionario.nome,
+                apelido: dadosFuncionario.apelido,
                 telefone: dadosFuncionario.telefone,
                 cpf: dadosFuncionario.cpf,
                 chavePix: dadosFuncionario.chavePix,
@@ -215,7 +220,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
       subtitle={
         funcionarioParaEditar
           ? !isAdmin
-            ? 'Encarregado: você pode editar Nome, Telefone, CPF, Chave Pix e Obra Padrão.'
+            ? 'Encarregado: você pode editar Nome, Apelido, Telefone, CPF, Chave Pix e Obra Padrão.'
             : 'Edição completa de cadastro, remuneração e alocação do colaborador.'
           : 'Cadastre operários de campo, encarregados ou empreiteiros, com diária semanal, quinzenal ou salário fixo'
       }
@@ -243,11 +248,11 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
             />
           </Field>
 
-          <Field label="CPF do Colaborador (Opcional)">
+          <Field label="Apelido (como é conhecido no canteiro)">
             <Input
-              placeholder="Ex.: 000.000.000-00"
-              value={cpf}
-              onChange={(e) => setCpf(e.target.value)}
+              placeholder="Ex.: Zé, Baiano, Alemão..."
+              value={apelido}
+              onChange={(e) => setApelido(e.target.value)}
             />
           </Field>
         </div>
@@ -364,9 +369,17 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
           </Field>
         )}
 
-        {/* Contato & Chave Pix com Atalhos Rápidos */}
+        {/* Contato, Documento & Chave Pix com Atalhos Rápidos */}
         <div className="space-y-2 rounded-xl border border-line bg-surface-2/40 p-3.5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <Field label="CPF do Colaborador (Opcional)">
+              <Input
+                placeholder="Ex.: 000.000.000-00"
+                value={cpf}
+                onChange={(e) => setCpf(e.target.value)}
+              />
+            </Field>
+
             <Field label="Telefone / WhatsApp">
               <Input
                 placeholder="(84) 99999-9999"

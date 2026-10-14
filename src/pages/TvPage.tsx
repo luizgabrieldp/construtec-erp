@@ -506,8 +506,10 @@ export function TvPage() {
                       {operariosNaObra.map((f) => (
                         <li key={f.id} className="flex items-center justify-between rounded-xl bg-[#16212E] p-3">
                           <div>
-                            <div className="font-bold text-white">{f.nome}</div>
-                            <div className="text-xs text-slate-400">{LABEL_FUNCAO[f.funcao]}</div>
+                            <div className="font-bold text-white">{f.apelido || f.nome}</div>
+                            <div className="text-xs text-slate-400">
+                              {f.apelido ? `${f.nome} • ` : ''}{LABEL_FUNCAO[f.funcao]}
+                            </div>
                           </div>
                           <span className="rounded-lg bg-slate-800 px-2 py-1 text-[11px] font-semibold text-slate-300 capitalize">
                             {f.regime}

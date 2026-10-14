@@ -157,6 +157,7 @@ export type TipoPix = 'telefone' | 'cpf' | 'aleatoria' | 'outro';
 export interface Funcionario {
   id: ID;
   nome: string;
+  apelido?: string;
   funcao: Funcao;
   regime: Regime;
   salario: number; // mensalista

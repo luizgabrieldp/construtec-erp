@@ -150,7 +150,12 @@ export function ApontamentoGrade() {
       if (filtroFuncao !== 'todos' && f.funcao !== filtroFuncao) return false;
       if (busca.trim()) {
         const q = busca.toLowerCase();
-        return f.nome.toLowerCase().includes(q) || f.telefone.includes(q);
+        return (
+          f.nome.toLowerCase().includes(q) ||
+          (f.apelido && f.apelido.toLowerCase().includes(q)) ||
+          f.telefone.includes(q) ||
+          (f.cpf && f.cpf.includes(q))
+        );
       }
       return true;
     });
@@ -200,7 +205,7 @@ export function ApontamentoGrade() {
           <div className="flex flex-wrap items-center gap-2 flex-1 max-w-md">
             <input
               type="text"
-              placeholder="Buscar colaborador na grade..."
+              placeholder="Buscar por nome ou apelido na grade..."
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
               className="w-full sm:w-64 rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs text-fg placeholder:text-muted focus:border-brand focus:outline-none"
@@ -297,10 +302,22 @@ export function ApontamentoGrade() {
                     <tr key={f.id} className="hover:bg-surface-2/30 transition-colors">
                       {/* Coluna Fixa do Colaborador (Adaptada para Mobile) */}
                       <td className="sticky left-0 z-10 bg-surface px-2.5 py-2.5 sm:px-4 sm:py-3 w-32 min-w-[120px] max-w-[130px] sm:w-48 sm:min-w-[180px] sm:max-w-[200px] shadow-[2px_0_5px_rgba(0,0,0,0.06)] border-r border-line">
-                        <div className="font-bold text-fg flex items-center gap-1 sm:gap-1.5 truncate text-[11px] sm:text-xs">
-                          <HardHat className="size-3 text-brand shrink-0" />
-                          <span className="truncate">{f.nome}</span>
-                        </div>
+                        {f.apelido ? (
+                          <>
+                            <div className="font-bold text-fg flex items-center gap-1 sm:gap-1.5 truncate text-[11px] sm:text-xs">
+                              <HardHat className="size-3 text-brand shrink-0" />
+                              <span className="truncate">{f.apelido}</span>
+                            </div>
+                            <div className="text-[10px] sm:text-[11px] text-muted truncate mt-0.5 font-normal">
+                              {f.nome}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="font-bold text-fg flex items-center gap-1 sm:gap-1.5 truncate text-[11px] sm:text-xs">
+                            <HardHat className="size-3 text-brand shrink-0" />
+                            <span className="truncate">{f.nome}</span>
+                          </div>
+                        )}
                         <div className="text-[10px] sm:text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
                           <span className="truncate">{LABEL_FUNCAO[f.funcao] || f.funcao}</span>
                         </div>
@@ -400,7 +417,13 @@ export function ApontamentoGrade() {
                                 <button
                                   type="button"
                                   onClick={() =>
-                                    abrirModalObras(f.id, f.nome, dia, centros, status)
+                                    abrirModalObras(
+                                      f.id,
+                                      f.apelido ? `${f.apelido} (${f.nome})` : f.nome,
+                                      dia,
+                                      centros,
+                                      status,
+                                    )
                                   }
                                   className="flex w-full max-w-[66px] sm:max-w-[80px] items-center justify-center gap-1 truncate rounded border border-line bg-surface px-1 py-0.5 text-[8.5px] sm:text-[9px] font-semibold text-fg hover:border-brand/60 hover:bg-surface-2 transition-colors cursor-pointer"
                                   title={`Obras em ${fmtDateShort(dia)}: ${nomesObras.join(', ')} (Clique para gerenciar múltiplas obras)`}

@@ -58,6 +58,7 @@ export function EquipePage() {
       const q = busca.toLowerCase();
       return (
         f.nome.toLowerCase().includes(q) ||
+        (f.apelido && f.apelido.toLowerCase().includes(q)) ||
         f.telefone.includes(q) ||
         (f.cpf && f.cpf.includes(q)) ||
         (f.chavePix && f.chavePix.toLowerCase().includes(q))
@@ -141,7 +142,7 @@ export function EquipePage() {
             <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
               <Input
-                placeholder="Buscar por nome ou telefone..."
+                placeholder="Buscar por nome, apelido ou telefone..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="pl-9"
@@ -184,10 +185,20 @@ export function EquipePage() {
                   return (
                     <tr key={f.id} className="hover:bg-surface-2/40 transition-colors">
                       <td className="py-3.5 pr-4">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-fg">{f.nome}</span>
-                          <WhatsAppBadge telefone={f.telefone} />
-                        </div>
+                        {f.apelido ? (
+                          <>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-semibold text-fg">{f.apelido}</span>
+                              <WhatsAppBadge telefone={f.telefone} />
+                            </div>
+                            <div className="text-xs text-muted font-normal mt-0.5">{f.nome}</div>
+                          </>
+                        ) : (
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="font-semibold text-fg">{f.nome}</span>
+                            <WhatsAppBadge telefone={f.telefone} />
+                          </div>
+                        )}
                         {f.cpf && (
                           <div className="text-[11px] text-muted font-normal mt-0.5">CPF: {f.cpf}</div>
                         )}
