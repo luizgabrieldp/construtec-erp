@@ -565,14 +565,67 @@ export function ConfiguracoesPage() {
 
       {/* ABA 4: DEPLOY VERCEL & FIREBASE */}
       {abaAtiva === 'deploy' && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Vercel */}
-          <Card>
+        <div className="space-y-6">
+          {/* Card Principal de Upload Automático via GitHub */}
+          <Card className="border-brand/40 bg-brand/5">
             <CardHeader
-              title="Publicação no Vercel"
-              subtitle="Hospedagem rápida e contínua com SSL automático"
-              action={<Terminal className="size-5 text-fg" />}
+              title="Upload Automático Contínuo via GitHub (CI/CD)"
+              subtitle="Sempre que você atualizar o projeto, basta 1 comando para enviar as modificações para o ar na Vercel e Firebase"
+              action={<Globe className="size-5 text-brand" />}
             />
+            <div className="p-5 space-y-4 text-xs">
+              <div className="rounded-xl border border-line bg-surface p-4 space-y-3">
+                <div className="flex items-center gap-2 font-bold text-sm text-fg">
+                  <Terminal className="size-4 text-brand" />
+                  <span>Comando único de upload rápido:</span>
+                </div>
+                <pre className="rounded-xl bg-surface-2 p-3 font-mono text-xs text-brand font-bold overflow-x-auto border border-line">
+npm run upload
+                </pre>
+                <p className="text-muted leading-relaxed">
+                  Esse comando adiciona todos os arquivos alterados, cria o commit automaticamente com data/hora e envia direto para o GitHub (<code className="font-mono text-fg">git push</code>).
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-xl border border-line bg-surface p-4 space-y-2">
+                  <h4 className="font-semibold text-fg flex items-center gap-1.5">
+                    <CheckCircle2 className="size-4 text-emerald-500" />
+                    <span>Como conectar ao seu GitHub (apenas na 1ª vez):</span>
+                  </h4>
+                  <ol className="list-decimal list-inside text-muted space-y-1.5">
+                    <li>Crie um repositório vazio no GitHub (<a href="https://github.com/new" target="_blank" rel="noreferrer" className="text-brand underline font-semibold">github.com/new</a>).</li>
+                    <li>No terminal do projeto, vincule o repositório:
+                      <pre className="mt-1 rounded bg-surface-2 p-2 font-mono text-[11px] text-fg overflow-x-auto">
+git remote add origin https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git
+npm run upload
+                      </pre>
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="rounded-xl border border-line bg-surface p-4 space-y-2">
+                  <h4 className="font-semibold text-fg flex items-center gap-1.5">
+                    <CheckCircle2 className="size-4 text-emerald-500" />
+                    <span>Como o deploy acontece automaticamente:</span>
+                  </h4>
+                  <ul className="list-disc list-inside text-muted space-y-1.5">
+                    <li><strong>Na Vercel:</strong> Importe o repositório do GitHub em <a href="https://vercel.com/new" target="_blank" rel="noreferrer" className="text-brand underline font-semibold">vercel.com/new</a>. Cada <code className="font-mono text-fg">npm run upload</code> atualizará o site online em menos de 1 minuto!</li>
+                    <li><strong>No Firebase:</strong> O workflow do GitHub Actions em <code className="font-mono text-fg">.github/workflows/deploy.yml</code> já está pronto e compila o projeto em cada push.</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Vercel */}
+            <Card>
+              <CardHeader
+                title="Publicação no Vercel (Manual via CLI)"
+                subtitle="Hospedagem rápida e contínua com SSL automático"
+                action={<Terminal className="size-5 text-fg" />}
+              />
             <div className="p-5 space-y-4 text-xs">
               <p className="text-muted">
                 O arquivo <code className="bg-surface-2 px-1.5 py-0.5 rounded text-fg font-mono">vercel.json</code> já está criado na raiz do projeto com as regras de SPA rewrite prontas.
