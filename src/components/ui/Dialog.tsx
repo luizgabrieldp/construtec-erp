@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface DialogProps {
   open: boolean;
@@ -9,15 +10,19 @@ interface DialogProps {
   children: ReactNode;
   footer?: ReactNode;
   wide?: boolean;
+  className?: string;
 }
 
 const suportaClosedBy = typeof HTMLDialogElement !== 'undefined' && 'closedBy' in HTMLDialogElement.prototype;
 
 /**
- * Modal sobre <dialog> nativo: top layer, foco preso e Esc nativos.
- * Light-dismiss via closedby="any" com fallback para Safari.
+ * Modal sobre <dialog> nativo com:
+ * - Top layer e Esc nativos
+ * - Centralização perfeita no mobile, tablet e desktop
+ * - Trava de rolagem (scroll lock) no body e touchmove cancelado no backdrop
+ * - Contenção de overscroll estrita para evitar travamentos em tabelas ao fundo
  */
-export function Dialog({ open, onClose, title, subtitle, children, footer, wide }: DialogProps) {
+export function Dialog({ open, onClose, title, subtitle, children, footer, wide, className }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -25,6 +30,35 @@ export function Dialog({ open, onClose, title, subtitle, children, footer, wide 
     if (!el) return;
     if (open && !el.open) el.showModal();
     if (!open && el.open) el.close();
+  }, [open]);
+
+  // Trava de rolagem e prevenção de toques passando para o conteúdo de fundo no mobile
+  useEffect(() => {
+    if (!open) return;
+
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    const el = ref.current;
+    if (!el) return;
+
+    // Cancela toques no backdrop para não disparar deslizamento inercial da página de trás
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.target === el) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener('touchmove', onTouchMove, { passive: false });
+
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+      el.removeEventListener('touchmove', onTouchMove);
+    };
   }, [open]);
 
   useEffect(() => {
@@ -49,23 +83,27 @@ export function Dialog({ open, onClose, title, subtitle, children, footer, wide 
   return (
     <dialog
       ref={ref}
-      className="cx-dialog"
+      className={cn('cx-dialog', wide && 'cx-dialog-wide', className)}
       aria-labelledby={titleId}
-      style={wide ? { width: 'min(860px, calc(100vw - 2rem))' } : undefined}
       {...({ closedby: 'any' } as Record<string, string>)}
     >
       {open && (
         <div className="flex max-h-[inherit] flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
-            <div>
-              <h2 id={titleId} className="text-base font-bold text-fg">{title}</h2>
-              {subtitle && <p className="mt-0.5 text-xs text-muted">{subtitle}</p>}
+          <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
+            <div className="min-w-0 pr-2">
+              <h2 id={titleId} className="text-base font-bold text-fg tracking-tight">{title}</h2>
+              {subtitle && <p className="mt-0.5 text-xs text-muted leading-relaxed">{subtitle}</p>}
             </div>
-            <button type="button" onClick={() => ref.current?.close()} className="rounded-lg p-1.5 text-muted hover:bg-surface-2 hover:text-fg" aria-label="Fechar">
+            <button
+              type="button"
+              onClick={() => ref.current?.close()}
+              className="size-9 shrink-0 inline-flex items-center justify-center rounded-xl border border-line bg-surface-2/60 text-muted hover:bg-surface-2 hover:text-fg active:scale-95 transition-all cursor-pointer"
+              aria-label="Fechar"
+            >
               <X className="size-4" />
             </button>
           </div>
-          <div className="overflow-y-auto px-5 py-4">{children}</div>
+          <div className="cx-dialog-scroll overflow-y-auto px-5 py-4 overscroll-contain">{children}</div>
           {footer && <div className="flex justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
         </div>
       )}

@@ -100,12 +100,15 @@ export function RecibosFolhaDialog({
               >
                 {/* Cabeçalho do Recibo */}
                 <div className="flex flex-wrap items-start justify-between border-b border-line pb-3 gap-2">
-                  <div>
-                    <h3 className="text-base font-black text-brand tracking-tight">CONSTRUTEC</h3>
-                    <p className="text-[11px] text-muted">Construção Civil & Reformas • CNPJ: 12.345.678/0001-90</p>
-                    <p className="font-bold text-fg mt-1">
-                      RECIBO DE PAGAMENTO DE SALÁRIO / DIÁRIAS (COMPROVANTE DE QUITAÇÃO)
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
+                    <div>
+                      <h3 className="text-base font-black text-brand tracking-tight">CONSTRUTEC</h3>
+                      <p className="text-[11px] text-muted">Construção Civil & Reformas • CNPJ: 35.477.198/0001-83 • Petrolina/PE</p>
+                      <p className="font-bold text-fg mt-0.5">
+                        RECIBO DE PAGAMENTO DE SALÁRIO / DIÁRIAS (COMPROVANTE DE QUITAÇÃO)
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right text-[11px] text-muted">
                     <div><strong>Período:</strong> {fmtDate(r.inicio)} a {fmtDate(r.fim)}</div>
@@ -227,10 +230,13 @@ export function RecibosFolhaDialog({
               >
                 {/* Topo do Recibo */}
                 <div className="flex justify-between items-start border-b border-black pb-2 mb-2">
-                  <div>
-                    <h1 className="text-xl font-black tracking-tight leading-none">CONSTRUTEC</h1>
-                    <p className="text-[10px] uppercase tracking-wider text-gray-700 mt-0.5">Construção Civil & Reformas em Geral</p>
-                    <p className="text-[9px] text-gray-600">CNPJ: 12.345.678/0001-90 • Natal/RN</p>
+                  <div className="flex items-center gap-2.5">
+                    <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
+                    <div>
+                      <h1 className="text-xl font-black tracking-tight leading-none">CONSTRUTEC</h1>
+                      <p className="text-[10px] uppercase tracking-wider text-gray-700 mt-0.5">Construção Civil & Reformas em Geral</p>
+                      <p className="text-[9px] text-gray-600">CNPJ: 35.477.198/0001-83 • Petrolina - PE</p>
+                    </div>
                   </div>
                   <div className="text-right text-[10px]">
                     <div className="font-bold uppercase bg-gray-100 px-2 py-0.5 rounded border border-gray-400 inline-block">

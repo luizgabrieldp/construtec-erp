@@ -21,7 +21,7 @@ export function FornecedorFormDialog({ open, onClose, fornecedorParaEditar }: Fo
   const [cnpj, setCnpj] = useState('');
   const [contato, setContato] = useState('');
   const [telefone, setTelefone] = useState('');
-  const [cidade, setCidade] = useState('Natal/RN');
+  const [cidade, setCidade] = useState('Petrolina/PE');
 
   useEffect(() => {
     if (fornecedorParaEditar) {
@@ -37,7 +37,7 @@ export function FornecedorFormDialog({ open, onClose, fornecedorParaEditar }: Fo
       setCnpj('');
       setContato('');
       setTelefone('');
-      setCidade('Natal/RN');
+      setCidade('Petrolina/PE');
     }
   }, [fornecedorParaEditar, open]);
 
@@ -125,7 +125,7 @@ export function FornecedorFormDialog({ open, onClose, fornecedorParaEditar }: Fo
         </div>
 
         <Field label="Cidade / UF">
-          <Input placeholder="Ex.: Natal/RN" value={cidade} onChange={(e) => setCidade(e.target.value)} />
+          <Input placeholder="Ex.: Petrolina/PE" value={cidade} onChange={(e) => setCidade(e.target.value)} />
         </Field>
 
         <div className="flex gap-2 pt-2 justify-end">

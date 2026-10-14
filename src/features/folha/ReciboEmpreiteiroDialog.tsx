@@ -185,14 +185,17 @@ export function ReciboEmpreiteiroDialog({
           <div className="rounded-xl border border-line bg-surface p-5 text-fg space-y-4 shadow-sm">
             {/* Topo do Recibo */}
             <div className="flex flex-wrap items-start justify-between border-b border-line pb-3 gap-3">
-              <div>
-                <h3 className="text-lg font-black text-brand tracking-tight">CONSTRUTEC</h3>
-                <p className="text-[11px] text-muted">Construção Civil & Reformas • CNPJ: 12.345.678/0001-90</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <Badge tone="orange">RECIBO CONSOLIDADO DO EMPREITEIRO ({tipo.toUpperCase()})</Badge>
-                  <span className="text-xs font-semibold text-fg">
-                    Período: {fmtDate(inicio)} a {fmtDate(fim)}
-                  </span>
+              <div className="flex items-center gap-3">
+                <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
+                <div>
+                  <h3 className="text-lg font-black text-brand tracking-tight">CONSTRUTEC</h3>
+                  <p className="text-[11px] text-muted">Construção Civil & Reformas • CNPJ: 35.477.198/0001-83 • Petrolina/PE</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Badge tone="orange">RECIBO CONSOLIDADO DO EMPREITEIRO ({tipo.toUpperCase()})</Badge>
+                    <span className="text-xs font-semibold text-fg">
+                      Período: {fmtDate(inicio)} a {fmtDate(fim)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -333,12 +336,15 @@ export function ReciboEmpreiteiroDialog({
             <div className="receipt-page font-sans text-black bg-white">
               {/* Topo do Recibo */}
               <div className="flex justify-between items-start border-b border-black pb-2 mb-2">
-                <div>
-                  <h1 className="text-xl font-black tracking-tight leading-none">CONSTRUTEC</h1>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-700 mt-0.5">
-                    Construção Civil & Reformas em Geral
-                  </p>
-                  <p className="text-[9px] text-gray-600">CNPJ: 12.345.678/0001-90 • Natal/RN</p>
+                <div className="flex items-center gap-2.5">
+                  <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
+                  <div>
+                    <h1 className="text-xl font-black tracking-tight leading-none">CONSTRUTEC</h1>
+                    <p className="text-[10px] uppercase tracking-wider text-gray-700 mt-0.5">
+                      Construção Civil & Reformas em Geral
+                    </p>
+                    <p className="text-[9px] text-gray-600">CNPJ: 35.477.198/0001-83 • Petrolina - PE</p>
+                  </div>
                 </div>
                 <div className="text-right text-[10px]">
                   <div className="font-bold uppercase bg-gray-100 px-2 py-0.5 rounded border border-gray-400 inline-block">
