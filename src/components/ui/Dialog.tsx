@@ -15,15 +15,47 @@ interface DialogProps {
 
 const suportaClosedBy = typeof HTMLDialogElement !== 'undefined' && 'closedBy' in HTMLDialogElement.prototype;
 
+let openDialogCount = 0;
+let savedScrollY = 0;
+
+function acquireScrollLock() {
+  openDialogCount++;
+  if (openDialogCount === 1) {
+    savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.body.classList.add('cx-dialog-open');
+    document.documentElement.classList.add('cx-dialog-open');
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${savedScrollY}px`;
+    document.body.style.width = '100%';
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+  }
+}
+
+function releaseScrollLock() {
+  openDialogCount = Math.max(0, openDialogCount - 1);
+  if (openDialogCount === 0) {
+    document.body.classList.remove('cx-dialog-open');
+    document.documentElement.classList.remove('cx-dialog-open');
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    window.scrollTo(0, savedScrollY);
+  }
+}
+
 /**
  * Modal sobre <dialog> nativo com:
  * - Top layer e Esc nativos
- * - Centralização perfeita no mobile, tablet e desktop
- * - Trava de rolagem (scroll lock) no body e touchmove cancelado no backdrop
- * - Contenção de overscroll estrita para evitar travamentos em tabelas ao fundo
+ * - Centralização simétrica no mobile, tablet e desktop
+ * - Trava de rolagem corporal absoluta (scroll lock) e isolamento estrito de touchmove
+ * - Contenção de overscroll no container de rolagem flexível
  */
 export function Dialog({ open, onClose, title, subtitle, children, footer, wide, className }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = ref.current;
@@ -32,32 +64,27 @@ export function Dialog({ open, onClose, title, subtitle, children, footer, wide,
     if (!open && el.open) el.close();
   }, [open]);
 
-  // Trava de rolagem e prevenção de toques passando para o conteúdo de fundo no mobile
+  // Trava de rolagem corporal e cancelamento de touchmove fora do conteúdo rolável do diálogo
   useEffect(() => {
     if (!open) return;
 
-    const prevOverflow = document.body.style.overflow;
-    const prevTouchAction = document.body.style.touchAction;
+    acquireScrollLock();
 
-    document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
-
-    const el = ref.current;
-    if (!el) return;
-
-    // Cancela toques no backdrop para não disparar deslizamento inercial da página de trás
     const onTouchMove = (e: TouchEvent) => {
-      if (e.target === el) {
-        e.preventDefault();
+      const contentEl = contentRef.current;
+      // Se o toque ocorreu fora do container interno rolável (no backdrop, bordas, cabeçalho ou rodapé)
+      if (!contentEl || !contentEl.contains(e.target as Node)) {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
       }
     };
 
-    el.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
 
     return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.style.touchAction = prevTouchAction;
-      el.removeEventListener('touchmove', onTouchMove);
+      releaseScrollLock();
+      document.removeEventListener('touchmove', onTouchMove);
     };
   }, [open]);
 
@@ -89,7 +116,7 @@ export function Dialog({ open, onClose, title, subtitle, children, footer, wide,
     >
       {open && (
         <div className="flex max-h-[inherit] flex-col">
-          <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4">
+          <div className="flex items-start justify-between gap-3 border-b border-line px-5 py-4 shrink-0">
             <div className="min-w-0 pr-2">
               <h2 id={titleId} className="text-base font-bold text-fg tracking-tight">{title}</h2>
               {subtitle && <p className="mt-0.5 text-xs text-muted leading-relaxed">{subtitle}</p>}
@@ -103,8 +130,13 @@ export function Dialog({ open, onClose, title, subtitle, children, footer, wide,
               <X className="size-4" />
             </button>
           </div>
-          <div className="cx-dialog-scroll overflow-y-auto px-5 py-4 overscroll-contain">{children}</div>
-          {footer && <div className="flex justify-end gap-2 border-t border-line px-5 py-3">{footer}</div>}
+          <div
+            ref={contentRef}
+            className="cx-dialog-scroll flex-1 min-h-0 overflow-y-auto px-5 py-4 overscroll-contain"
+          >
+            {children}
+          </div>
+          {footer && <div className="flex justify-end gap-2 border-t border-line px-5 py-3 shrink-0">{footer}</div>}
         </div>
       )}
     </dialog>

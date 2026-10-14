@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Menu, ShieldAlert, LogOut } from 'lucide-react';
+import { Menu, ShieldAlert, LogOut, Plus } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
 import { UserInfoCard, ThemeSwitcher } from './Switchers';
 import { useQuick } from './quick';
@@ -91,10 +91,17 @@ function Topbar() {
 function MobileMenu() {
   const openMenu = useQuick((s) => s.menu);
   const close = useQuick((s) => s.close);
+  const open = useQuick((s) => s.open);
   const logout = useAuth((s) => s.logout);
   return (
     <Dialog open={openMenu} onClose={() => close('menu')} title="Menu do Sistema" subtitle="Navegação geral do canteiro e configurações">
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
+        {/* Logotipo oficial no topo do menu móvel */}
+        <div className="flex items-center justify-between pb-1 border-b border-line">
+          <Logo size="sm" />
+          <span className="text-[10px] uppercase font-bold tracking-wider text-muted">Petrolina - PE</span>
+        </div>
+
         <div className="flex flex-col gap-2">
           <UserInfoCard full />
           <div className="flex items-center justify-between rounded-xl border border-line px-3 py-2">
@@ -102,7 +109,25 @@ function MobileMenu() {
             <ThemeSwitcher />
           </div>
         </div>
+
+        {/* Atalho rápido para lançar despesa no canteiro */}
+        <button
+          type="button"
+          onClick={() => {
+            close('menu');
+            open('despesa');
+          }}
+          className="flex items-center justify-between rounded-xl border border-brand/30 bg-brand/10 px-3.5 py-2.5 text-xs font-semibold text-brand hover:bg-brand/20 transition-all cursor-pointer"
+        >
+          <span className="flex items-center gap-2">
+            <Plus className="size-4" />
+            Lançar Despesa Rápida (Canteiro)
+          </span>
+          <span className="text-[10px] text-muted">Alt+D</span>
+        </button>
+
         <NavList onNavigate={() => close('menu')} />
+
         <div className="pt-2 border-t border-line">
           <Button
             variant="ghost"

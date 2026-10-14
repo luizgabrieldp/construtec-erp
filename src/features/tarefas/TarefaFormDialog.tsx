@@ -154,7 +154,7 @@ export function TarefaFormDialog({
           </Field>
 
           <Field label="Horário do aviso">
-            <div className="flex items-center gap-3 h-10">
+            <div className="flex flex-wrap items-center gap-2.5 min-h-10">
               <label className="flex items-center gap-2 text-xs font-medium text-fg cursor-pointer select-none">
                 <input
                   type="checkbox"
@@ -173,7 +173,7 @@ export function TarefaFormDialog({
                   required
                   value={horario}
                   onChange={(e) => setHorario(e.target.value)}
-                  className="w-32 h-10 text-xs"
+                  className="w-28 sm:w-32 h-10 text-xs"
                 />
               )}
             </div>

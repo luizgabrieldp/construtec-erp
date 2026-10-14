@@ -22,10 +22,10 @@ export interface LogoProps {
 }
 
 const SIZES = {
-  sm: { icon: 'size-7', fullH: 'h-7', title: 'text-base', sub: 'text-[9px]' },
+  sm: { icon: 'size-7', fullH: 'h-8', title: 'text-base', sub: 'text-[9px]' },
   md: { icon: 'size-9', fullH: 'h-9', title: 'text-lg', sub: 'text-[10px]' },
-  lg: { icon: 'size-12', fullH: 'h-12', title: 'text-2xl', sub: 'text-xs' },
-  xl: { icon: 'size-16', fullH: 'h-16', title: 'text-4xl', sub: 'text-base' },
+  lg: { icon: 'size-12', fullH: 'h-11', title: 'text-2xl', sub: 'text-xs' },
+  xl: { icon: 'size-16', fullH: 'h-14', title: 'text-4xl', sub: 'text-base' },
 };
 
 /** Logotipo completo com nome oficial CONSTRUTORA */
@@ -67,7 +67,7 @@ export function LogoCompleto({
   );
 }
 
-export function Logo({ compact, size = 'md', onDark, className, useImageFull }: LogoProps) {
+export function Logo({ compact, size = 'md', onDark, className, useImageFull = true }: LogoProps) {
   const s = SIZES[size];
   if (compact) {
     return (

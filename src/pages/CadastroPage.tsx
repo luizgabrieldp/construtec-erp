@@ -101,7 +101,7 @@ export function CadastroPage() {
         <div className="rounded-3xl border border-line bg-surface/90 backdrop-blur-xl p-8 shadow-2xl">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
-              <Logo size="md" />
+              <Logo size="lg" />
             </div>
             <h1 className="text-xl font-bold text-fg tracking-tight">Ativar Convite de Acesso</h1>
             <p className="text-xs text-muted mt-1">

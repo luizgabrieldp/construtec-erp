@@ -97,8 +97,24 @@ body {
   outline-offset: 2px;
 }
 
-/* ------------------------------------------------------------------ dialog nativo */
+/* ------------------------------------------------------------------ dialog nativo & isolamento */
+body.cx-dialog-open {
+  overflow: hidden !important;
+  touch-action: none !important;
+}
+
+body.cx-dialog-open #root {
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+}
+
+body.cx-dialog-open #root * {
+  overscroll-behavior: contain !important;
+}
+
 dialog.cx-dialog {
+  pointer-events: auto !important;
   position: fixed;
   inset: 0;
   margin: auto;
@@ -107,7 +123,7 @@ dialog.cx-dialog {
   border-radius: 1.25rem;
   background: var(--surface);
   color: var(--text);
-  width: calc(100vw - 1.5rem);
+  width: calc(100vw - 2rem);
   max-width: 32rem;
   max-height: calc(100dvh - 2.5rem);
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
@@ -121,7 +137,7 @@ dialog.cx-dialog.cx-dialog-wide {
 
 @media (min-width: 640px) {
   dialog.cx-dialog {
-    width: min(32rem, calc(100vw - 2.5rem));
+    width: min(32rem, calc(100vw - 3rem));
     max-height: calc(100dvh - 3.5rem);
   }
   dialog.cx-dialog.cx-dialog-wide {
@@ -139,6 +155,7 @@ dialog.cx-dialog::backdrop {
 
 .cx-dialog-scroll {
   overscroll-behavior: contain;
+  touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
 }
 

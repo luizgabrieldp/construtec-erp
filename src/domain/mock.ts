@@ -113,13 +113,13 @@ export function gerarDadosDemo(hoje: ISODate = today()): ErpData {
 
   // ------------------------------------------------------------ fornecedores
   const fornecedores: Fornecedor[] = [
-    { id: 'f_areal', nome: 'Areal São Jorge', categoria: 'areia_brita', cnpj: '12.345.678/0001-90', contato: 'Jorge Mendes', telefone: '(84) 99812-3344', cidade: 'Natal/RN' },
-    { id: 'f_cimenteira', nome: 'Cimenteira Nordeste Distribuidora', categoria: 'cimento', cnpj: '23.456.789/0001-01', contato: 'Patrícia Lopes', telefone: '(84) 3211-4500', cidade: 'Parnamirim/RN' },
-    { id: 'f_acoforte', nome: 'Ferragens Aço Forte', categoria: 'ferragens', cnpj: '34.567.890/0001-12', contato: 'Cláudio Rocha', telefone: '(84) 99977-1020', cidade: 'Natal/RN' },
-    { id: 'f_ceramica', nome: 'Cerâmica Santa Luzia', categoria: 'ceramica_tijolos', cnpj: '45.678.901/0001-23', contato: 'Fátima Araújo', telefone: '(84) 3422-8890', cidade: 'São Gonçalo do Amarante/RN' },
-    { id: 'f_pontocerto', nome: 'Ponto Certo Elétrica e Hidráulica', categoria: 'eletrica_hidraulica', cnpj: '56.789.012/0001-34', contato: 'Rafael Dantas', telefone: '(84) 99654-7788', cidade: 'Natal/RN' },
-    { id: 'f_locamaq', nome: 'LocaMáquinas Pesadas Ltda.', categoria: 'locacao', cnpj: '67.890.123/0001-45', contato: 'Sérgio Queiroz', telefone: '(84) 3300-9090', cidade: 'Macaíba/RN' },
-    { id: 'f_andaimes', nome: 'Andaimes & Cia Locações', categoria: 'locacao', cnpj: '78.901.234/0001-56', contato: 'Bruna Freitas', telefone: '(84) 99123-4567', cidade: 'Natal/RN' },
+    { id: 'f_areal', nome: 'Areal São Jorge', categoria: 'areia_brita', cnpj: '12.345.678/0001-90', contato: 'Jorge Mendes', telefone: '(87) 99812-3344', cidade: 'Petrolina/PE' },
+    { id: 'f_cimenteira', nome: 'Cimenteira Nordeste Distribuidora', categoria: 'cimento', cnpj: '23.456.789/0001-01', contato: 'Patrícia Lopes', telefone: '(87) 3861-4500', cidade: 'Petrolina/PE' },
+    { id: 'f_acoforte', nome: 'Ferragens Aço Forte', categoria: 'ferragens', cnpj: '34.567.890/0001-12', contato: 'Cláudio Rocha', telefone: '(87) 99977-1020', cidade: 'Petrolina/PE' },
+    { id: 'f_ceramica', nome: 'Cerâmica Santa Luzia', categoria: 'ceramica_tijolos', cnpj: '45.678.901/0001-23', contato: 'Fátima Araújo', telefone: '(87) 3862-8890', cidade: 'Petrolina/PE' },
+    { id: 'f_pontocerto', nome: 'Ponto Certo Elétrica e Hidráulica', categoria: 'eletrica_hidraulica', cnpj: '56.789.012/0001-34', contato: 'Rafael Dantas', telefone: '(87) 99654-7788', cidade: 'Petrolina/PE' },
+    { id: 'f_locamaq', nome: 'LocaMáquinas Pesadas Ltda.', categoria: 'locacao', cnpj: '67.890.123/0001-45', contato: 'Sérgio Queiroz', telefone: '(87) 3863-9090', cidade: 'Petrolina/PE' },
+    { id: 'f_andaimes', nome: 'Andaimes & Cia Locações', categoria: 'locacao', cnpj: '78.901.234/0001-56', contato: 'Bruna Freitas', telefone: '(87) 99123-4567', cidade: 'Petrolina/PE' },
   ];
 
   // ------------------------------------------------------------ materiais

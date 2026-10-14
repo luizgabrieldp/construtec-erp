@@ -59,7 +59,7 @@ export function LoginPage() {
           {/* Logo e Cabeçalho */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
-              <Logo size="md" />
+              <Logo size="lg" />
             </div>
             <h1 className="text-xl font-bold text-fg tracking-tight">Acesso ao Sistema</h1>
             <p className="text-xs text-muted mt-1">

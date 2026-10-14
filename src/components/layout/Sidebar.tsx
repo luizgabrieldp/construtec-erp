@@ -80,7 +80,7 @@ export function Sidebar() {
       )}
     >
       <div className={cn('flex h-16 items-center border-b border-line', collapsed ? 'justify-center' : 'px-5')}>
-        <Logo compact={collapsed} size="sm" />
+        <Logo compact={collapsed} size={collapsed ? 'sm' : 'md'} />
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-5">
         <NavList collapsed={collapsed} />

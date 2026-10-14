@@ -307,7 +307,7 @@ export function ReciboEmpreiteiroDialog({
                 <div className="text-[10px] text-muted">Assinatura do Empreiteiro (Recebedor do Repasse)</div>
               </div>
               <div>
-                <div className="border-t border-line pt-1 font-semibold">CONSTRUTEC ENGENHARIA</div>
+                <div className="border-t border-line pt-1 font-semibold">CONSTRUTEC</div>
                 <div className="text-[10px] text-muted">Responsável Financeiro / Construtora</div>
               </div>
             </div>
@@ -439,7 +439,7 @@ export function ReciboEmpreiteiroDialog({
                 </div>
                 <div>
                   <div className="border-t border-black pt-1 w-52 mx-auto font-bold">
-                    CONSTRUTEC ENGENHARIA
+                    CONSTRUTEC
                   </div>
                   <div className="text-[9px] text-gray-600">Construtora / Responsável Financeiro</div>
                 </div>

@@ -200,7 +200,7 @@ export function RecibosFolhaDialog({
                     <div className="text-[10px] text-muted">Assinatura do Colaborador</div>
                   </div>
                   <div>
-                    <div className="border-t border-line pt-1 font-semibold">CONSTRUTEC ENGENHARIA</div>
+                    <div className="border-t border-line pt-1 font-semibold">CONSTRUTEC</div>
                     <div className="text-[10px] text-muted">Encarregado / Responsável Financeiro</div>
                   </div>
                 </div>
@@ -324,7 +324,7 @@ export function RecibosFolhaDialog({
                     <div className="text-[9px] text-gray-600">Assinatura do Colaborador</div>
                   </div>
                   <div>
-                    <div className="border-t border-black pt-1 w-52 mx-auto font-bold">CONSTRUTEC ENGENHARIA</div>
+                    <div className="border-t border-black pt-1 w-52 mx-auto font-bold">CONSTRUTEC</div>
                     <div className="text-[9px] text-gray-600">Encarregado / Responsável Financeiro</div>
                   </div>
                 </div>
