@@ -11,11 +11,14 @@ import {
   Globe,
   LogOut,
   CheckCircle2,
+  ShieldCheck,
+  HardHat,
 } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Field, Input, Select, PageHeader } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { ThemeSwitcher } from '@/components/layout/Switchers';
 import { useAuth } from '@/data/auth';
+import { useIsAdmin } from '@/hooks';
 import { fmtDate } from '@/lib/format';
 import {
   getNotificationPermission,
@@ -30,7 +33,7 @@ type TabConfig = 'perfil' | 'usuarios' | 'notificacoes';
 export function ConfiguracoesPage() {
   const navigate = useNavigate();
   const { usuarioAtual, usuarios, convites, atualizarPerfil, criarConvite, alternarStatusUsuario, logout } = useAuth();
-  const isAdmin = usuarioAtual?.perfil === 'admin';
+  const isAdmin = useIsAdmin();
 
   const [abaAtiva, setAbaAtiva] = useState<TabConfig>('perfil');
 
@@ -183,6 +186,18 @@ export function ConfiguracoesPage() {
             />
 
             <form onSubmit={handleSalvarPerfil} className="p-5 space-y-4">
+              <div className="rounded-xl border border-line bg-surface-2 p-3.5 text-xs text-muted space-y-1">
+                <div className="font-semibold text-fg flex items-center gap-1.5">
+                  {isAdmin ? <ShieldCheck className="size-4 text-brand" /> : <HardHat className="size-4 text-amber-500" />}
+                  <span>Nível de Acesso: {isAdmin ? 'Administrador' : 'Encarregado da Obra'}</span>
+                </div>
+                <p className="leading-relaxed">
+                  {isAdmin
+                    ? 'Você possui permissões administrativas completas, podendo gerenciar usuários, emitir convites e acompanhar a folha de pagamento.'
+                    : 'Sua conta possui acesso operacional ao canteiro de obras (apontamento de presenças, tarefas e obras). A gestão de usuários e acesso financeiro são restritos ao Administrador.'}
+                </p>
+              </div>
+
               <Field label="Nome Completo">
                 <Input
                   required

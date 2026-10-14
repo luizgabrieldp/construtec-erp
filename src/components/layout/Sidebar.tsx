@@ -2,9 +2,10 @@ import { NavLink } from 'react-router-dom';
 import { ChevronsLeft, ChevronsRight, LogOut } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { NAV_GROUPS, navDoPerfil, type NavItem } from '@/app/nav';
-import { ProfileSwitcher } from './Switchers';
+import { UserInfoCard } from './Switchers';
 import { useUi } from '@/data/ui';
 import { useAuth } from '@/data/auth';
+import { usePerfil } from '@/hooks';
 import { cn } from '@/lib/utils';
 
 export const atalhoLabel = (k: string) => `Alt+${k}`;
@@ -49,7 +50,7 @@ function NavGroup({ items, collapsed, onNavigate }: { items: NavItem[]; collapse
 }
 
 export function NavList({ collapsed = false, onNavigate }: { collapsed?: boolean; onNavigate?: () => void }) {
-  const perfil = useUi((s) => s.perfil);
+  const perfil = usePerfil();
   const itens = navDoPerfil(perfil);
   return (
     <nav aria-label="Principal" className="flex flex-col gap-5">
@@ -85,7 +86,7 @@ export function Sidebar() {
         <NavList collapsed={collapsed} />
       </div>
       <div className="flex flex-col gap-2 border-t border-line p-3">
-        <ProfileSwitcher compact={collapsed} full={!collapsed} />
+        <UserInfoCard compact={collapsed} full={!collapsed} />
         <button
           type="button"
           onClick={logout}

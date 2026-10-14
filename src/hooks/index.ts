@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useUi } from '@/data/ui';
 import { useData } from '@/data/store';
+import { useAuth } from '@/data/auth';
 import { calcularResumo } from '@/domain/selectors';
 import { today } from '@/lib/dates';
 
@@ -51,11 +52,14 @@ export function useResumo() {
 }
 
 export function usePerfil() {
-  return useUi((s) => s.perfil);
+  const usuario = useAuth((s) => s.usuarioAtual);
+  const perfilUi = useUi((s) => s.perfil);
+  return usuario?.perfil ?? perfilUi;
 }
 
 export function useIsAdmin() {
-  return useUi((s) => s.perfil === 'admin');
+  const perfil = usePerfil();
+  return perfil === 'admin';
 }
 
 /** Verifica se o foco está num campo editável (para não capturar atalhos). */

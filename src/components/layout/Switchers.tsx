@@ -1,5 +1,6 @@
 import { Monitor, Moon, Sun, HardHat, ShieldCheck } from 'lucide-react';
 import { useUi } from '@/data/ui';
+import { useAuth } from '@/data/auth';
 import type { Perfil, ThemePref } from '@/domain/types';
 import { cn } from '@/lib/utils';
 
@@ -35,49 +36,69 @@ export function ThemeSwitcher({ className }: { className?: string }) {
   );
 }
 
-const PERFIS: { value: Perfil; label: string; icon: typeof HardHat }[] = [
-  { value: 'admin', label: 'Administrador', icon: ShieldCheck },
-  { value: 'encarregado', label: 'Encarregado de Obra', icon: HardHat },
-];
-
-export function ProfileSwitcher({ full, compact }: { full?: boolean; compact?: boolean }) {
-  const perfil = useUi((s) => s.perfil);
-  const setPerfil = useUi((s) => s.setPerfil);
-  const atual = PERFIS.find((p) => p.value === perfil)!;
-  const Icon = atual.icon;
+/**
+ * Exibe o cartão informativo fixo da conta conectada.
+ * Substitui o antigo switcher, impedindo que o encarregado altere seu próprio papel.
+ */
+export function UserInfoCard({ full, compact }: { full?: boolean; compact?: boolean }) {
+  const usuario = useAuth((s) => s.usuarioAtual);
+  const perfil = usuario?.perfil || 'encarregado';
+  const isAdmin = perfil === 'admin';
+  const Icon = isAdmin ? ShieldCheck : HardHat;
+  const label = isAdmin ? 'Administrador' : 'Encarregado da Obra';
+  const nome = usuario?.nome || (isAdmin ? 'Administrador' : 'Encarregado');
 
   if (compact) {
-    const proximo: Perfil = perfil === 'admin' ? 'encarregado' : 'admin';
-    const proximoLabel = PERFIS.find((p) => p.value === proximo)!.label;
     return (
-      <button
-        type="button"
-        onClick={() => setPerfil(proximo)}
-        title={`Perfil: ${atual.label} (Clique para alternar para ${proximoLabel})`}
-        className="grid size-10 place-items-center rounded-xl border border-line bg-surface-2 hover:bg-surface text-fg transition-colors mx-auto cursor-pointer"
+      <div
+        title={`Conectado: ${nome} (${label})`}
+        className={cn(
+          'grid size-10 place-items-center rounded-xl border border-line bg-surface-2 mx-auto',
+          isAdmin ? 'text-brand' : 'text-amber-500'
+        )}
       >
-        <Icon className={cn('size-5', perfil === 'admin' ? 'text-brand' : 'text-amber-500')} />
-        <span className="sr-only">Perfil: {atual.label}</span>
-      </button>
+        <Icon className="size-5" />
+        <span className="sr-only">{label}</span>
+      </div>
     );
   }
 
   return (
-    <label className={cn('relative flex items-center gap-2 rounded-xl border border-line bg-surface-2 pl-2.5 pr-1 h-9', full && 'w-full')}>
-      <Icon className={cn('size-4 shrink-0', perfil === 'admin' ? 'text-brand' : 'text-amber-500')} />
-      <span className="sr-only">Perfil</span>
-      <select
-        value={perfil}
-        onChange={(e) => setPerfil(e.target.value as Perfil)}
-        className="h-full flex-1 cursor-pointer appearance-none bg-transparent pr-5 text-xs font-semibold text-fg outline-none"
+    <div
+      className={cn(
+        'flex items-center gap-2.5 rounded-xl border border-line bg-surface-2 p-2.5 select-none',
+        full && 'w-full'
+      )}
+    >
+      <div
+        className={cn(
+          'grid size-8 shrink-0 place-items-center rounded-lg border',
+          isAdmin
+            ? 'border-brand/30 bg-brand/10 text-brand'
+            : 'border-amber-500/30 bg-amber-500/10 text-amber-500'
+        )}
       >
-        {PERFIS.map((p) => (
-          <option key={p.value} value={p.value}>
-            {p.label}
-          </option>
-        ))}
-      </select>
-      <span className="pointer-events-none absolute right-2 text-[10px] text-muted">▾</span>
-    </label>
+        <Icon className="size-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-xs font-bold text-fg leading-tight">
+          {nome}
+        </div>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span
+            className={cn(
+              'inline-block size-1.5 rounded-full',
+              isAdmin ? 'bg-brand' : 'bg-amber-500'
+            )}
+          />
+          <span className="truncate text-[10px] font-medium text-muted">
+            {label}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
+
+// Mantido como alias para compatibilidade com outros arquivos
+export const ProfileSwitcher = UserInfoCard;

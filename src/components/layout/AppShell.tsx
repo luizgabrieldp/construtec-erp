@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Building2, ClipboardCheck, LayoutDashboard, Menu, Plus, ShieldAlert, CheckSquare, Users, Settings, LogOut } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
-import { ProfileSwitcher, ThemeSwitcher } from './Switchers';
+import { UserInfoCard, ThemeSwitcher } from './Switchers';
 import { useQuick } from './quick';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui';
@@ -120,7 +120,7 @@ function MobileMenu() {
     <Dialog open={openMenu} onClose={() => close('menu')} title="Menu">
       <div className="flex flex-col gap-5">
         <div className="flex flex-col gap-2">
-          <ProfileSwitcher full />
+          <UserInfoCard full />
           <div className="flex items-center justify-between rounded-xl border border-line px-3 py-2">
             <span className="text-xs font-semibold text-muted">Tema</span>
             <ThemeSwitcher />
@@ -150,16 +150,24 @@ function AcessoRestrito() {
     <div className="mx-auto mt-16 max-w-md text-center">
       <ShieldAlert className="mx-auto size-12 text-amber-500" />
       <h1 className="mt-4 text-xl font-bold">Acesso restrito</h1>
-      <p className="mt-2 text-sm text-muted">Esta área é exclusiva do perfil Administrador. Troque o perfil na parte inferior do menu lateral para acessar.</p>
+      <p className="mt-2 text-sm text-muted">
+        Esta área é restrita para o perfil Administrador. O seu perfil atual é Encarregado da Obra.
+      </p>
     </div>
   );
 }
 
 export function AppShell() {
   useAtalhos();
-  const perfil = useUi((s) => s.perfil);
   const { pathname } = useLocation();
   const usuarioAtual = useAuth((s) => s.usuarioAtual);
+  const perfilEfetivo = usuarioAtual?.perfil || 'encarregado';
+
+  useEffect(() => {
+    if (usuarioAtual && useUi.getState().perfil !== usuarioAtual.perfil) {
+      useUi.getState().setPerfil(usuarioAtual.perfil);
+    }
+  }, [usuarioAtual]);
 
   useEffect(() => {
     const cancelar = iniciarVerificadorTarefas(60000);
@@ -176,7 +184,7 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-28 pt-6 md:px-6 md:pb-10 lg:px-8">
-          {podeAcessar(pathname, perfil) ? <Outlet /> : <AcessoRestrito />}
+          {podeAcessar(pathname, perfilEfetivo) ? <Outlet /> : <AcessoRestrito />}
         </main>
       </div>
       <BottomBar />
