@@ -180,47 +180,9 @@ dialog.cx-dialog::backdrop {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 8mm 10mm;
   }
 
-  /* Quando imprimindo recibos, oculta COMPLETAMENTE o app para eliminar páginas em branco */
-  body.imprimindo-recibos > *:not(#construtec-print-area),
-  body:has(#construtec-print-area) > *:not(#construtec-print-area) {
-    display: none !important;
-  }
-
-  #construtec-print-area {
-    display: block !important;
-    position: static !important;
-    width: 100% !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    background: white !important;
-    color: black !important;
-  }
-
-  .receipt-page {
-    box-sizing: border-box !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    margin: 0 0 0 0 !important;
-    padding: 8mm !important;
-    background: white !important;
-    color: black !important;
-    border: 1.5px solid #000 !important;
-    border-radius: 6px !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-    page-break-after: always !important;
-    break-after: page !important;
-  }
-
-  .receipt-page:last-child {
-    page-break-after: auto !important;
-    break-after: auto !important;
-  }
-
-  /* Se não estiver no modo de recibos especiais, oculta elementos de navegação */
   .no-print, header, aside, nav, dialog.cx-dialog {
     display: none !important;
   }
