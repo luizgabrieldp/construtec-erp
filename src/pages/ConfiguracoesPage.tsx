@@ -686,7 +686,8 @@ firebase deploy --only hosting`}
             </div>
           </Card>
         </div>
-      )}
+      </div>
+    )}
 
       {/* ABA 5: CAIXA & MANUTENÇÃO */}
       {abaAtiva === 'sistema' && (
