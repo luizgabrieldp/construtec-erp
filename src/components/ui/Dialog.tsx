@@ -18,7 +18,7 @@ const suportaClosedBy = typeof HTMLDialogElement !== 'undefined' && 'closedBy' i
 let openDialogCount = 0;
 let savedScrollY = 0;
 
-function acquireScrollLock() {
+export function acquireScrollLock() {
   openDialogCount++;
   if (openDialogCount === 1) {
     savedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
@@ -32,7 +32,7 @@ function acquireScrollLock() {
   }
 }
 
-function releaseScrollLock() {
+export function releaseScrollLock() {
   openDialogCount = Math.max(0, openDialogCount - 1);
   if (openDialogCount === 0) {
     document.body.classList.remove('cx-dialog-open');

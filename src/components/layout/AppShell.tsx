@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Menu, ShieldAlert, LogOut, Plus } from 'lucide-react';
+import { Menu, ShieldAlert, LogOut, Plus, X } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
 import { UserInfoCard, ThemeSwitcher } from './Switchers';
 import { useQuick } from './quick';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui';
-import { Dialog } from '@/components/ui/Dialog';
+import { acquireScrollLock, releaseScrollLock } from '@/components/ui/Dialog';
 import { Toaster } from '@/components/ui/Toast';
 import { DespesaRapidaDialog } from '@/features/despesas/DespesaRapidaDialog';
 import { NAV, navDoPerfil, podeAcessar } from '@/app/nav';
@@ -15,6 +15,7 @@ import { useAuth } from '@/data/auth';
 import { iniciarVerificadorTarefas } from '@/lib/notifications';
 import { isTyping, useHoje } from '@/hooks';
 import { fmtDateLong } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 const codeDaTecla = (k: string) => (k === ',' ? 'Comma' : k === 's' ? 'KeyS' : `Digit${k}`);
 
@@ -54,88 +55,156 @@ function Topbar() {
   const atual = [...NAV].sort((a, b) => b.to.length - a.to.length).find((n) => (n.to === '/' ? pathname === '/' : pathname.startsWith(n.to)));
 
   return (
-    <header className="no-print sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface/85 px-4 backdrop-blur-md md:px-6">
-      {/* Botão Hambúrguer para telas mobile e tablet */}
-      <button
-        type="button"
-        onClick={() => open('menu')}
-        className="lg:hidden size-10 inline-flex items-center justify-center rounded-xl border border-line bg-surface-2/60 text-fg hover:bg-surface-2 active:scale-95 transition-all cursor-pointer"
-        aria-label="Abrir menu de navegação"
-      >
-        <Menu className="size-5" />
-      </button>
+    <header
+      className="no-print sticky top-0 z-30 border-b border-line bg-surface/85 backdrop-blur-md px-4 md:px-6"
+      style={{
+        paddingTop: 'env(safe-area-inset-top, 0px)',
+      }}
+    >
+      <div className="flex h-16 items-center gap-3">
+        {/* Botão Hambúrguer para telas mobile e tablet */}
+        <button
+          type="button"
+          onClick={() => open('menu')}
+          className="lg:hidden size-10 inline-flex items-center justify-center rounded-xl border border-line bg-surface-2/60 text-fg hover:bg-surface-2 active:scale-95 transition-all cursor-pointer shrink-0"
+          aria-label="Abrir menu de navegação"
+        >
+          <Menu className="size-5" />
+        </button>
 
-      {/* Ícone oficial CONSTRUTEC isolado (sem texto escrito) no topo */}
-      <div className="flex items-center">
-        <img
-          src="/logo-emblema-trim.png"
-          alt="CONSTRUTEC"
-          className="size-8 object-contain shrink-0 select-none"
-        />
-      </div>
+        {/* Ícone oficial CONSTRUTEC isolado (sem texto escrito) no topo */}
+        <div className="flex items-center">
+          <img
+            src="/logo-emblema-trim.png"
+            alt="CONSTRUTEC"
+            className="size-8 object-contain shrink-0 select-none"
+          />
+        </div>
 
-      {/* Título e data da página no desktop */}
-      <div className="hidden min-w-0 flex-1 lg:block">
-        <div className="truncate text-sm font-semibold text-fg">{atual?.label ?? 'CONSTRUTEC'}</div>
-        <div className="text-xs capitalize text-muted">{fmtDateLong(hoje)}</div>
-      </div>
+        {/* Título e data da página no desktop */}
+        <div className="hidden min-w-0 flex-1 lg:block">
+          <div className="truncate text-sm font-semibold text-fg">{atual?.label ?? 'CONSTRUTEC'}</div>
+          <div className="text-xs capitalize text-muted">{fmtDateLong(hoje)}</div>
+        </div>
 
-      {/* Título sucinto no tablet/mobile */}
-      <div className="min-w-0 flex-1 truncate text-xs font-semibold text-fg lg:hidden">
-        {atual?.label}
-      </div>
+        {/* Título sucinto no tablet/mobile */}
+        <div className="min-w-0 flex-1 truncate text-xs font-semibold text-fg lg:hidden">
+          {atual?.label}
+        </div>
 
-      <div className="ml-auto flex items-center gap-2">
-        <ThemeSwitcher className="inline-flex" />
+        <div className="ml-auto flex items-center gap-2">
+          <ThemeSwitcher className="inline-flex" />
+        </div>
       </div>
     </header>
   );
 }
 
-function MobileMenu() {
+function MobileDrawer() {
   const openMenu = useQuick((s) => s.menu);
   const close = useQuick((s) => s.close);
   const open = useQuick((s) => s.open);
   const logout = useAuth((s) => s.logout);
+
+  // Trava de rolagem corporal do iOS/navegadores e atalho de teclado Esc
+  useEffect(() => {
+    if (!openMenu) return;
+
+    acquireScrollLock();
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close('menu');
+    };
+    window.addEventListener('keydown', onKey);
+
+    return () => {
+      releaseScrollLock();
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [openMenu, close]);
+
   return (
-    <Dialog open={openMenu} onClose={() => close('menu')} title="Menu do Sistema" subtitle="Navegação geral do canteiro e configurações">
-      <div className="flex flex-col gap-4">
-        {/* Logotipo oficial no topo do menu móvel */}
-        <div className="flex items-center justify-between pb-1 border-b border-line">
-          <Logo size="sm" />
-          <span className="text-[10px] uppercase font-bold tracking-wider text-muted">Petrolina - PE</span>
-        </div>
+    <div
+      className={cn(
+        'fixed inset-0 z-50 lg:hidden transition-all duration-300',
+        openMenu ? 'visible' : 'invisible pointer-events-none'
+      )}
+      aria-hidden={!openMenu}
+    >
+      {/* Backdrop escurecido suave e com blur */}
+      <div
+        className={cn(
+          'fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300 ease-out',
+          openMenu ? 'opacity-100' : 'opacity-0'
+        )}
+        onClick={() => close('menu')}
+        aria-hidden="true"
+      />
 
-        <div className="flex flex-col gap-2">
-          <UserInfoCard full />
-          <div className="flex items-center justify-between rounded-xl border border-line px-3 py-2">
-            <span className="text-xs font-semibold text-muted">Tema da Interface</span>
-            <ThemeSwitcher />
+      {/* Gaveta deslizante lateral da esquerda com safe area adaptativa */}
+      <aside
+        className={cn(
+          'fixed inset-y-0 left-0 flex h-dvh w-[min(340px,85vw)] flex-col border-r border-line bg-surface shadow-2xl transition-transform duration-300 ease-out',
+          openMenu ? 'translate-x-0' : '-translate-x-full'
+        )}
+        style={{
+          paddingTop: 'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Menu de Navegação do Sistema"
+      >
+        {/* Topo da Gaveta com safe area respeitada e botão de fechar confortável */}
+        <div className="flex h-16 items-center justify-between border-b border-line px-4 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <Logo size="sm" />
+            <span className="text-[10px] uppercase font-bold tracking-wider text-muted">Petrolina - PE</span>
           </div>
+          <button
+            type="button"
+            onClick={() => close('menu')}
+            className="size-10 inline-flex items-center justify-center rounded-xl border border-line bg-surface-2/60 text-muted hover:bg-surface-2 hover:text-fg active:scale-95 transition-all cursor-pointer"
+            aria-label="Fechar menu"
+          >
+            <X className="size-5" />
+          </button>
         </div>
 
-        {/* Atalho rápido para lançar despesa no canteiro */}
-        <button
-          type="button"
-          onClick={() => {
-            close('menu');
-            open('despesa');
-          }}
-          className="flex items-center justify-between rounded-xl border border-brand/30 bg-brand/10 px-3.5 py-2.5 text-xs font-semibold text-brand hover:bg-brand/20 transition-all cursor-pointer"
-        >
-          <span className="flex items-center gap-2">
-            <Plus className="size-4" />
-            Lançar Despesa Rápida (Canteiro)
-          </span>
-          <span className="text-[10px] text-muted">Alt+D</span>
-        </button>
+        {/* Conteúdo rolável da gaveta com overscroll contido */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 overscroll-contain">
+          <div className="flex flex-col gap-2">
+            <UserInfoCard full />
+            <div className="flex items-center justify-between rounded-xl border border-line px-3 py-2 bg-surface-2/30">
+              <span className="text-xs font-semibold text-muted">Tema da Interface</span>
+              <ThemeSwitcher />
+            </div>
+          </div>
 
-        <NavList onNavigate={() => close('menu')} />
+          {/* Atalho rápido para lançar despesa no canteiro */}
+          <button
+            type="button"
+            onClick={() => {
+              close('menu');
+              open('despesa');
+            }}
+            className="flex items-center justify-between rounded-xl border border-brand/30 bg-brand/10 px-4 py-3 text-xs font-semibold text-brand hover:bg-brand/20 active:scale-[0.99] transition-all cursor-pointer shadow-xs"
+          >
+            <span className="flex items-center gap-2.5">
+              <Plus className="size-4" />
+              Lançar Despesa Rápida (Canteiro)
+            </span>
+            <span className="text-[10px] text-muted font-mono bg-surface/60 px-1.5 py-0.5 rounded border border-brand/20">Alt+D</span>
+          </button>
 
-        <div className="pt-2 border-t border-line">
+          <NavList onNavigate={() => close('menu')} />
+        </div>
+
+        {/* Rodapé da gaveta respeitando safe area inferior do iPhone */}
+        <div className="border-t border-line p-4 shrink-0 bg-surface">
           <Button
             variant="ghost"
-            className="w-full text-red-500 hover:bg-red-500/10 justify-start text-xs font-semibold"
+            className="w-full text-red-500 hover:bg-red-500/10 justify-start text-xs font-semibold py-3"
             icon={<LogOut className="size-4" />}
             onClick={() => {
               close('menu');
@@ -145,8 +214,8 @@ function MobileMenu() {
             Sair da Conta (Logout)
           </Button>
         </div>
-      </div>
-    </Dialog>
+      </aside>
+    </div>
   );
 }
 
@@ -188,11 +257,16 @@ export function AppShell() {
       <Sidebar />
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
-        <main className="mx-auto w-full max-w-[1600px] flex-1 px-4 pb-10 pt-6 md:px-6 lg:px-8">
+        <main
+          className="mx-auto w-full max-w-[1600px] flex-1 px-4 pt-6 md:px-6 lg:px-8"
+          style={{
+            paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
           {podeAcessar(pathname, perfilEfetivo) ? <Outlet /> : <AcessoRestrito />}
         </main>
       </div>
-      <MobileMenu />
+      <MobileDrawer />
       <DespesaRapidaDialog />
       <Toaster />
     </div>

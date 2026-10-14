@@ -22,7 +22,7 @@ export const requestNotificationPermission = async (): Promise<NotificationPermi
 const getNotificationAssets = () => {
   const origin = typeof window !== 'undefined' && window.location?.origin ? window.location.origin : '';
   return {
-    icon: origin ? `${origin}/icon-192-transparent.png` : '/icon-192-transparent.png',
+    icon: origin ? `${origin}/icon-192.png` : '/icon-192.png',
     badge: origin ? `${origin}/favicon-32x32.png` : '/favicon-32x32.png',
   };
 };
@@ -32,31 +32,34 @@ export const sendNotification = async (title: string, options?: NotificationOpti
   if (Notification.permission !== 'granted') return;
 
   const { icon, badge } = getNotificationAssets();
+  const notificationOptions: NotificationOptions = {
+    icon,
+    badge,
+    ...options,
+  };
 
   try {
     if ('serviceWorker' in navigator) {
-      const reg = await navigator.serviceWorker.ready;
+      let reg: ServiceWorkerRegistration | undefined = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise<undefined>((resolve) => setTimeout(() => resolve(undefined), 800)),
+        ]);
+      }
       if (reg && reg.showNotification) {
-        await reg.showNotification(title, {
-          icon,
-          badge,
-          ...options,
-        });
+        await reg.showNotification(title, notificationOptions);
         return;
       }
     }
-  } catch {
-    // fallback para API padrão
+  } catch (err) {
+    console.warn('Falha ao disparar notificação via Service Worker:', err);
   }
 
   try {
-    new Notification(title, {
-      icon,
-      badge,
-      ...options,
-    });
+    new Notification(title, notificationOptions);
   } catch (e) {
-    console.warn('Erro ao disparar notificação:', e);
+    console.warn('Erro ao disparar notificação via Notification API:', e);
   }
 };
 

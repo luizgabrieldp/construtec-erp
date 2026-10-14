@@ -125,7 +125,7 @@ dialog.cx-dialog {
   color: var(--text);
   width: calc(100vw - 2rem);
   max-width: 32rem;
-  max-height: calc(100dvh - 2.5rem);
+  max-height: calc(100dvh - 2.5rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   box-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.5);
   overscroll-behavior: contain;
   touch-action: pan-y;
