@@ -240,7 +240,7 @@ export function gerarContasRecorrentes(
         origem: 'recorrencia',
         origemId: r.id,
         distribuicao: [{ centroId: SEDE, valor: r.valor }],
-        criadoEm: new Date().toISOString(),
+        criadoEm: `${venc}T00:00:00.000Z`,
       });
       ultima = monthKey(cursor);
       cursor = addMonths(cursor, 1);

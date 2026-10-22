@@ -74,10 +74,30 @@ export function contarRegistrosErp(data: ErpData | null | undefined): number {
   if (Array.isArray(data.funcoesCustomizadas)) {
     total += data.funcoesCustomizadas.length;
   }
-  if (data.config && typeof data.config.saldoInicial === 'number' && data.config.saldoInicial !== 0) {
+  if (
+    data.config &&
+    ((typeof data.config.saldoInicial === 'number' && data.config.saldoInicial !== 0) ||
+      (typeof data.config.empresa === 'string' &&
+        data.config.empresa.trim() !== '' &&
+        data.config.empresa !== 'CONSTRUTEC'))
+  ) {
     total += 1;
   }
   return total;
+}
+
+/**
+ * Verifica se o objeto `ErpData` possui estado intencional sincronizável
+ * (registros ativos, exclusões intencionais em `deletedIds`, edições em `updatedAt` ou `systemResetAt`).
+ * Retorna `false` apenas para um documento `dadosVazios()` recém-inicializado/em branco.
+ */
+export function possuiEstadoSincronizavelErp(data: ErpData | null | undefined): boolean {
+  if (!data || typeof data !== 'object') return false;
+  if (contarRegistrosErp(data) > 0) return true;
+  if (typeof data._meta?.systemResetAt === 'number' && data._meta.systemResetAt > 0) return true;
+  if (data._meta?.deletedIds && Object.keys(data._meta.deletedIds).length > 0) return true;
+  if (data._meta?.updatedAt && Object.keys(data._meta.updatedAt).length > 0) return true;
+  return false;
 }
 
 /**
@@ -156,6 +176,13 @@ export function normalizarDadosErp(raw: unknown): ErpData | null {
   for (const k of Object.keys(out.apontamentos)) {
     const metaKey = `apontamentos:${k}`;
     if (!updatedAt[metaKey]) updatedAt[metaKey] = 1;
+  }
+
+  for (const fn of out.funcoesCustomizadas || []) {
+    if (typeof fn === 'string' && fn.trim()) {
+      const metaKey = `funcoesCustomizadas:${fn}`;
+      if (!updatedAt[metaKey]) updatedAt[metaKey] = 1;
+    }
   }
 
   if (
@@ -250,6 +277,25 @@ export function registrarMutacaoErp(
     }
   }
 
+  // Funções customizadas
+  const prevFnSet = new Set(prevNorm.funcoesCustomizadas || []);
+  const nextFnSet = new Set(next.funcoesCustomizadas || []);
+  for (const fn of nextFnSet) {
+    const metaKey = `funcoesCustomizadas:${fn}`;
+    if (!prevFnSet.has(fn)) {
+      updatedAt[metaKey] = now;
+      delete deletedIds[metaKey];
+    } else if (!updatedAt[metaKey]) {
+      updatedAt[metaKey] = 1;
+    }
+  }
+  for (const fn of prevFnSet) {
+    if (!nextFnSet.has(fn)) {
+      const metaKey = `funcoesCustomizadas:${fn}`;
+      deletedIds[metaKey] = now;
+    }
+  }
+
   // Config
   if (!igualCanonico(prevNorm.config, next.config)) {
     updatedAt['config'] = now;
@@ -267,15 +313,17 @@ export function registrarMutacaoErp(
 }
 
 /**
- * Desempate inteligente quando o mesmo registro existe em ambos os lados com o mesmo timestamp
- * (por exemplo, dados legados antes da introdução de `_meta`).
+ * Desempate determinístico e estritamente comutativo quando o mesmo registro existe
+ * em ambos os lados com o mesmo timestamp (ex.: dados legados antes da introdução de `_meta`).
  */
 function desempatarEntidade<T extends EntidadeComId>(
   col: ColecaoIdKey,
   localItem: T,
   remotoItem: T,
 ): T {
-  if (igualCanonico(localItem, remotoItem)) return remotoItem;
+  const jsonLocal = canonicalizarJson(localItem);
+  const jsonRemoto = canonicalizarJson(remotoItem);
+  if (jsonLocal === jsonRemoto) return remotoItem;
 
   if (col === 'contasPagar') {
     const l = localItem as unknown as ContaPagar;
@@ -299,14 +347,15 @@ function desempatarEntidade<T extends EntidadeComId>(
   }
 
   // Prefere o item com mais campos preenchidos (ex.: apelido, cpf, chavePix adicionados)
-  const lenLocal = canonicalizarJson(localItem).length;
-  const lenRemoto = canonicalizarJson(remotoItem).length;
-  if (lenLocal > lenRemoto) return localItem;
-  return remotoItem;
+  if (jsonLocal.length !== jsonRemoto.length) {
+    return jsonLocal.length > jsonRemoto.length ? localItem : remotoItem;
+  }
+  return jsonLocal >= jsonRemoto ? localItem : remotoItem;
 }
 
 /**
- * Mescla de forma determinística e segura dois estados `ErpData` (ex.: cache local de Allysson + nuvem de Luiz Gabriel).
+ * Mescla de forma determinística, comutativa e segura dois estados `ErpData`
+ * (ex.: cache local de Allysson + nuvem de Luiz Gabriel).
  * - Preserva todas as adições feitas em qualquer dispositivo.
  * - Resolve edições no mesmo item usando o timestamp `_meta.updatedAt[colecao:id]`.
  * - Respeita exclusões intencionais registradas em `_meta.deletedIds[colecao:id]`.
@@ -458,10 +507,21 @@ export function mesclarDadosErp(
       } else if (tsR > tsL) {
         apMesclado[k] = structuredClone(itemR);
       } else {
-        // Desempate: prefere aquele com mais centros selecionados ou o remoto
-        const lenL = itemL.centroIds?.length ?? 0;
-        const lenR = itemR.centroIds?.length ?? 0;
-        apMesclado[k] = structuredClone(lenL > lenR ? itemL : itemR);
+        const jsonL = canonicalizarJson(itemL);
+        const jsonR = canonicalizarJson(itemR);
+        if (itemL.status !== 'falta' && itemR.status === 'falta') {
+          apMesclado[k] = structuredClone(itemL);
+        } else if (itemR.status !== 'falta' && itemL.status === 'falta') {
+          apMesclado[k] = structuredClone(itemR);
+        } else {
+          const lenL = itemL.centroIds?.length ?? 0;
+          const lenR = itemR.centroIds?.length ?? 0;
+          if (lenL !== lenR) {
+            apMesclado[k] = structuredClone(lenL > lenR ? itemL : itemR);
+          } else {
+            apMesclado[k] = structuredClone(jsonL >= jsonR ? itemL : itemR);
+          }
+        }
       }
     } else if (itemL) {
       apMesclado[k] = structuredClone(itemL);
@@ -471,31 +531,69 @@ export function mesclarDadosErp(
   }
   resultado.apontamentos = apMesclado;
 
-  // 3. Mesclar funções customizadas
-  resultado.funcoesCustomizadas = Array.from(
-    new Set([...(local.funcoesCustomizadas || []), ...(remoto.funcoesCustomizadas || [])]),
-  );
+  // 3. Mesclar funções customizadas (respeitando exclusões e systemResetAt)
+  const todasFuncoes = new Set<string>([
+    ...(local.funcoesCustomizadas || []),
+    ...(remoto.funcoesCustomizadas || []),
+  ]);
+  const funcoesMescladas: string[] = [];
+  for (const fn of todasFuncoes) {
+    if (typeof fn !== 'string' || !fn.trim()) continue;
+    const metaKey = `funcoesCustomizadas:${fn}`;
+    const hasL = (local.funcoesCustomizadas || []).includes(fn);
+    const hasR = (remoto.funcoesCustomizadas || []).includes(fn);
+    const tsL = hasL ? (metaLocal.updatedAt[metaKey] ?? 1) : 0;
+    const tsR = hasR ? (metaRemoto.updatedAt[metaKey] ?? 1) : 0;
+    const maxTs = Math.max(tsL, tsR);
+    const delTs = mergedDeletedIds[metaKey] ?? 0;
 
-  // 4. Mesclar configurações
-  const tsCfgL = metaLocal.updatedAt['config'] ?? 0;
-  const tsCfgR = metaRemoto.updatedAt['config'] ?? 0;
+    if (delTs > 0 && delTs >= maxTs) continue;
+    if (resetAt > 0 && maxTs < resetAt) continue;
+
+    mergedUpdatedAt[metaKey] = maxTs;
+    funcoesMescladas.push(fn);
+  }
+  resultado.funcoesCustomizadas = funcoesMescladas;
+
+  // 4. Mesclar configurações (respeitando systemResetAt e comutatividade)
+  const rawTsCfgL = metaLocal.updatedAt['config'] ?? 0;
+  const rawTsCfgR = metaRemoto.updatedAt['config'] ?? 0;
+  const tsCfgL = resetAt > 0 && rawTsCfgL < resetAt ? 0 : rawTsCfgL;
+  const tsCfgR = resetAt > 0 && rawTsCfgR < resetAt ? 0 : rawTsCfgR;
+
   if (tsCfgL > tsCfgR) {
     resultado.config = structuredClone(local.config);
   } else if (tsCfgR > tsCfgL) {
     resultado.config = structuredClone(remoto.config);
-  } else if (local.config.saldoInicial !== 0 && remoto.config.saldoInicial === 0) {
-    resultado.config = structuredClone(local.config);
+  } else if (tsCfgL === 0 && tsCfgR === 0 && resetAt > 0) {
+    resultado.config = dadosVazios().config;
   } else {
-    resultado.config = structuredClone(remoto.config);
+    const customL = local.config.saldoInicial !== 0 || local.config.empresa !== 'CONSTRUTEC';
+    const customR = remoto.config.saldoInicial !== 0 || remoto.config.empresa !== 'CONSTRUTEC';
+    if (customL && !customR) {
+      resultado.config = structuredClone(local.config);
+    } else if (customR && !customL) {
+      resultado.config = structuredClone(remoto.config);
+    } else {
+      const jsonCfgL = canonicalizarJson(local.config);
+      const jsonCfgR = canonicalizarJson(remoto.config);
+      resultado.config = structuredClone(jsonCfgL >= jsonCfgR ? local.config : remoto.config);
+    }
   }
   if (Math.max(tsCfgL, tsCfgR) > 0) {
     mergedUpdatedAt['config'] = Math.max(tsCfgL, tsCfgR);
   }
 
-  // 5. Mesclar auditoria (união por ID ordenada por timestamp decrescente, limite 500)
+  // 5. Mesclar auditoria (união por ID ordenada por timestamp decrescente, respeitando systemResetAt, limite 500)
   const auditMap = new Map<string, AuditEntry>();
   for (const a of [...(local.audit || []), ...(remoto.audit || [])]) {
     if (a && typeof a.id === 'string' && !auditMap.has(a.id)) {
+      if (resetAt > 0 && a.ts) {
+        const parsedTs = Date.parse(a.ts);
+        if (!Number.isNaN(parsedTs) && parsedTs < resetAt - 1000) {
+          continue;
+        }
+      }
       auditMap.set(a.id, a);
     }
   }

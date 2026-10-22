@@ -37,6 +37,7 @@ function sincronizarRecorrencias(data: ErpData): ErpData {
   if (!novas.length) return data;
 
   const idsExistentes = new Set(data.contasPagar.map((c) => c.id));
+  const deletedIds = data._meta?.deletedIds || {};
   const chavesRecExistentes = new Set(
     data.contasPagar
       .filter((c) => c.origem === 'recorrencia' && c.origemId && c.vencimento)
@@ -44,8 +45,15 @@ function sincronizarRecorrencias(data: ErpData): ErpData {
   );
 
   const novasFiltradas = novas.filter(
-    (c) => !idsExistentes.has(c.id) && !chavesRecExistentes.has(`${c.origemId}|${c.vencimento}`),
+    (c) =>
+      !idsExistentes.has(c.id) &&
+      !deletedIds[`contasPagar:${c.id}`] &&
+      !chavesRecExistentes.has(`${c.origemId}|${c.vencimento}`),
   );
+
+  if (!novasFiltradas.length && fingerprintDominio({ ...data, recorrencias }) === fingerprintDominio(data)) {
+    return data;
+  }
 
   const atualizado: ErpData = {
     ...data,
@@ -53,7 +61,9 @@ function sincronizarRecorrencias(data: ErpData): ErpData {
     contasPagar: [...data.contasPagar, ...novasFiltradas],
   };
 
-  return registrarMutacaoErp(data, atualizado, repository.getClientId());
+  // Usa timestamp base (1) para geração automática de recorrência a fim de nunca sobrescrever
+  // uma baixa/pagamento manual ('pago') feita em outro dispositivo.
+  return registrarMutacaoErp(data, atualizado, repository.getClientId(), 1);
 }
 
 /**
@@ -118,7 +128,7 @@ export const useErp = create<ErpState>()((set, get) => ({
     const vazio = dadosVazios();
     vazio.audit = [entradaAuditoria({ acao: 'Sistema', descricao: 'Sistema zerado' })];
     vazio._meta = {
-      updatedAt: {},
+      updatedAt: { config: agora },
       deletedIds: {},
       systemResetAt: agora,
       lastClientId: repository.getClientId(),

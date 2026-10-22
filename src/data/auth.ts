@@ -79,9 +79,9 @@ export function mesclarUsuarios(
 
   const todos = [
     ...USUARIOS_PADRAO,
+    ...(usuarioAtual ? [usuarioAtual] : []),
     ...(Array.isArray(local) ? local : []),
     ...(Array.isArray(remoto) ? remoto : []),
-    ...(usuarioAtual ? [usuarioAtual] : []),
   ];
 
   for (const item of todos) {
@@ -102,12 +102,19 @@ export function mesclarUsuarios(
     } else {
       // Se um deles foi customizado em relação ao padrão, prefere o customizado
       const padrao = padraoMap.get(item.id);
-      if (padrao && canonicalizarJson(existente) === canonicalizarJson(padrao)) {
+      const jsonExistente = canonicalizarJson(existente);
+      const jsonNovo = canonicalizarJson(item);
+      const jsonPadrao = padrao ? canonicalizarJson(padrao) : '';
+
+      if (padrao && jsonExistente === jsonPadrao) {
         map.set(item.id, { ...item });
-      } else if (padrao && canonicalizarJson(item) === canonicalizarJson(padrao)) {
+      } else if (padrao && jsonNovo === jsonPadrao) {
         // mantém existente customizado
+      } else if (existente.ativo !== item.ativo && !padrao) {
+        // Prefere o estado explícito mais recente ou determinístico
+        map.set(item.id, jsonNovo >= jsonExistente ? { ...item } : existente);
       } else {
-        map.set(item.id, { ...item });
+        map.set(item.id, jsonNovo >= jsonExistente ? { ...item } : existente);
       }
     }
   }
@@ -122,9 +129,9 @@ export function mesclarConvites(
   const map = new Map<string, ConviteAcesso>();
 
   const todos = [
+    ...CONVITES_PADRAO,
     ...(Array.isArray(local) ? local : []),
     ...(Array.isArray(remoto) ? remoto : []),
-    ...CONVITES_PADRAO,
   ];
 
   for (const item of todos) {
@@ -140,7 +147,14 @@ export function mesclarConvites(
     const usadoPor = existente.usadoPor || item.usadoPor;
     const tsExistente = existente.atualizadoEm ?? 0;
     const tsNovo = item.atualizadoEm ?? 0;
-    const base = tsNovo >= tsExistente ? item : existente;
+    const base =
+      tsNovo > tsExistente
+        ? item
+        : tsExistente > tsNovo
+        ? existente
+        : canonicalizarJson(item) >= canonicalizarJson(existente)
+        ? item
+        : existente;
 
     map.set(chave, {
       ...base,

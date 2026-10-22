@@ -6,6 +6,7 @@ import {
   fingerprintDominio,
   mesclarDadosErp,
   normalizarDadosErp,
+  possuiEstadoSincronizavelErp,
   sanitizarParaFirestore,
 } from './sync';
 
@@ -116,7 +117,7 @@ class FirestoreRepository implements ErpRepository {
       if (options?.forceReset) {
         localStorage.setItem(LOCAL_BACKUP_KEY, json);
         localStorage.setItem(LOCAL_VAULT_KEY, json);
-      } else if (contarRegistrosErp(norm) > 0) {
+      } else if (possuiEstadoSincronizavelErp(norm)) {
         const backupAtual = this.lerChaveLocal(LOCAL_BACKUP_KEY);
         const novoBackup = backupAtual ? mesclarDadosErp(backupAtual, norm) : norm;
         const jsonBackup = JSON.stringify(novoBackup);
@@ -154,8 +155,8 @@ class FirestoreRepository implements ErpRepository {
       consolidado = mesclarDadosErp(this.lastCloudData, consolidado);
     }
 
-    // Trava de segurança: jamais gravar um estado vazio acidental (sem systemResetAt) na nuvem
-    if (contarRegistrosErp(consolidado) === 0 && !consolidado._meta?.systemResetAt) {
+    // Trava de segurança: jamais gravar um estado em branco acidental (sem registros, sem tombstones e sem systemResetAt)
+    if (!possuiEstadoSincronizavelErp(consolidado)) {
       return;
     }
 
@@ -189,14 +190,15 @@ class FirestoreRepository implements ErpRepository {
 
         let alvo = item.data;
         const forceReset = item.forceReset;
+        let nuvemAtual: ErpData | null = null;
 
         if (!forceReset) {
           // Busca o documento mais recente da nuvem antes de gravar para mesclar alterações simultâneas do outro usuário
           try {
             const snapAtual = await getDoc(ERP_DOC_REF);
             if (snapAtual.exists()) {
-              const nuvemAtual = normalizarDadosErp(snapAtual.data());
-              if (nuvemAtual && contarRegistrosErp(nuvemAtual) > 0) {
+              nuvemAtual = normalizarDadosErp(snapAtual.data());
+              if (nuvemAtual && possuiEstadoSincronizavelErp(nuvemAtual)) {
                 alvo = mesclarDadosErp(nuvemAtual, alvo);
               }
             }
@@ -205,7 +207,7 @@ class FirestoreRepository implements ErpRepository {
           }
 
           // Segunda trava de segurança antes do setDoc
-          if (contarRegistrosErp(alvo) === 0 && !alvo._meta?.systemResetAt) {
+          if (!possuiEstadoSincronizavelErp(alvo)) {
             continue;
           }
         }
@@ -218,13 +220,25 @@ class FirestoreRepository implements ErpRepository {
           this.notificarListeners();
         }
 
-        const payload = sanitizarParaFirestore(alvo);
-        await setDoc(ERP_DOC_REF, payload);
+        const jaSincronizadoNaNuvem =
+          !forceReset &&
+          nuvemAtual !== null &&
+          possuiEstadoSincronizavelErp(nuvemAtual) &&
+          fingerprintDominio(nuvemAtual) === fingerprintDominio(alvo) &&
+          (nuvemAtual.audit?.length ?? 0) === (alvo.audit?.length ?? 0);
 
-        // Gravação automática em segundo plano nos documentos de backup da nuvem sempre que houver registros válidos
-        if (contarRegistrosErp(alvo) > 0) {
-          setDoc(ERP_BACKUP_REF, payload).catch(() => {});
-          if (!this.hasBackedUpThisSession) {
+        const payload = sanitizarParaFirestore(alvo);
+
+        if (!jaSincronizadoNaNuvem) {
+          await setDoc(ERP_DOC_REF, payload);
+        }
+
+        // Gravação automática em segundo plano nos documentos de backup da nuvem
+        if (possuiEstadoSincronizavelErp(alvo) && !alvo._meta?.systemResetAt) {
+          if (!jaSincronizadoNaNuvem || !this.hasBackedUpThisSession) {
+            setDoc(ERP_BACKUP_REF, payload).catch(() => {});
+          }
+          if (contarRegistrosErp(alvo) > 0 && !this.hasBackedUpThisSession) {
             this.hasBackedUpThisSession = true;
             const deviceBackupRef = doc(db, 'erp', `backup_${this.getClientId()}`);
             setDoc(deviceBackupRef, payload).catch(() => {});
@@ -239,33 +253,41 @@ class FirestoreRepository implements ErpRepository {
   }
 
   /**
-   * Tenta recuperar dados do backup automático da nuvem (`erp/backup_auto`)
+   * Tenta recuperar dados dos backups automáticos da nuvem (`erp/backup_auto` e `erp/backup_<clientId>`)
    * caso o documento principal `erp/dados` tenha sido zerado acidentalmente.
    */
   private async tentarResgatarDoBackupNuvem(localAtual: ErpData | null): Promise<void> {
+    let resgatado: ErpData | null =
+      localAtual && possuiEstadoSincronizavelErp(localAtual) ? localAtual : null;
+
     try {
       const snapBackup = await getDoc(ERP_BACKUP_REF);
-      const dadosBackup = snapBackup.exists() ? normalizarDadosErp(snapBackup.data()) : null;
-
-      let resgatado: ErpData | null = null;
-      if (dadosBackup && contarRegistrosErp(dadosBackup) > 0) {
-        resgatado = localAtual ? mesclarDadosErp(dadosBackup, localAtual) : dadosBackup;
-      } else if (localAtual && contarRegistrosErp(localAtual) > 0) {
-        resgatado = localAtual;
+      if (snapBackup.exists()) {
+        const dadosBackup = normalizarDadosErp(snapBackup.data());
+        if (dadosBackup && contarRegistrosErp(dadosBackup) > 0) {
+          resgatado = resgatado ? mesclarDadosErp(dadosBackup, resgatado) : dadosBackup;
+        }
       }
 
-      if (resgatado && contarRegistrosErp(resgatado) > 0) {
-        this.lastCloudData = resgatado;
-        this.persistirLocal(resgatado);
-        this.notificarListeners();
-        this.agendarSincronizacaoNuvem(resgatado, false);
+      if (!resgatado || contarRegistrosErp(resgatado) === 0) {
+        const deviceBackupRef = doc(db, 'erp', `backup_${this.getClientId()}`);
+        const snapDevice = await getDoc(deviceBackupRef);
+        if (snapDevice.exists()) {
+          const dadosDevice = normalizarDadosErp(snapDevice.data());
+          if (dadosDevice && contarRegistrosErp(dadosDevice) > 0) {
+            resgatado = resgatado ? mesclarDadosErp(dadosDevice, resgatado) : dadosDevice;
+          }
+        }
       }
     } catch {
-      // Se estiver offline mas houver dados locais, mantém os dados locais intactos
-      if (localAtual && contarRegistrosErp(localAtual) > 0) {
-        this.persistirLocal(localAtual);
-        this.notificarListeners();
-      }
+      // Offline: mantém os dados locais intactos
+    }
+
+    if (resgatado && possuiEstadoSincronizavelErp(resgatado)) {
+      this.lastCloudData = resgatado;
+      this.persistirLocal(resgatado);
+      this.notificarListeners();
+      this.agendarSincronizacaoNuvem(resgatado, false);
     }
   }
 
@@ -279,9 +301,11 @@ class FirestoreRepository implements ErpRepository {
     this.listeners.add(onExternalChange);
 
     // 1. Garante imediatamente no boot que qualquer dado local existente seja protegido no cofre local
+    // e já agenda o resgate/sincronização com a nuvem sem esperar múltiplos round-trips
     const inicialLocal = this.load();
     if (inicialLocal && contarRegistrosErp(inicialLocal) > 0) {
       this.persistirLocal(inicialLocal);
+      this.agendarSincronizacaoNuvem(inicialLocal, false);
     }
 
     // 2. Sincronização em tempo real via Cloud Firestore com mesclagem inteligente e resgate automático
@@ -293,9 +317,9 @@ class FirestoreRepository implements ErpRepository {
         if (snapshot.exists()) {
           const dadosNuvem = normalizarDadosErp(snapshot.data());
 
-          // Caso A: Documento na nuvem está vazio sem ter sido zerado intencionalmente (ex.: wipe acidental)
-          if (!dadosNuvem || (contarRegistrosErp(dadosNuvem) === 0 && !dadosNuvem._meta?.systemResetAt)) {
-            if (local && contarRegistrosErp(local) > 0) {
+          // Caso A: Documento na nuvem está em branco sem ter sido zerado/deletado intencionalmente (ex.: wipe acidental)
+          if (!dadosNuvem || !possuiEstadoSincronizavelErp(dadosNuvem)) {
+            if (local && possuiEstadoSincronizavelErp(local)) {
               // Resgata imediatamente os dados locais deste aparelho (Allysson / Luiz Gabriel) para a nuvem!
               void this.tentarResgatarDoBackupNuvem(local);
             } else {
@@ -305,7 +329,7 @@ class FirestoreRepository implements ErpRepository {
             return;
           }
 
-          // Caso B: Nuvem possui dados válidos (ou reset intencional) -> Mescla local + nuvem sem perder nada
+          // Caso B: Nuvem possui estado válido -> Mescla local + nuvem sem perder nada
           const mesclado = local ? mesclarDadosErp(local, dadosNuvem) : dadosNuvem;
           this.lastCloudData = mesclado;
 
@@ -318,8 +342,8 @@ class FirestoreRepository implements ErpRepository {
             this.notificarListeners();
           }
 
-          // Se o aparelho local tinha registros/edições que ainda não estavam na nuvem, envia a união para o Firestore
-          if (fpMesclado !== fpNuvem && contarRegistrosErp(mesclado) > 0) {
+          // Se o aparelho local tinha registros/edições/exclusões que ainda não estavam na nuvem, envia a união para o Firestore
+          if (fpMesclado !== fpNuvem && possuiEstadoSincronizavelErp(mesclado)) {
             this.agendarSincronizacaoNuvem(mesclado, false);
           } else if (contarRegistrosErp(mesclado) > 0 && !this.hasBackedUpThisSession) {
             this.hasBackedUpThisSession = true;
@@ -348,7 +372,7 @@ class FirestoreRepository implements ErpRepository {
     const handleOnlineOrVisible = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       const atual = this.load();
-      if (atual && contarRegistrosErp(atual) > 0) {
+      if (atual && possuiEstadoSincronizavelErp(atual)) {
         this.agendarSincronizacaoNuvem(atual, false);
       }
     };
