@@ -141,9 +141,8 @@ function Topbar() {
           {atual?.label}
         </div>
 
-        <div className="ml-auto flex items-center gap-2 shrink-0">
+        <div className="ml-auto flex items-center shrink-0">
           <SyncStatusBadge />
-          <ThemeSwitcher className="inline-flex" />
         </div>
       </div>
     </header>
