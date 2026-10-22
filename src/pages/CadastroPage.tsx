@@ -9,7 +9,7 @@ import { toast } from '@/components/ui/Toast';
 export function CadastroPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { validarConvite, cadastrarComConvite, usuarioAtual } = useAuth();
+  const { validarConvite, cadastrarComConvite, convites } = useAuth();
 
   const conviteQuery = searchParams.get('convite') || '';
   const [codigo, setCodigo] = useState(conviteQuery);
@@ -24,7 +24,7 @@ export function CadastroPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
 
-  // Se já houver convite na URL ao carregar, valida imediatamente
+  // Se já houver convite na URL ao carregar ou assim que sincronizar da nuvem, valida imediatamente
   useEffect(() => {
     if (conviteQuery) {
       const c = validarConvite(conviteQuery);
@@ -35,7 +35,7 @@ export function CadastroPage() {
         setErro(null);
       }
     }
-  }, [conviteQuery, validarConvite]);
+  }, [conviteQuery, validarConvite, convites]);
 
   const handleValidarCodigo = (e: React.FormEvent) => {
     e.preventDefault();

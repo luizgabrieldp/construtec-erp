@@ -4,7 +4,8 @@ import type { Perfil } from '@/domain/types';
 import { useUi } from './ui';
 import { uid } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { doc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { canonicalizarJson } from './sync';
 
 export interface Usuario {
   id: string;
@@ -14,6 +15,7 @@ export interface Usuario {
   perfil: Perfil;
   ativo: boolean;
   criadoEm: string;
+  atualizadoEm?: number;
 }
 
 export interface ConviteAcesso {
@@ -23,6 +25,7 @@ export interface ConviteAcesso {
   usado: boolean;
   usadoPor?: string;
   criadoEm: string;
+  atualizadoEm?: number;
 }
 
 const USUARIOS_PADRAO: Usuario[] = [
@@ -64,13 +67,125 @@ const CONVITES_PADRAO: ConviteAcesso[] = [
 ];
 
 const AUTH_DOC_REF = doc(db, 'erp', 'auth');
+const AUTH_BACKUP_REF = doc(db, 'erp', 'auth_backup');
 
-function sincronizarAuthNuvem(usuarios: Usuario[], convites: ConviteAcesso[]) {
+export function mesclarUsuarios(
+  local: Usuario[],
+  remoto: Usuario[],
+  usuarioAtual?: Usuario | null,
+): Usuario[] {
+  const padraoMap = new Map(USUARIOS_PADRAO.map((u) => [u.id, u]));
+  const map = new Map<string, Usuario>();
+
+  const todos = [
+    ...USUARIOS_PADRAO,
+    ...(Array.isArray(local) ? local : []),
+    ...(Array.isArray(remoto) ? remoto : []),
+    ...(usuarioAtual ? [usuarioAtual] : []),
+  ];
+
+  for (const item of todos) {
+    if (!item || typeof item.id !== 'string') continue;
+    const existente = map.get(item.id);
+    if (!existente) {
+      map.set(item.id, { ...item });
+      continue;
+    }
+
+    const tsExistente = existente.atualizadoEm ?? 0;
+    const tsNovo = item.atualizadoEm ?? 0;
+
+    if (tsNovo > tsExistente) {
+      map.set(item.id, { ...item });
+    } else if (tsExistente > tsNovo) {
+      // mantém existente
+    } else {
+      // Se um deles foi customizado em relação ao padrão, prefere o customizado
+      const padrao = padraoMap.get(item.id);
+      if (padrao && canonicalizarJson(existente) === canonicalizarJson(padrao)) {
+        map.set(item.id, { ...item });
+      } else if (padrao && canonicalizarJson(item) === canonicalizarJson(padrao)) {
+        // mantém existente customizado
+      } else {
+        map.set(item.id, { ...item });
+      }
+    }
+  }
+
+  return Array.from(map.values());
+}
+
+export function mesclarConvites(
+  local: ConviteAcesso[],
+  remoto: ConviteAcesso[],
+): ConviteAcesso[] {
+  const map = new Map<string, ConviteAcesso>();
+
+  const todos = [
+    ...(Array.isArray(local) ? local : []),
+    ...(Array.isArray(remoto) ? remoto : []),
+    ...CONVITES_PADRAO,
+  ];
+
+  for (const item of todos) {
+    if (!item || typeof item.id !== 'string' || typeof item.codigo !== 'string') continue;
+    const chave = item.codigo.trim().toUpperCase();
+    const existente = map.get(chave);
+    if (!existente) {
+      map.set(chave, { ...item });
+      continue;
+    }
+
+    const usado = Boolean(existente.usado || item.usado);
+    const usadoPor = existente.usadoPor || item.usadoPor;
+    const tsExistente = existente.atualizadoEm ?? 0;
+    const tsNovo = item.atualizadoEm ?? 0;
+    const base = tsNovo >= tsExistente ? item : existente;
+
+    map.set(chave, {
+      ...base,
+      usado,
+      ...(usadoPor ? { usadoPor } : {}),
+      atualizadoEm: Math.max(tsExistente, tsNovo),
+    });
+  }
+
+  return Array.from(map.values());
+}
+
+function fingerprintAuth(usuarios: Usuario[], convites: ConviteAcesso[]): string {
+  const uOrd = [...usuarios].sort((a, b) => a.id.localeCompare(b.id));
+  const cOrd = [...convites].sort((a, b) => a.codigo.localeCompare(b.codigo));
+  return canonicalizarJson({ usuarios: uOrd, convites: cOrd });
+}
+
+async function sincronizarAuthNuvem(
+  usuariosLocais: Usuario[],
+  convitesLocais: ConviteAcesso[],
+  usuarioAtual?: Usuario | null,
+) {
   try {
-    setDoc(AUTH_DOC_REF, {
-      usuarios: JSON.parse(JSON.stringify(usuarios)),
-      convites: JSON.parse(JSON.stringify(convites)),
-    }).catch(() => {});
+    let usuariosFinais = mesclarUsuarios(usuariosLocais, [], usuarioAtual);
+    let convitesFinais = mesclarConvites(convitesLocais, []);
+
+    try {
+      const snap = await getDoc(AUTH_DOC_REF);
+      if (snap.exists()) {
+        const d = snap.data();
+        const nuvemU = Array.isArray(d?.usuarios) ? (d.usuarios as Usuario[]) : [];
+        const nuvemC = Array.isArray(d?.convites) ? (d.convites as ConviteAcesso[]) : [];
+        usuariosFinais = mesclarUsuarios(usuariosFinais, nuvemU, usuarioAtual);
+        convitesFinais = mesclarConvites(convitesFinais, nuvemC);
+      }
+    } catch {}
+
+    const payload = {
+      usuarios: JSON.parse(JSON.stringify(usuariosFinais)),
+      convites: JSON.parse(JSON.stringify(convitesFinais)),
+    };
+
+    await setDoc(AUTH_DOC_REF, payload);
+    setDoc(AUTH_BACKUP_REF, payload).catch(() => {});
   } catch {}
 }
 
@@ -145,16 +260,20 @@ export const useAuth = create<AuthState>()(
           nome: dados.nome?.trim() || atual.nome,
           emailOuLogin: dados.emailOuLogin?.trim() || atual.emailOuLogin,
           senha: dados.senha?.trim() || atual.senha,
+          atualizadoEm: Date.now(),
         };
 
-        const novaLista = get().usuarios.map((u) => (u.id === atual.id ? atualizado : u));
+        const existeNaLista = get().usuarios.some((u) => u.id === atual.id);
+        const novaLista = existeNaLista
+          ? get().usuarios.map((u) => (u.id === atual.id ? atualizado : u))
+          : [...get().usuarios, atualizado];
 
         set({
           usuarioAtual: atualizado,
           usuarios: novaLista,
         });
 
-        sincronizarAuthNuvem(novaLista, get().convites);
+        void sincronizarAuthNuvem(novaLista, get().convites, atualizado);
       },
 
       criarConvite: (perfil) => {
@@ -168,12 +287,13 @@ export const useAuth = create<AuthState>()(
           perfil,
           usado: false,
           criadoEm: new Date().toISOString(),
+          atualizadoEm: Date.now(),
         };
 
         const novosConvites = [novoConvite, ...get().convites];
         set({ convites: novosConvites });
 
-        sincronizarAuthNuvem(get().usuarios, novosConvites);
+        void sincronizarAuthNuvem(get().usuarios, novosConvites, get().usuarioAtual);
         return novoConvite;
       },
 
@@ -195,6 +315,7 @@ export const useAuth = create<AuthState>()(
           return { ok: false, error: 'Este login/e-mail já está cadastrado no sistema.' };
         }
 
+        const agora = Date.now();
         const novoUsuario: Usuario = {
           id: uid('usr'),
           nome: dados.nome.trim(),
@@ -202,12 +323,15 @@ export const useAuth = create<AuthState>()(
           senha: dados.senha.trim(),
           perfil: convite.perfil,
           ativo: true,
-          criadoEm: new Date().toISOString(),
+          criadoEm: new Date(agora).toISOString(),
+          atualizadoEm: agora,
         };
 
         const novosUsuarios = [...get().usuarios, novoUsuario];
         const novosConvites = get().convites.map((c) =>
-          c.id === convite.id ? { ...c, usado: true, usadoPor: novoUsuario.nome } : c
+          c.id === convite.id
+            ? { ...c, usado: true, usadoPor: novoUsuario.nome, atualizadoEm: agora }
+            : c
         );
 
         set({
@@ -217,16 +341,17 @@ export const useAuth = create<AuthState>()(
         });
 
         useUi.getState().setPerfil(novoUsuario.perfil);
-        sincronizarAuthNuvem(novosUsuarios, novosConvites);
+        void sincronizarAuthNuvem(novosUsuarios, novosConvites, novoUsuario);
         return { ok: true };
       },
 
       alternarStatusUsuario: (usuarioId) => {
+        const agora = Date.now();
         const novosUsuarios = get().usuarios.map((u) =>
-          u.id === usuarioId ? { ...u, ativo: !u.ativo } : u
+          u.id === usuarioId ? { ...u, ativo: !u.ativo, atualizadoEm: agora } : u
         );
         set({ usuarios: novosUsuarios });
-        sincronizarAuthNuvem(novosUsuarios, get().convites);
+        void sincronizarAuthNuvem(novosUsuarios, get().convites, get().usuarioAtual);
       },
     }),
     {
@@ -240,21 +365,43 @@ export const useAuth = create<AuthState>()(
   )
 );
 
-// Listener do Cloud Firestore para sincronização em tempo real de usuários e convites
+// Listener do Cloud Firestore para sincronização em tempo real de usuários e convites (com mesclagem segura)
 try {
   onSnapshot(
     AUTH_DOC_REF,
     (snap) => {
+      const s = useAuth.getState();
+
       if (snap.exists()) {
         const data = snap.data();
-        if (data && Array.isArray(data.usuarios) && data.usuarios.length > 0) {
-          useAuth.setState((s) => ({
-            usuarios: data.usuarios,
-            convites: Array.isArray(data.convites) ? data.convites : s.convites,
-          }));
+        const nuvemU = Array.isArray(data?.usuarios) ? (data.usuarios as Usuario[]) : [];
+        const nuvemC = Array.isArray(data?.convites) ? (data.convites as ConviteAcesso[]) : [];
+
+        const usuariosMesclados = mesclarUsuarios(s.usuarios, nuvemU, s.usuarioAtual);
+        const convitesMesclados = mesclarConvites(s.convites, nuvemC);
+
+        const usuarioAtualSincronizado = s.usuarioAtual
+          ? usuariosMesclados.find((u) => u.id === s.usuarioAtual!.id) ?? s.usuarioAtual
+          : null;
+
+        const fpLocal = fingerprintAuth(s.usuarios, s.convites);
+        const fpMesclado = fingerprintAuth(usuariosMesclados, convitesMesclados);
+        const fpNuvem = fingerprintAuth(nuvemU, nuvemC);
+
+        if (fpMesclado !== fpLocal) {
+          useAuth.setState({
+            usuarios: usuariosMesclados,
+            convites: convitesMesclados,
+            usuarioAtual: usuarioAtualSincronizado,
+          });
+        }
+
+        // Se o aparelho local tinha usuário cadastrado ou convite que faltava na nuvem, resgata para a nuvem
+        if (fpMesclado !== fpNuvem) {
+          void sincronizarAuthNuvem(usuariosMesclados, convitesMesclados, usuarioAtualSincronizado);
         }
       } else {
-        sincronizarAuthNuvem(USUARIOS_PADRAO, CONVITES_PADRAO);
+        void sincronizarAuthNuvem(s.usuarios, s.convites, s.usuarioAtual);
       }
     },
     () => {}

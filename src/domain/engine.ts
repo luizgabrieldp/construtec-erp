@@ -19,7 +19,6 @@ import type {
 import { SEDE } from './types';
 import { addDays, addMonths, diasUteisMes, diffDays, eachDay, endOfMonth, minDate, monthKey } from '@/lib/dates';
 import { round2 } from '@/lib/format';
-import { uid } from '@/lib/utils';
 
 // ---------------------------------------------------------------- utilitários
 
@@ -226,9 +225,10 @@ export function gerarContasRecorrentes(
     while (monthKey(cursor) <= alvo) {
       const dia = Math.min(r.diaVencimento, Number(endOfMonth(cursor).slice(8)));
       const venc = `${monthKey(cursor)}-${String(dia).padStart(2, '0')}`;
+      const mesRef = monthKey(cursor);
       novas.push({
-        id: uid('cp'),
-        descricao: `${r.descricao} — ${monthKey(cursor).split('-').reverse().join('/')}`,
+        id: `cp_rec_${r.id}_${mesRef}`,
+        descricao: `${r.descricao} — ${mesRef.split('-').reverse().join('/')}`,
         categoria: r.categoria,
         fornecedorId: r.fornecedorId,
         valor: r.valor,

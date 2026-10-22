@@ -348,6 +348,19 @@ export interface Config {
   dataSaldoInicial: ISODate;
 }
 
+export interface ErpSyncMeta {
+  /** Timestamp (ms) da última modificação de cada registro ("colecao:id", "apontamentos:chave", "config") */
+  updatedAt: Record<string, number>;
+  /** Timestamp (ms) de exclusões explícitas ("colecao:id", "apontamentos:chave") */
+  deletedIds: Record<string, number>;
+  /** Timestamp (ms) quando o sistema foi explicitamente zerado pelo usuário */
+  systemResetAt?: number;
+  /** Identificador único do dispositivo/navegador que realizou a última gravação */
+  lastClientId?: string;
+  /** Timestamp (ms) da última gravação */
+  lastWriteAt?: number;
+}
+
 /** Todo o estado persistido do ERP. */
 export interface ErpData {
   version: number;
@@ -368,4 +381,6 @@ export interface ErpData {
   contasReceber: ContaReceber[];
   recorrencias: Recorrencia[];
   audit: AuditEntry[];
+  _meta?: ErpSyncMeta;
 }
+

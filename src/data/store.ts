@@ -1,8 +1,15 @@
 import { create } from 'zustand';
 import type { AuditEntry, Config, ErpData } from '@/domain/types';
-import { DATA_VERSION, dadosVazios, gerarDadosDemo } from '@/domain/mock';
+import { dadosVazios, gerarDadosDemo } from '@/domain/mock';
 import { gerarContasRecorrentes } from '@/domain/engine';
 import { repository } from './repository';
+import {
+  COLECOES_ARRAY,
+  fingerprintDominio,
+  mesclarDadosErp,
+  normalizarDadosErp,
+  registrarMutacaoErp,
+} from './sync';
 import { useUi } from './ui';
 import { today } from '@/lib/dates';
 import { uid } from '@/lib/utils';
@@ -28,20 +35,42 @@ interface ErpState {
 function sincronizarRecorrencias(data: ErpData): ErpData {
   const { novas, recorrencias } = gerarContasRecorrentes(data.recorrencias, today());
   if (!novas.length) return data;
-  return { ...data, recorrencias, contasPagar: [...data.contasPagar, ...novas] };
+
+  const idsExistentes = new Set(data.contasPagar.map((c) => c.id));
+  const chavesRecExistentes = new Set(
+    data.contasPagar
+      .filter((c) => c.origem === 'recorrencia' && c.origemId && c.vencimento)
+      .map((c) => `${c.origemId}|${c.vencimento}`),
+  );
+
+  const novasFiltradas = novas.filter(
+    (c) => !idsExistentes.has(c.id) && !chavesRecExistentes.has(`${c.origemId}|${c.vencimento}`),
+  );
+
+  const atualizado: ErpData = {
+    ...data,
+    recorrencias,
+    contasPagar: [...data.contasPagar, ...novasFiltradas],
+  };
+
+  return registrarMutacaoErp(data, atualizado, repository.getClientId());
 }
 
+/**
+ * Carrega o estado inicial a partir do armazenamento local.
+ * IMPORTANTE: Quando não há dados locais (novo navegador, novo celular ou PWA recém-instalado),
+ * retorna `dadosVazios()` apenas em memória — JAMAIS chama `repository.save(vazio)`,
+ * impedindo que um dispositivo novo sobrescreva o banco na nuvem.
+ */
 function carregarInicial(): ErpData {
   const salvo = repository.load();
-  if (salvo && salvo.version === DATA_VERSION) {
-    salvo.servicos ??= [];
-    salvo.tarefas ??= [];
-    salvo.funcoesCustomizadas ??= [];
-    return sincronizarRecorrencias(salvo);
+  if (salvo) {
+    const normalizado = normalizarDadosErp(salvo);
+    if (normalizado) {
+      return sincronizarRecorrencias(normalizado);
+    }
   }
-  const vazio = dadosVazios();
-  repository.save(vazio);
-  return vazio;
+  return dadosVazios();
 }
 
 function entradaAuditoria(info: AuditInfo): AuditEntry {
@@ -52,23 +81,50 @@ export const useErp = create<ErpState>()((set, get) => ({
   data: carregarInicial(),
 
   mutate: (fn, audit) => {
-    const draft = structuredClone(get().data);
+    const prev = get().data;
+    const draft = structuredClone(prev);
     fn(draft);
     if (audit) draft.audit = [entradaAuditoria(audit), ...draft.audit].slice(0, 500);
+    registrarMutacaoErp(prev, draft, repository.getClientId());
     repository.save(draft);
-    set({ data: draft });
+    const consolidado = repository.load() ?? draft;
+    set({ data: consolidado });
   },
 
   restaurarDemo: () => {
-    const demo = gerarDadosDemo();
+    const agora = Date.now();
+    const demo = normalizarDadosErp(gerarDadosDemo())!;
+    const updatedAt: Record<string, number> = { config: agora };
+    for (const col of COLECOES_ARRAY) {
+      for (const item of demo[col] as { id: string }[]) {
+        updatedAt[`${col}:${item.id}`] = agora;
+      }
+    }
+    for (const k of Object.keys(demo.apontamentos)) {
+      updatedAt[`apontamentos:${k}`] = agora;
+    }
+    demo._meta = {
+      updatedAt,
+      deletedIds: {},
+      lastClientId: repository.getClientId(),
+      lastWriteAt: agora,
+    };
     repository.save(demo);
     set({ data: demo });
   },
 
   zerarSistema: () => {
+    const agora = Date.now();
     const vazio = dadosVazios();
     vazio.audit = [entradaAuditoria({ acao: 'Sistema', descricao: 'Sistema zerado' })];
-    repository.save(vazio);
+    vazio._meta = {
+      updatedAt: {},
+      deletedIds: {},
+      systemResetAt: agora,
+      lastClientId: repository.getClientId(),
+      lastWriteAt: agora,
+    };
+    repository.save(vazio, { forceReset: true });
     set({ data: vazio });
   },
 
@@ -81,10 +137,15 @@ export const useErp = create<ErpState>()((set, get) => ({
     ),
 }));
 
-// Tempo real entre abas: quando outra aba grava, recarrega o estado aqui (ex.: Modo TV).
+// Tempo real entre dispositivos (Firestore) e entre abas locais: mescla o estado sem perder alterações em memória.
 repository.subscribe(() => {
   const externo = repository.load();
-  if (externo) useErp.setState({ data: externo });
+  if (!externo) return;
+  const atual = useErp.getState().data;
+  const mesclado = sincronizarRecorrencias(mesclarDadosErp(atual, externo));
+  if (fingerprintDominio(atual) !== fingerprintDominio(mesclado) || atual.audit.length !== mesclado.audit.length) {
+    useErp.setState({ data: mesclado });
+  }
 });
 
 /** Atalho para ler a fatia de dados. */

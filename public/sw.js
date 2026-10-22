@@ -1,7 +1,6 @@
-// CONSTRUTEC ERP - Service Worker v3
-const CACHE_NAME = 'construtec-pwa-v3';
+// CONSTRUTEC ERP - Service Worker v4
+const CACHE_NAME = 'construtec-pwa-v4';
 const STATIC_ASSETS = [
-  '/',
   '/favicon.ico',
   '/favicon-32x32.png',
   '/favicon-16x16.png',
