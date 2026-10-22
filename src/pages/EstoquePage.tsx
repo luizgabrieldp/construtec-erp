@@ -143,27 +143,28 @@ export function EstoquePage() {
       />
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-6 no-print">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-3 mb-6 no-print">
         <StatCard
           label="Valor em Materiais"
           value={fmtBRL(valorTotalConsolidado)}
-          hint={localFiltro === 'todos' ? 'Total em todas as obras + Sede' : `Em ${getNomeLocal(localFiltro as CentroId)}`}
-          icon={<Package className="size-5" />}
+          hint={localFiltro === 'todos' ? 'Todas as obras + Sede' : `Em ${getNomeLocal(localFiltro as CentroId)}`}
+          icon={<Package className="size-4 sm:size-5" />}
           tone="brand"
         />
         <StatCard
-          label="Insumos no Catálogo"
-          value={`${data.materiais.length} materiais`}
-          hint="Itens monitorados pelo ERP"
-          icon={<Layers className="size-5" />}
+          label="Catálogo"
+          value={`${data.materiais.length} itens`}
+          hint="Insumos monitorados"
+          icon={<Layers className="size-4 sm:size-5" />}
           tone="blue"
         />
         <StatCard
-          label="Alertas de Reposição"
-          value={`${itensComEstoqueBaixo} itens abaixo do mín.`}
-          hint={itensComEstoqueBaixo > 0 ? 'Necessitam de nova compra' : 'Níveis de segurança atendidos'}
-          icon={<AlertTriangle className="size-5" />}
+          label="Reposição"
+          value={`${itensComEstoqueBaixo} alertas`}
+          hint={itensComEstoqueBaixo > 0 ? 'Abaixo do mínimo' : 'Estoque em dia'}
+          icon={<AlertTriangle className="size-4 sm:size-5" />}
           tone={itensComEstoqueBaixo > 0 ? 'amber' : 'green'}
+          className="col-span-2 sm:col-span-1"
         />
       </div>
 

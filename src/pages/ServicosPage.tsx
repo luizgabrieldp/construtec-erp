@@ -103,33 +103,33 @@ export function ServicosPage() {
       />
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
         <StatCard
-          label="Total em Empreitadas"
+          label="Empreitadas"
           value={fmtBRL(metrics.totalContratado)}
-          icon={<Briefcase className="size-5 text-brand" />}
-          hint={`${servicos.filter((s) => s.status !== 'cancelado').length} contratos firmados`}
+          icon={<Briefcase className="size-4 sm:size-5 text-brand" />}
+          hint={`${servicos.filter((s) => s.status !== 'cancelado').length} contratos`}
         />
         <StatCard
-          label="Total Liquidado"
+          label="Liquidado"
           value={fmtBRL(metrics.totalPago)}
-          icon={<CheckCircle className="size-5 text-emerald-500" />}
+          icon={<CheckCircle className="size-4 sm:size-5 text-emerald-500" />}
           tone="green"
-          hint="Etapas pagas a prestadores"
+          hint="Etapas pagas"
         />
         <StatCard
-          label="Saldo a Pagar (Em Aberto)"
+          label="A Pagar"
           value={fmtBRL(metrics.totalPendente)}
-          icon={<DollarSign className="size-5 text-amber-500" />}
+          icon={<DollarSign className="size-4 sm:size-5 text-amber-500" />}
           tone={metrics.totalPendente > 0 ? 'amber' : undefined}
-          hint="Etapas pendentes de conclusão/vencimento"
+          hint="Etapas pendentes"
         />
         <StatCard
-          label="Contratos em Andamento"
+          label="Em Andamento"
           value={metrics.ativosCount}
-          icon={<Wrench className="size-5 text-blue-500" />}
+          icon={<Wrench className="size-4 sm:size-5 text-blue-500" />}
           tone="blue"
-          hint="Serviços sendo executados em campo"
+          hint="Ativos em campo"
         />
       </div>
 

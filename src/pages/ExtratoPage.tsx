@@ -211,39 +211,39 @@ export function ExtratoPage() {
         />
 
         {/* Cards de Métricas do Extrato */}
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
           <StatCard
-            label="Total de Entradas"
+            label="Entradas"
             value={fmtBRL(totalEntradas)}
-            icon={<ArrowDownLeft className="size-5 text-emerald-500" />}
+            icon={<ArrowDownLeft className="size-4 sm:size-5 text-emerald-500" />}
             tone="green"
-            hint="Medições de clientes e aportes"
+            hint="Medições e aportes"
           />
           <StatCard
-            label="Total de Saídas"
+            label="Saídas"
             value={fmtBRL(totalSaidas)}
-            icon={<ArrowUpRight className="size-5 text-red-500" />}
+            icon={<ArrowUpRight className="size-4 sm:size-5 text-red-500" />}
             tone="red"
-            hint="Materiais, equipe, locações e fixos"
+            hint="Materiais, equipe e fixos"
           />
           <StatCard
             label="Resultado Líquido"
             value={fmtBRL(resultadoLiquido)}
-            icon={<Wallet className="size-5" />}
+            icon={<Wallet className="size-4 sm:size-5" />}
             tone={resultadoLiquido >= 0 ? 'green' : 'red'}
-            hint={resultadoLiquido >= 0 ? 'Superávit no período filtrado' : 'Déficit no período filtrado'}
+            hint={resultadoLiquido >= 0 ? 'Superávit no período' : 'Déficit no período'}
           />
           <StatCard
-            label="Custos Sede vs Obras"
+            label="Sede vs Obras"
             value={
-              <span className="flex items-baseline gap-2 text-sm">
+              <span className="flex items-baseline gap-1.5 text-xs sm:text-sm">
                 <span className="font-bold text-fg">Sede: {fmtBRL(totalSede)}</span>
                 <span className="text-muted">|</span>
                 <span className="font-bold text-brand">Obras: {fmtBRL(totalObras)}</span>
               </span>
             }
-            icon={<Building2 className="size-5 text-brand" />}
-            hint={`Obras absorvem ${fmtPct(totalObras / (totalSaidas || 1))} dos gastos`}
+            icon={<Building2 className="size-4 sm:size-5 text-brand" />}
+            hint={`Obras: ${fmtPct(totalObras / (totalSaidas || 1))} dos gastos`}
           />
         </div>
       </div>

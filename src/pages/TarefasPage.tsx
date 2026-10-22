@@ -201,34 +201,34 @@ export function TarefasPage() {
       />
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
         <StatCard
-          label="Tarefas para Hoje"
+          label="Hoje"
           value={`${metricas.concluidasHoje}/${metricas.totalHoje}`}
-          icon={<Calendar className="size-5 text-brand" />}
+          icon={<Calendar className="size-4 sm:size-5 text-brand" />}
           tone="brand"
-          hint={`${metricas.pendentesHoje} pendência(s) hoje`}
+          hint={metricas.pendentesHoje === 0 ? 'Tudo em dia' : `${metricas.pendentesHoje} pendente(s)`}
         />
         <StatCard
-          label="Pendências da Semana"
+          label="Semana"
           value={`${metricas.concluidasSemana}/${metricas.totalSemana}`}
-          icon={<Clock className="size-5 text-amber-500" />}
+          icon={<Clock className="size-4 sm:size-5 text-amber-500" />}
           tone="amber"
-          hint={`${metricas.pendentesSemana} pendência(s) na semana`}
+          hint={metricas.pendentesSemana === 0 ? 'Semana concluída' : `${metricas.pendentesSemana} pendente(s)`}
         />
         <StatCard
-          label="Tarefas Atrasadas"
+          label="Atrasadas"
           value={metricas.atrasadas}
-          icon={<AlertCircle className="size-5 text-red-500" />}
+          icon={<AlertCircle className="size-4 sm:size-5 text-red-500" />}
           tone="red"
-          hint={`${metricas.atrasadas} demanda(s) em atraso`}
+          hint={metricas.atrasadas === 0 ? 'Zero atrasos' : 'Ação imediata'}
         />
         <StatCard
-          label="Total de Tarefas"
+          label="Total"
           value={metricas.total}
-          icon={<CheckSquare className="size-5 text-sky-500" />}
+          icon={<CheckSquare className="size-4 sm:size-5 text-sky-500" />}
           tone="blue"
-          hint="Histórico ativo de demandas"
+          hint={`${metricas.concluidas} concluída(s)`}
         />
       </div>
 

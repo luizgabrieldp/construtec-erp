@@ -25,12 +25,14 @@ export function DashboardPage() {
   const r = useResumo();
 
   const obrasAtivas = data.obras.filter((o) => o.status === 'andamento');
+  const obrasPlanejamento = data.obras.filter((o) => o.status === 'planejamento').length;
+  const obrasConcluidas = data.obras.filter((o) => o.status === 'concluida').length;
+  const colaboradoresAtivos = data.funcionarios.filter((f) => f.ativo);
 
   // Contagem de presença e faltas hoje
   let presentesHoje = 0;
   let faltasHoje = 0;
-  data.funcionarios.forEach((f) => {
-    if (!f.ativo) return;
+  colaboradoresAtivos.forEach((f) => {
     const k = chaveApontamento(f.id, hoje);
     const ap = data.apontamentos[k];
     if (ap) {
@@ -71,37 +73,37 @@ export function DashboardPage() {
       />
 
       {/* Cards de Métricas Operacionais */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
         <StatCard
-          label="Obras em Andamento"
+          label="Obras Ativas"
           value={obrasAtivas.length}
-          icon={<Building2 className="size-5" />}
+          icon={<Building2 className="size-4 sm:size-5" />}
           tone="blue"
-          hint={`${data.obras.length} obras cadastradas no total`}
+          hint={`${obrasPlanejamento} planej. · ${obrasConcluidas} concl.`}
         />
 
         <StatCard
-          label="Equipe em Campo Hoje"
+          label="Em Campo"
           value={presentesHoje}
-          icon={<HardHat className="size-5 text-emerald-500" />}
+          icon={<HardHat className="size-4 sm:size-5 text-emerald-500" />}
           tone="green"
-          hint="Operários com apontamento ativo no canteiro"
+          hint={`de ${colaboradoresAtivos.length} ativos`}
         />
 
         <StatCard
-          label="Faltas Registradas Hoje"
+          label="Faltas Hoje"
           value={faltasHoje}
-          icon={<UserX className="size-5 text-red-500" />}
+          icon={<UserX className="size-4 sm:size-5 text-red-500" />}
           tone={faltasHoje > 0 ? 'red' : undefined}
-          hint="Ausências apontadas para a data de hoje"
+          hint={faltasHoje === 0 ? '100% presente' : 'Ausências hoje'}
         />
 
         <StatCard
-          label="Prazo Médio Decorrido"
+          label="Prazo Médio"
           value={fmtPct(mediaPrazoDecorrido)}
-          icon={<Calendar className="size-5 text-amber-500" />}
+          icon={<Calendar className="size-4 sm:size-5 text-amber-500" />}
           tone="amber"
-          hint="Tempo médio consumido do cronograma ativo"
+          hint="Tempo decorrido"
         />
       </div>
 

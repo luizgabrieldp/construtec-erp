@@ -180,33 +180,34 @@ export function FinanceiroPage() {
       />
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-6 no-print">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-3 mb-6 no-print">
         <StatCard
-          label="Contas a Pagar Pendentes"
+          label="A Pagar Pendente"
           value={fmtBRL(totalPagarPendente)}
           hint={
             totalPagarVencido > 0 ? (
               <span className="text-red-500 font-bold">{fmtBRL(totalPagarVencido)} vencidas</span>
             ) : (
-              'Todos os compromissos em dia'
+              'Compromissos em dia'
             )
           }
-          icon={<Landmark className="size-5" />}
+          icon={<Landmark className="size-4 sm:size-5" />}
           tone={totalPagarVencido > 0 ? 'red' : 'amber'}
         />
         <StatCard
-          label="Medições a Receber (Clientes)"
+          label="A Receber"
           value={fmtBRL(totalReceberPendente)}
-          hint="Receitas contratadas previstas"
-          icon={<CheckCircle2 className="size-5" />}
+          hint="Medições previstas"
+          icon={<CheckCircle2 className="size-4 sm:size-5" />}
           tone="green"
         />
         <StatCard
-          label="Custos Fixos da Sede"
+          label="Custos Fixos Sede"
           value={fmtBRL(data.recorrencias.filter((r) => r.ativo).reduce((s, r) => s + r.valor, 0))}
-          hint="Compromisso mensal recorrente"
-          icon={<RefreshCw className="size-5" />}
+          hint="Mensal recorrente"
+          icon={<RefreshCw className="size-4 sm:size-5" />}
           tone="blue"
+          className="col-span-2 sm:col-span-1"
         />
       </div>
 

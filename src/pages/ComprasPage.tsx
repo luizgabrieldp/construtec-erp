@@ -89,27 +89,28 @@ export function ComprasPage() {
       />
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-3 mb-6">
         <StatCard
-          label="Total Comprado (Ativo)"
+          label="Total Comprado"
           value={fmtBRL(totalCompradoGeral)}
-          hint="Histórico consolidado em compras de insumos"
-          icon={<ShoppingCart className="size-5" />}
+          hint="Histórico de insumos"
+          icon={<ShoppingCart className="size-4 sm:size-5" />}
           tone="brand"
         />
         <StatCard
-          label="Compras no Mês Vigente"
+          label="Compras no Mês"
           value={fmtBRL(totalCompradoMes)}
-          hint="Insumos adquiridos no ciclo atual"
-          icon={<Calendar className="size-5" />}
+          hint="Ciclo atual"
+          icon={<Calendar className="size-4 sm:size-5" />}
           tone="blue"
         />
         <StatCard
-          label="Volume de Operações"
+          label="Pedidos Ativos"
           value={`${data.compras.filter((c) => c.status === 'ativa').length} pedidos`}
-          hint={`${data.compras.filter((c) => c.destinos.length > 1).length} compras com rateio entre obras`}
-          icon={<ShoppingCart className="size-5" />}
+          hint={`${data.compras.filter((c) => c.destinos.length > 1).length} com rateio`}
+          icon={<ShoppingCart className="size-4 sm:size-5" />}
           tone="green"
+          className="col-span-2 sm:col-span-1"
         />
       </div>
 

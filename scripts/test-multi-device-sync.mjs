@@ -339,7 +339,85 @@ try {
   const mescladoComNuvem = mesclarDadosErp(nuvemMesmoDominioTsMaior, aposMutacaoIpad);
   assert.equal(mescladoComNuvem.obras[0].nome, 'Obra Editada Após Propagação de Timestamp');
 
-  console.log('✅ Todos os testes de sincronização multi-dispositivo e Relógio Lógico Monotônico passaram!');
+  console.log('7. Testando useSyncStatus, flag construtec:erp:dirty:v1 e edição Offline Colaborativa sem sobrescrever outros usuários...');
+  const { useSyncStatus } = await server.ssrLoadModule('/src/data/repository.ts');
+
+  // Simula dispositivo ficando Offline
+  Object.defineProperty(globalThis, 'navigator', {
+    value: { onLine: false },
+    configurable: true,
+    writable: true,
+  });
+  for (const fn of windowListeners.get('offline') || []) {
+    fn();
+  }
+  assert.equal(useSyncStatus.getState().online, false);
+
+  const pendenciasAntes = useSyncStatus.getState().pendingCount;
+  // Usuário A (offline) cria uma obra 'obr-offline-userA'
+  useErp.getState().mutate((d) => {
+    d.obras.push({
+      id: 'obr-offline-userA',
+      nome: 'Obra Criada Offline pelo Usuário A',
+      cliente: 'Cliente Offline',
+      endereco: 'Canteiro Offline',
+      status: 'andamento',
+      orcamento: 250000,
+      dataInicio: '2026-10-22',
+      previsaoEntrega: '2027-04-22',
+      cor: '#10b981',
+    });
+  });
+
+  // Verifica que a flag dirty foi persistida no localStorage e pendingCount incrementou
+  assert.equal(globalThis.localStorage.getItem('construtec:erp:dirty:v1'), '1');
+  assert.equal(useSyncStatus.getState().pendingCount >= pendenciasAntes + 1, true);
+
+  // Enquanto o Usuário A estava offline, o Usuário B (online na nuvem) cadastrou 'obr-online-userB' e a tarefa 'tar-online-userB'
+  const estadoNuvemUsuarioB = structuredClone(nuvemMesmoDominioTsMaior);
+  estadoNuvemUsuarioB.obras.push({
+    id: 'obr-online-userB',
+    nome: 'Obra Criada Online pelo Usuário B (Allysson)',
+    cliente: 'Cliente B',
+    endereco: 'Av. Principal',
+    status: 'andamento',
+    orcamento: 420000,
+    dataInicio: '2026-10-22',
+    previsaoEntrega: '2027-06-22',
+    cor: '#3b82f6',
+  });
+  estadoNuvemUsuarioB.tarefas.push({
+    id: 'tar-online-userB',
+    titulo: 'Vistoria registrada por Allysson enquanto outro estava offline',
+    data: '2026-10-22',
+    concluida: false,
+    prioridade: 'alta',
+    recorrencia: 'unica',
+    criadoEm: '2026-10-22T12:00:00.000Z',
+  });
+  const nuvemAtualizadaPorB = registrarMutacaoErp(
+    nuvemMesmoDominioTsMaior,
+    estadoNuvemUsuarioB,
+    'cli_allysson_online',
+    tsMuitoMaior + 50,
+  );
+
+  // Quando o Usuário A reconecta, o sistema mescla o estado mais recente do servidor (nuvemAtualizadaPorB)
+  // com o estado local contendo as edições offline (useErp.getState().data):
+  const estadoLocalOfflineA = repository.load();
+  const resultadoReconexao = mesclarDadosErp(nuvemAtualizadaPorB, estadoLocalOfflineA);
+
+  // Ambas as obras (a criada offline por A e a criada online por B) e a tarefa de B estão preservadas!
+  assert.equal(resultadoReconexao.obras.some((o) => o.id === 'obr-offline-userA'), true);
+  assert.equal(resultadoReconexao.obras.some((o) => o.id === 'obr-online-userB'), true);
+  assert.equal(resultadoReconexao.tarefas.some((t) => t.id === 'tar-online-userB'), true);
+  // E a edição feita por A em 'obr-prop-1' também foi preservada!
+  assert.equal(
+    resultadoReconexao.obras.find((o) => o.id === 'obr-prop-1')?.nome,
+    'Obra Editada Após Propagação de Timestamp',
+  );
+
+  console.log('✅ Todos os testes de sincronização multi-dispositivo, fila offline e Relógio Lógico Monotônico passaram!');
 } catch (err) {
   console.error('❌ Erro no teste:', err);
   process.exitCode = 1;

@@ -20,13 +20,19 @@ const TONE: Record<NonNullable<StatCardProps['tone']>, string> = {
 
 export function StatCard({ label, value, hint, icon, tone = 'brand', className }: StatCardProps) {
   return (
-    <div className={cn('rounded-2xl border border-line bg-surface p-5', className)}>
-      <div className="flex items-start justify-between gap-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-muted">{label}</span>
-        <span className={cn('grid size-9 shrink-0 place-items-center rounded-xl', TONE[tone])}>{icon}</span>
+    <div className={cn('rounded-2xl border border-line bg-surface p-3.5 sm:p-5', className)}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-muted leading-tight line-clamp-1">
+          {label}
+        </span>
+        <span className={cn('grid size-7 sm:size-9 shrink-0 place-items-center rounded-lg sm:rounded-xl', TONE[tone])}>
+          {icon}
+        </span>
       </div>
-      <div className="mt-3 text-2xl font-bold tracking-tight text-fg tabular-nums">{value}</div>
-      {hint && <div className="mt-1.5 text-xs text-muted">{hint}</div>}
+      <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-bold tracking-tight text-fg tabular-nums leading-tight truncate">
+        {value}
+      </div>
+      {hint && <div className="mt-1 text-[11px] sm:text-xs text-muted leading-snug line-clamp-1">{hint}</div>}
     </div>
   );
 }

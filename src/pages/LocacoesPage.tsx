@@ -54,27 +54,28 @@ export function LocacoesPage() {
       />
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 sm:grid-cols-3 mb-6">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:grid-cols-3 mb-6">
         <StatCard
-          label="Equipamentos em Operação"
-          value={`${maquinasAtivasQtd} unidades`}
-          hint="Betoneiras, retroescavadeiras, andaimes ativos"
-          icon={<Construction className="size-5" />}
+          label="Em Operação"
+          value={`${maquinasAtivasQtd} unid.`}
+          hint="Máquinas e equipamentos ativos"
+          icon={<Construction className="size-4 sm:size-5" />}
           tone="brand"
         />
         <StatCard
-          label="Custo Acumulado em Obras"
+          label="Custo Acumulado"
           value={fmtBRL(custoTotalAcumulado)}
-          hint="Calculado proporcionalmente até hoje"
-          icon={<Clock className="size-5" />}
+          hint="Proporcional até hoje"
+          icon={<Clock className="size-4 sm:size-5" />}
           tone="blue"
         />
         <StatCard
-          label="Faturado em Contas a Pagar"
+          label="Faturado"
           value={fmtBRL(totalJaFaturado)}
-          hint={`Pendente de fatura: ${fmtBRL(Math.max(0, custoTotalAcumulado - totalJaFaturado))}`}
-          icon={<CheckCircle2 className="size-5" />}
+          hint={`Pendente: ${fmtBRL(Math.max(0, custoTotalAcumulado - totalJaFaturado))}`}
+          icon={<CheckCircle2 className="size-4 sm:size-5" />}
           tone="green"
+          className="col-span-2 sm:col-span-1"
         />
       </div>
 

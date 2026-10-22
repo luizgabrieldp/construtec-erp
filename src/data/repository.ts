@@ -1,6 +1,7 @@
+import { create } from 'zustand';
 import type { ErpData } from '@/domain/types';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, setDoc, onSnapshot } from 'firebase/firestore';
 import {
   contarRegistrosErp,
   fingerprintDominio,
@@ -15,6 +16,14 @@ export interface SaveOptions {
   forceReset?: boolean;
 }
 
+export interface SyncStatusState {
+  online: boolean;
+  syncing: boolean;
+  latencyMs: number | null;
+  pendingCount: number;
+  lastSyncedAt: number | null;
+}
+
 export interface ErpRepository {
   load(): ErpData | null;
   save(data: ErpData, options?: SaveOptions): void;
@@ -22,15 +31,74 @@ export interface ErpRepository {
   getClientId(): string;
   /** Notifica quando os dados mudam em tempo real (Firestore na nuvem ou outra aba) */
   subscribe(onExternalChange: () => void): () => void;
+  /** Dispara uma sincronização e medição de latência imediata com o servidor */
+  forcarSincronizacaoAgora(): Promise<void>;
 }
 
 const LOCAL_KEY = 'construtec:data';
 const LOCAL_BACKUP_KEY = 'construtec:data:backup';
 const LOCAL_VAULT_KEY = 'construtec:data:vault';
+const LOCAL_DIRTY_KEY = 'construtec:erp:dirty:v1';
+const LOCAL_PENDING_COUNT_KEY = 'construtec:erp:pending_count:v1';
 const CLIENT_ID_KEY = 'construtec:client_id';
 
 const ERP_DOC_REF = doc(db, 'erp', 'dados');
 const ERP_BACKUP_REF = doc(db, 'erp', 'backup_auto');
+
+function lerDirtyInicial(): { dirty: boolean; count: number } {
+  try {
+    const dirty = localStorage.getItem(LOCAL_DIRTY_KEY) === '1';
+    const rawCount = Number(localStorage.getItem(LOCAL_PENDING_COUNT_KEY) || '0');
+    const count = dirty ? Math.max(1, Number.isFinite(rawCount) ? rawCount : 1) : 0;
+    return { dirty, count };
+  } catch {
+    return { dirty: false, count: 0 };
+  }
+}
+
+function navegadorOnline(): boolean {
+  try {
+    return typeof navigator !== 'undefined' && typeof navigator.onLine === 'boolean'
+      ? navigator.onLine
+      : true;
+  } catch {
+    return true;
+  }
+}
+
+const inicialDirty = lerDirtyInicial();
+
+export const useSyncStatus = create<SyncStatusState>()(() => ({
+  online: navegadorOnline(),
+  syncing: false,
+  latencyMs: null,
+  pendingCount: inicialDirty.count,
+  lastSyncedAt: null,
+}));
+
+function atualizarSyncStatus(patch: Partial<SyncStatusState>): void {
+  useSyncStatus.setState((prev) => ({ ...prev, ...patch }));
+}
+
+function agoraPerf(): number {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+}
+
+async function lerDocComLatencia(ref: ReturnType<typeof doc>) {
+  const t0 = agoraPerf();
+  try {
+    const snap = await getDocFromServer(ref);
+    const lat = Math.max(1, Math.round(agoraPerf() - t0));
+    atualizarSyncStatus({ online: true, latencyMs: lat, lastSyncedAt: Date.now() });
+    return { snap, fromServer: true };
+  } catch (err) {
+    // Se getDocFromServer falhou, a rede/servidor está indisponível no momento
+    atualizarSyncStatus({ online: false });
+    throw err;
+  }
+}
 
 class FirestoreRepository implements ErpRepository {
   private lastCloudData: ErpData | null = null;
@@ -50,6 +118,36 @@ class FirestoreRepository implements ErpRepository {
       return id;
     } catch {
       return this.fallbackClientId;
+    }
+  }
+
+  private marcarDirtyLocal(increment = true): void {
+    try {
+      const atual = useSyncStatus.getState().pendingCount;
+      const proximo = increment ? atual + 1 : Math.max(1, atual);
+      localStorage.setItem(LOCAL_DIRTY_KEY, '1');
+      localStorage.setItem(LOCAL_PENDING_COUNT_KEY, String(proximo));
+      atualizarSyncStatus({ pendingCount: proximo });
+    } catch {
+      atualizarSyncStatus({
+        pendingCount: increment ? useSyncStatus.getState().pendingCount + 1 : Math.max(1, useSyncStatus.getState().pendingCount),
+      });
+    }
+  }
+
+  private limparDirtyLocal(): void {
+    try {
+      localStorage.removeItem(LOCAL_DIRTY_KEY);
+      localStorage.removeItem(LOCAL_PENDING_COUNT_KEY);
+    } catch {}
+    atualizarSyncStatus({ pendingCount: 0 });
+  }
+
+  private possuiPendenciaLocal(): boolean {
+    try {
+      return localStorage.getItem(LOCAL_DIRTY_KEY) === '1' || useSyncStatus.getState().pendingCount > 0;
+    } catch {
+      return useSyncStatus.getState().pendingCount > 0;
     }
   }
 
@@ -145,6 +243,7 @@ class FirestoreRepository implements ErpRepository {
     if (options?.forceReset) {
       this.lastCloudData = norm;
       this.persistirLocal(norm, { forceReset: true });
+      this.marcarDirtyLocal(true);
       this.agendarSincronizacaoNuvem(norm, true);
       return;
     }
@@ -163,6 +262,7 @@ class FirestoreRepository implements ErpRepository {
 
     this.lastCloudData = consolidado;
     this.persistirLocal(consolidado);
+    this.marcarDirtyLocal(true);
     this.agendarSincronizacaoNuvem(consolidado, false);
   }
 
@@ -181,9 +281,26 @@ class FirestoreRepository implements ErpRepository {
     void this.processarFilaSincronizacao();
   }
 
+  private reencolherPendencia(alvo: ErpData, forceReset: boolean): void {
+    const pendenteAtual = this.pendingSync;
+    this.pendingSync = pendenteAtual
+      ? {
+          data: mesclarDadosErp(alvo, pendenteAtual.data),
+          forceReset: pendenteAtual.forceReset || forceReset,
+        }
+      : { data: alvo, forceReset };
+  }
+
   private async processarFilaSincronizacao(): Promise<void> {
     if (this.isSyncing) return;
+
+    if (!navegadorOnline()) {
+      atualizarSyncStatus({ online: false, syncing: false });
+      return;
+    }
+
     this.isSyncing = true;
+    atualizarSyncStatus({ syncing: true });
 
     try {
       while (this.pendingSync) {
@@ -195,9 +312,10 @@ class FirestoreRepository implements ErpRepository {
         let nuvemAtual: ErpData | null = null;
 
         if (!forceReset) {
-          // Busca o documento mais recente da nuvem antes de gravar para mesclar alterações simultâneas do outro usuário
+          // Busca OBRIGATORIAMENTE o documento mais recente do SERVIDOR antes de gravar
+          // para mesclar alterações feitas por outros usuários enquanto este aparelho estava offline.
           try {
-            const snapAtual = await getDoc(ERP_DOC_REF);
+            const { snap: snapAtual } = await lerDocComLatencia(ERP_DOC_REF);
             if (snapAtual.exists()) {
               nuvemAtual = normalizarDadosErp(snapAtual.data());
               if (nuvemAtual && possuiEstadoSincronizavelErp(nuvemAtual)) {
@@ -205,11 +323,16 @@ class FirestoreRepository implements ErpRepository {
               }
             }
           } catch {
-            // Sem conexão no momento; prossegue com o estado mesclado localmente
+            // Sem conexão real com o servidor: mantém na fila pendente e preserva a flag dirty no localStorage
+            this.reencolherPendencia(alvo, forceReset);
+            this.marcarDirtyLocal(false);
+            atualizarSyncStatus({ online: false, syncing: false });
+            return;
           }
 
           // Segunda trava de segurança antes do setDoc
           if (!possuiEstadoSincronizavelErp(alvo)) {
+            this.limparDirtyLocal();
             continue;
           }
         }
@@ -237,7 +360,35 @@ class FirestoreRepository implements ErpRepository {
         const payload = sanitizarParaFirestore(alvo);
 
         if (!jaSincronizadoNaNuvem) {
-          await setDoc(ERP_DOC_REF, payload);
+          try {
+            const tWrite0 = agoraPerf();
+            await setDoc(ERP_DOC_REF, payload);
+            const snapConfirm = await getDocFromServer(ERP_DOC_REF);
+            const writeLat = Math.max(1, Math.round(agoraPerf() - tWrite0));
+            atualizarSyncStatus({ online: true, latencyMs: writeLat, lastSyncedAt: Date.now() });
+            if (snapConfirm.exists()) {
+              const confirmado = normalizarDadosErp(snapConfirm.data());
+              if (confirmado && possuiEstadoSincronizavelErp(confirmado)) {
+                const posConfirm = mesclarDadosErp(alvo, confirmado);
+                this.lastCloudData = posConfirm;
+                if (fingerprintDominio(posConfirm) !== fingerprintDominio(alvo)) {
+                  this.persistirLocal(posConfirm, { forceReset });
+                  this.notificarListeners();
+                }
+              }
+            }
+          } catch (writeErr) {
+            this.reencolherPendencia(alvo, forceReset);
+            this.marcarDirtyLocal(false);
+            throw writeErr;
+          }
+        } else {
+          atualizarSyncStatus({ online: true, lastSyncedAt: Date.now() });
+        }
+
+        // Se nenhuma outra mutação entrou enquanto gravava, limpa a fila dirty persistida
+        if (!this.pendingSync) {
+          this.limparDirtyLocal();
         }
 
         // Gravação automática em segundo plano nos documentos de backup da nuvem
@@ -254,8 +405,61 @@ class FirestoreRepository implements ErpRepository {
       }
     } catch (err) {
       console.warn('[CONSTRUTEC] Sincronização em nuvem pendente/offline:', err);
+      this.marcarDirtyLocal(false);
+      atualizarSyncStatus({ online: false });
     } finally {
       this.isSyncing = false;
+      atualizarSyncStatus({ syncing: false });
+    }
+  }
+
+  async forcarSincronizacaoAgora(): Promise<void> {
+    if (!navegadorOnline()) {
+      atualizarSyncStatus({ online: false, syncing: false });
+      return;
+    }
+
+    const local = this.load();
+    if (this.possuiPendenciaLocal() && local && possuiEstadoSincronizavelErp(local)) {
+      this.agendarSincronizacaoNuvem(local, false);
+      return;
+    }
+
+    atualizarSyncStatus({ syncing: true });
+    try {
+      const { snap } = await lerDocComLatencia(ERP_DOC_REF);
+      if (snap.exists()) {
+        const dadosNuvem = normalizarDadosErp(snap.data());
+        if (dadosNuvem && possuiEstadoSincronizavelErp(dadosNuvem)) {
+          const mesclado = local ? mesclarDadosErp(local, dadosNuvem) : dadosNuvem;
+          this.lastCloudData = mesclado;
+          const fpLocal = local ? fingerprintDominio(local) : '';
+          const fpMesclado = fingerprintDominio(mesclado);
+          const fpNuvem = fingerprintDominio(dadosNuvem);
+          const tsAvancou =
+            obterMaiorTimestampConhecido(mesclado) > obterMaiorTimestampConhecido(local);
+
+          if (fpMesclado !== fpLocal || tsAvancou) {
+            this.persistirLocal(mesclado);
+            this.notificarListeners();
+          }
+
+          if (fpMesclado !== fpNuvem && possuiEstadoSincronizavelErp(mesclado)) {
+            this.marcarDirtyLocal(false);
+            this.agendarSincronizacaoNuvem(mesclado, false);
+          } else {
+            this.limparDirtyLocal();
+          }
+        }
+      } else if (local && possuiEstadoSincronizavelErp(local)) {
+        this.agendarSincronizacaoNuvem(local, false);
+      }
+    } catch {
+      atualizarSyncStatus({ online: false });
+    } finally {
+      if (!this.isSyncing) {
+        atualizarSyncStatus({ syncing: false });
+      }
     }
   }
 
@@ -302,6 +506,7 @@ class FirestoreRepository implements ErpRepository {
     localStorage.removeItem(LOCAL_KEY);
     localStorage.removeItem(LOCAL_BACKUP_KEY);
     localStorage.removeItem(LOCAL_VAULT_KEY);
+    this.limparDirtyLocal();
   }
 
   subscribe(onExternalChange: () => void): () => void {
@@ -310,15 +515,30 @@ class FirestoreRepository implements ErpRepository {
     // 1. Garante imediatamente no boot que qualquer dado local existente seja protegido no cofre local
     // e já agenda o resgate/sincronização com a nuvem sem esperar múltiplos round-trips
     const inicialLocal = this.load();
-    if (inicialLocal && contarRegistrosErp(inicialLocal) > 0) {
+    if (inicialLocal && (contarRegistrosErp(inicialLocal) > 0 || this.possuiPendenciaLocal())) {
       this.persistirLocal(inicialLocal);
       this.agendarSincronizacaoNuvem(inicialLocal, false);
+    } else {
+      void this.forcarSincronizacaoAgora();
     }
 
     // 2. Sincronização em tempo real via Cloud Firestore com mesclagem inteligente e resgate automático
+    let ultimoSnapshotMs = agoraPerf();
     const unsubscribeFirestore = onSnapshot(
       ERP_DOC_REF,
+      { includeMetadataChanges: true },
       (snapshot) => {
+        const agoraSnap = agoraPerf();
+        if (!snapshot.metadata.fromCache) {
+          const lat = useSyncStatus.getState().latencyMs ?? Math.max(8, Math.min(450, Math.round(agoraSnap - ultimoSnapshotMs)));
+          atualizarSyncStatus({
+            online: true,
+            latencyMs: lat,
+            lastSyncedAt: Date.now(),
+          });
+        }
+        ultimoSnapshotMs = agoraSnap;
+
         const local = this.load();
 
         if (snapshot.exists()) {
@@ -353,11 +573,17 @@ class FirestoreRepository implements ErpRepository {
 
           // Se o aparelho local tinha registros/edições/exclusões que ainda não estavam na nuvem, envia a união para o Firestore
           if (fpMesclado !== fpNuvem && possuiEstadoSincronizavelErp(mesclado)) {
+            this.marcarDirtyLocal(false);
             this.agendarSincronizacaoNuvem(mesclado, false);
-          } else if (contarRegistrosErp(mesclado) > 0 && !this.hasBackedUpThisSession) {
-            this.hasBackedUpThisSession = true;
-            const payload = sanitizarParaFirestore(mesclado);
-            setDoc(ERP_BACKUP_REF, payload).catch(() => {});
+          } else {
+            if (!snapshot.metadata.fromCache && !this.pendingSync && !this.isSyncing) {
+              this.limparDirtyLocal();
+            }
+            if (contarRegistrosErp(mesclado) > 0 && !this.hasBackedUpThisSession) {
+              this.hasBackedUpThisSession = true;
+              const payload = sanitizarParaFirestore(mesclado);
+              setDoc(ERP_BACKUP_REF, payload).catch(() => {});
+            }
           }
         } else {
           // Caso C: Documento `erp/dados` ainda não existe na nuvem -> resgata do local ou do backup na nuvem
@@ -366,6 +592,7 @@ class FirestoreRepository implements ErpRepository {
       },
       (error) => {
         console.warn('[CONSTRUTEC] Listener do Firestore desconectado:', error);
+        atualizarSyncStatus({ online: false });
       },
     );
 
@@ -374,32 +601,64 @@ class FirestoreRepository implements ErpRepository {
       if (e.key === LOCAL_KEY || e.key === LOCAL_BACKUP_KEY || e.key === null) {
         onExternalChange();
       }
+      if (e.key === LOCAL_DIRTY_KEY || e.key === LOCAL_PENDING_COUNT_KEY || e.key === null) {
+        const d = lerDirtyInicial();
+        atualizarSyncStatus({ pendingCount: d.count });
+      }
     };
     window.addEventListener('storage', handleStorage);
 
     // 4. Re-sincronizar automaticamente quando o celular/navegador reconectar à internet ou voltar ao foco (iOS/iPadOS Safari e PWA)
     const handleOnlineOrVisible = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      atualizarSyncStatus({ online: navegadorOnline() });
       const atual = this.load();
-      if (atual && possuiEstadoSincronizavelErp(atual)) {
+      if (atual && (possuiEstadoSincronizavelErp(atual) || this.possuiPendenciaLocal())) {
         this.agendarSincronizacaoNuvem(atual, false);
+      } else {
+        void this.forcarSincronizacaoAgora();
       }
     };
+
+    const handleOffline = () => {
+      atualizarSyncStatus({ online: false, syncing: false });
+    };
+
     window.addEventListener('online', handleOnlineOrVisible);
+    window.addEventListener('offline', handleOffline);
     window.addEventListener('focus', handleOnlineOrVisible);
     window.addEventListener('pageshow', handleOnlineOrVisible);
     document.addEventListener('visibilitychange', handleOnlineOrVisible);
+
+    // 5. Heartbeat leve periódico (~25s) enquanto a aba estiver visível para medir latência real e garantir sincronia
+    const heartbeatId =
+      typeof window !== 'undefined' && typeof window.setInterval === 'function'
+        ? window.setInterval(() => {
+            if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+            if (!navegadorOnline()) {
+              atualizarSyncStatus({ online: false });
+              return;
+            }
+            void this.forcarSincronizacaoAgora();
+          }, 25000)
+        : null;
 
     return () => {
       this.listeners.delete(onExternalChange);
       unsubscribeFirestore();
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('online', handleOnlineOrVisible);
+      window.removeEventListener('offline', handleOffline);
       window.removeEventListener('focus', handleOnlineOrVisible);
       window.removeEventListener('pageshow', handleOnlineOrVisible);
       document.removeEventListener('visibilitychange', handleOnlineOrVisible);
+      if (heartbeatId !== null && typeof window !== 'undefined' && typeof window.clearInterval === 'function') {
+        window.clearInterval(heartbeatId);
+      }
     };
   }
 }
 
 export const repository: ErpRepository = new FirestoreRepository();
+export const forcarSincronizacaoAgora = () => repository.forcarSincronizacaoAgora();
+

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Menu, ShieldAlert, LogOut, X } from 'lucide-react';
+import { Menu, ShieldAlert, LogOut, X, WifiOff, RefreshCw } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
 import { UserInfoCard, ThemeSwitcher } from './Switchers';
 import { useQuick } from './quick';
@@ -11,6 +11,7 @@ import { Toaster } from '@/components/ui/Toast';
 import { NAV, navDoPerfil, podeAcessar } from '@/app/nav';
 import { useUi } from '@/data/ui';
 import { useAuth } from '@/data/auth';
+import { useSyncStatus, forcarSincronizacaoAgora } from '@/data/repository';
 import { iniciarVerificadorTarefas } from '@/lib/notifications';
 import { isTyping, useHoje } from '@/hooks';
 import { fmtDateLong } from '@/lib/format';
@@ -43,6 +44,64 @@ function useAtalhos() {
   }, [navigate, perfil, toggle]);
 }
 
+function SyncStatusBadge() {
+  const { online, syncing, latencyMs, pendingCount } = useSyncStatus();
+
+  if (!online) {
+    const labelOffline =
+      pendingCount > 0 ? `Offline • ${pendingCount} pendente(s)` : 'Offline • Salvo local';
+    const labelOfflineCurto =
+      pendingCount > 0 ? `Offline • ${pendingCount} pend.` : 'Offline • Salvo local';
+
+    return (
+      <button
+        type="button"
+        onClick={() => void forcarSincronizacaoAgora()}
+        title="Sem conexão no momento. Suas edições estão salvas neste aparelho e subirão automaticamente assim que a internet voltar, sem apagar dados de outros usuários."
+        className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 active:scale-95 transition-all cursor-pointer shrink-0 tabular-nums"
+      >
+        <span className="relative flex size-2 shrink-0">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
+          <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+        </span>
+        <WifiOff className="size-3 shrink-0" />
+        <span className="hidden sm:inline">{labelOffline}</span>
+        <span className="sm:hidden">{labelOfflineCurto}</span>
+      </button>
+    );
+  }
+
+  if (syncing) {
+    return (
+      <button
+        type="button"
+        onClick={() => void forcarSincronizacaoAgora()}
+        title="Sincronizando e mesclando alterações em tempo real com a nuvem..."
+        className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 text-[11px] font-semibold text-brand hover:bg-brand/15 active:scale-95 transition-all cursor-pointer shrink-0 tabular-nums"
+      >
+        <RefreshCw className="size-3 animate-spin shrink-0" />
+        <span>Sincronizando...</span>
+      </button>
+    );
+  }
+
+  const msTexto = latencyMs !== null ? `${latencyMs}ms` : 'OK';
+
+  return (
+    <button
+      type="button"
+      onClick={() => void forcarSincronizacaoAgora()}
+      title="Conectado em tempo real com a nuvem. Clique para verificar a latência e sincronizar agora."
+      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer shrink-0 tabular-nums"
+    >
+      <span className="relative flex size-2 shrink-0">
+        <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+      </span>
+      <span>Online • {msTexto}</span>
+    </button>
+  );
+}
+
 function Topbar() {
   const hoje = useHoje();
   const { pathname } = useLocation();
@@ -57,7 +116,7 @@ function Topbar() {
         paddingBottom: '0.375rem',
       }}
     >
-      <div className="flex h-14 md:h-16 items-center gap-3">
+      <div className="flex h-14 md:h-16 items-center gap-2.5 sm:gap-3">
         {/* Botão Hambúrguer acessível com alvo de toque padrão Apple HIG (44x44px) */}
         <button
           type="button"
@@ -88,7 +147,8 @@ function Topbar() {
           {atual?.label}
         </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-2 shrink-0">
+          <SyncStatusBadge />
           <ThemeSwitcher className="inline-flex" />
         </div>
       </div>

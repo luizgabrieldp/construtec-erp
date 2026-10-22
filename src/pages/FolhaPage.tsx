@@ -210,33 +210,33 @@ export function FolhaPage() {
       />
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
         <StatCard
-          label="Folha Pendente de Pagamento"
+          label="Folha Pendente"
           value={fmtBRL(totalPendenteFolha)}
-          icon={<DollarSign className="size-5 text-amber-500" />}
+          icon={<DollarSign className="size-4 sm:size-5 text-amber-500" />}
           tone={totalPendenteFolha > 0 ? 'amber' : undefined}
-          hint="Contas a pagar de folha em aberto"
+          hint="Em aberto"
         />
         <StatCard
-          label="Total Pago em Folha"
+          label="Total Pago"
           value={fmtBRL(totalPagoFolha)}
-          icon={<CheckCircle className="size-5 text-emerald-500" />}
+          icon={<CheckCircle className="size-4 sm:size-5 text-emerald-500" />}
           tone="green"
-          hint="Total liquidado no histórico"
+          hint="Liquidado no histórico"
         />
         <StatCard
-          label="Fechamentos Realizados"
+          label="Fechamentos"
           value={data.fechamentos.length}
-          icon={<FileText className="size-5 text-brand" />}
-          hint={`${data.fechamentos.filter((f) => f.tipo === 'semanal').length} semanais · ${data.fechamentos.filter((f) => f.tipo === 'quinzenal').length} quinzenais · ${data.fechamentos.filter((f) => f.tipo === 'mensal').length} mensais`}
+          icon={<FileText className="size-4 sm:size-5 text-brand" />}
+          hint={`${data.fechamentos.filter((f) => f.tipo === 'semanal').length} sem. · ${data.fechamentos.filter((f) => f.tipo === 'quinzenal').length} quinz. · ${data.fechamentos.filter((f) => f.tipo === 'mensal').length} mens.`}
         />
         <StatCard
-          label="Colaboradores na Folha"
+          label="Equipe na Folha"
           value={data.funcionarios.filter((f) => f.ativo).length}
-          icon={<Users className="size-5 text-blue-500" />}
+          icon={<Users className="size-4 sm:size-5 text-blue-500" />}
           tone="blue"
-          hint="Profissionais ativos no cadastro"
+          hint="Profissionais ativos"
         />
       </div>
 

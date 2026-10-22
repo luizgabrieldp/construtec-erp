@@ -93,33 +93,33 @@ export function EquipePage() {
       />
 
       {/* Cards de Métricas */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2.5 sm:gap-4 lg:grid-cols-4">
         <StatCard
-          label="Colaboradores Ativos"
+          label="Equipe Ativa"
           value={ativos.length}
-          icon={<Users className="size-5" />}
-          hint={`${totalMensalistas} mensalistas · ${totalDiaristas} diaristas`}
+          icon={<Users className="size-4 sm:size-5" />}
+          hint={`${totalMensalistas} mens. · ${totalDiaristas} diar.`}
         />
         <StatCard
-          label="Em Campo Hoje"
+          label="Em Campo"
           value={presentesHoje}
-          icon={<UserCheck className="size-5 text-emerald-500" />}
+          icon={<UserCheck className="size-4 sm:size-5 text-emerald-500" />}
           tone="green"
-          hint={`Presença registrada para o dia de hoje (${hoje})`}
+          hint="Presentes hoje"
         />
         <StatCard
-          label="Faltas Apontadas Hoje"
+          label="Faltas Hoje"
           value={faltasHoje}
-          icon={<UserX className="size-5 text-red-500" />}
+          icon={<UserX className="size-4 sm:size-5 text-red-500" />}
           tone={faltasHoje > 0 ? 'red' : undefined}
-          hint="Ausências registradas no canteiro"
+          hint="Ausências no dia"
         />
         <StatCard
-          label="Regime Predominante"
-          value={`${Math.round((totalDiaristas / (ativos.length || 1)) * 100)}%`}
-          icon={<HardHat className="size-5 text-amber-500" />}
+          label="Regime"
+          value={totalDiaristas >= totalMensalistas ? 'Diária' : 'Mensal'}
+          icon={<HardHat className="size-4 sm:size-5 text-amber-500" />}
           tone="amber"
-          hint={`${totalDiaristasSemanais} semanais · ${totalDiaristasQuinzenais} quinzenais`}
+          hint={`${totalDiaristasSemanais} sem. · ${totalDiaristasQuinzenais} quinz.`}
         />
       </div>
 

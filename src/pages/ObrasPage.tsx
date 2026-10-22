@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Search, Building2, Eye, Edit2, Calendar } from 'lucide-react';
+import { Plus, Search, Building2, Eye, Edit2, Calendar, HardHat, CheckCircle2, Clock } from 'lucide-react';
 import { Button, Input, PageHeader, Card, Badge, Progress } from '@/components/ui';
+import { StatCard } from '@/components/ui/StatCard';
 import { useData } from '@/data/store';
 import { useIsAdmin, useResumo } from '@/hooks';
 import type { Obra } from '@/domain/types';
@@ -21,6 +22,11 @@ export function ObrasPage() {
   const [modalFormOpen, setModalFormOpen] = useState(false);
   const [obraEditando, setObraEditando] = useState<Obra | null>(null);
   const [obraVisualizando, setObraVisualizando] = useState<Obra | null>(null);
+
+  const obrasAndamento = data.obras.filter((o) => o.status === 'andamento').length;
+  const obrasPlanejamento = data.obras.filter((o) => o.status === 'planejamento').length;
+  const obrasPausadas = data.obras.filter((o) => o.status === 'pausada').length;
+  const obrasConcluidas = data.obras.filter((o) => o.status === 'concluida').length;
 
   const obrasFiltradas = data.obras.filter((o) => {
     const q = busca.toLowerCase();
@@ -56,6 +62,38 @@ export function ObrasPage() {
           )
         }
       />
+
+      {/* Cards de Métricas das Obras */}
+      <div className="mb-6 grid grid-cols-2 gap-2.5 sm:gap-4 xl:grid-cols-4">
+        <StatCard
+          label="Em Andamento"
+          value={obrasAndamento}
+          icon={<Building2 className="size-4 sm:size-5" />}
+          tone="green"
+          hint={`de ${data.obras.length} cadastradas`}
+        />
+        <StatCard
+          label="Planejamento"
+          value={obrasPlanejamento}
+          icon={<Clock className="size-4 sm:size-5" />}
+          tone="blue"
+          hint={obrasPausadas > 0 ? `${obrasPausadas} pausada(s)` : 'Em preparação'}
+        />
+        <StatCard
+          label="Concluídas"
+          value={obrasConcluidas}
+          icon={<CheckCircle2 className="size-4 sm:size-5" />}
+          tone="brand"
+          hint="Obras entregues"
+        />
+        <StatCard
+          label="Em Campo"
+          value={r.equipeHoje}
+          icon={<HardHat className="size-4 sm:size-5" />}
+          tone="amber"
+          hint="Operários nas obras"
+        />
+      </div>
 
       {/* Barra de Filtros */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
