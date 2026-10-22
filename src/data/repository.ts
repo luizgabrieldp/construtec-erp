@@ -368,7 +368,7 @@ class FirestoreRepository implements ErpRepository {
     };
     window.addEventListener('storage', handleStorage);
 
-    // 4. Re-sincronizar automaticamente quando o celular/navegador reconectar à internet ou voltar ao foco (PWA)
+    // 4. Re-sincronizar automaticamente quando o celular/navegador reconectar à internet ou voltar ao foco (iOS/iPadOS Safari e PWA)
     const handleOnlineOrVisible = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
       const atual = this.load();
@@ -377,6 +377,8 @@ class FirestoreRepository implements ErpRepository {
       }
     };
     window.addEventListener('online', handleOnlineOrVisible);
+    window.addEventListener('focus', handleOnlineOrVisible);
+    window.addEventListener('pageshow', handleOnlineOrVisible);
     document.addEventListener('visibilitychange', handleOnlineOrVisible);
 
     return () => {
@@ -384,6 +386,8 @@ class FirestoreRepository implements ErpRepository {
       unsubscribeFirestore();
       window.removeEventListener('storage', handleStorage);
       window.removeEventListener('online', handleOnlineOrVisible);
+      window.removeEventListener('focus', handleOnlineOrVisible);
+      window.removeEventListener('pageshow', handleOnlineOrVisible);
       document.removeEventListener('visibilitychange', handleOnlineOrVisible);
     };
   }

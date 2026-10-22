@@ -204,16 +204,62 @@ export function normalizarDadosErp(raw: unknown): ErpData | null {
 }
 
 /**
+ * Retorna o maior timestamp conhecido nos metadados `_meta` de um estado `ErpData`
+ * (`lastWriteAt`, `systemResetAt`, todos os valores de `updatedAt` e todos os valores de `deletedIds`).
+ * Usado pelo Relógio Lógico Monotônico (Hybrid Logical Timestamp) para garantir que edições
+ * sequenciais do mesmo usuário em múltiplos aparelhos (ex.: 2 iPhones e 1 iPad com diferenças
+ * de relógio / clock skew) sempre gerem um timestamp estritamente crescente.
+ */
+export function obterMaiorTimestampConhecido(data?: ErpData | null): number {
+  if (!data || typeof data !== 'object' || !data._meta) return 0;
+  const meta = data._meta;
+  let maior = 0;
+
+  if (typeof meta.lastWriteAt === 'number' && Number.isFinite(meta.lastWriteAt) && meta.lastWriteAt > maior) {
+    maior = meta.lastWriteAt;
+  }
+  if (typeof meta.systemResetAt === 'number' && Number.isFinite(meta.systemResetAt) && meta.systemResetAt > maior) {
+    maior = meta.systemResetAt;
+  }
+  if (meta.updatedAt && typeof meta.updatedAt === 'object') {
+    for (const ts of Object.values(meta.updatedAt)) {
+      if (typeof ts === 'number' && Number.isFinite(ts) && ts > maior) {
+        maior = ts;
+      }
+    }
+  }
+  if (meta.deletedIds && typeof meta.deletedIds === 'object') {
+    for (const ts of Object.values(meta.deletedIds)) {
+      if (typeof ts === 'number' && Number.isFinite(ts) && ts > maior) {
+        maior = ts;
+      }
+    }
+  }
+
+  return maior;
+}
+
+/**
  * Registra nos metadados `_meta` exatamente quais itens foram criados, editados ou excluídos
  * durante uma mutação (`prev` -> `next`).
+ * Quando `timestamp !== 1`, aplica Relógio Lógico Monotônico para blindar contra clock skew
+ * entre aparelhos do mesmo usuário ou de usuários distintos.
  */
 export function registrarMutacaoErp(
   prev: ErpData,
   next: ErpData,
   clientId: string,
-  now: number = Date.now(),
+  timestamp?: number,
 ): ErpData {
   const prevNorm = normalizarDadosErp(prev) ?? dadosVazios();
+  const agora =
+    timestamp === 1
+      ? 1
+      : Math.max(
+          timestamp ?? Date.now(),
+          obterMaiorTimestampConhecido(prevNorm) + 1,
+          obterMaiorTimestampConhecido(next) + 1,
+        );
   const updatedAt: Record<string, number> = {
     ...(prevNorm._meta?.updatedAt || {}),
     ...(next._meta?.updatedAt || {}),
@@ -242,7 +288,7 @@ export function registrarMutacaoErp(
       const metaKey = `${col}:${id}`;
       const antigo = prevMap.get(id);
       if (!antigo || !igualCanonico(antigo, item)) {
-        updatedAt[metaKey] = now;
+        updatedAt[metaKey] = agora;
         delete deletedIds[metaKey];
       } else if (!updatedAt[metaKey]) {
         updatedAt[metaKey] = 1;
@@ -253,7 +299,7 @@ export function registrarMutacaoErp(
     for (const id of prevMap.keys()) {
       if (!nextMap.has(id)) {
         const metaKey = `${col}:${id}`;
-        deletedIds[metaKey] = now;
+        deletedIds[metaKey] = agora;
       }
     }
   }
@@ -264,7 +310,7 @@ export function registrarMutacaoErp(
   for (const [k, val] of Object.entries(nextAp)) {
     const metaKey = `apontamentos:${k}`;
     if (!prevAp[k] || !igualCanonico(prevAp[k], val)) {
-      updatedAt[metaKey] = now;
+      updatedAt[metaKey] = agora;
       delete deletedIds[metaKey];
     } else if (!updatedAt[metaKey]) {
       updatedAt[metaKey] = 1;
@@ -273,7 +319,7 @@ export function registrarMutacaoErp(
   for (const k of Object.keys(prevAp)) {
     if (!(k in nextAp)) {
       const metaKey = `apontamentos:${k}`;
-      deletedIds[metaKey] = now;
+      deletedIds[metaKey] = agora;
     }
   }
 
@@ -283,7 +329,7 @@ export function registrarMutacaoErp(
   for (const fn of nextFnSet) {
     const metaKey = `funcoesCustomizadas:${fn}`;
     if (!prevFnSet.has(fn)) {
-      updatedAt[metaKey] = now;
+      updatedAt[metaKey] = agora;
       delete deletedIds[metaKey];
     } else if (!updatedAt[metaKey]) {
       updatedAt[metaKey] = 1;
@@ -292,13 +338,13 @@ export function registrarMutacaoErp(
   for (const fn of prevFnSet) {
     if (!nextFnSet.has(fn)) {
       const metaKey = `funcoesCustomizadas:${fn}`;
-      deletedIds[metaKey] = now;
+      deletedIds[metaKey] = agora;
     }
   }
 
   // Config
   if (!igualCanonico(prevNorm.config, next.config)) {
-    updatedAt['config'] = now;
+    updatedAt['config'] = agora;
   }
 
   next._meta = {
@@ -306,7 +352,7 @@ export function registrarMutacaoErp(
     deletedIds,
     ...(prevNorm._meta?.systemResetAt ? { systemResetAt: prevNorm._meta.systemResetAt } : {}),
     lastClientId: clientId,
-    lastWriteAt: now,
+    lastWriteAt: Math.max(agora, prevNorm._meta?.lastWriteAt ?? 0, next._meta?.lastWriteAt ?? 0),
   };
 
   return next;
@@ -603,6 +649,13 @@ export function mesclarDadosErp(
 
   const lastWriteL = metaLocal.lastWriteAt ?? 0;
   const lastWriteR = metaRemoto.lastWriteAt ?? 0;
+  const maiorConhecido = Math.max(
+    lastWriteL,
+    lastWriteR,
+    resetAt,
+    ...Object.values(mergedUpdatedAt),
+    ...Object.values(mergedDeletedIds),
+  );
 
   resultado._meta = {
     updatedAt: mergedUpdatedAt,
@@ -612,7 +665,7 @@ export function mesclarDadosErp(
       lastWriteL >= lastWriteR
         ? (metaLocal.lastClientId ?? metaRemoto.lastClientId)
         : (metaRemoto.lastClientId ?? metaLocal.lastClientId),
-    lastWriteAt: Math.max(lastWriteL, lastWriteR, Date.now()),
+    lastWriteAt: maiorConhecido > 1 ? maiorConhecido : Date.now(),
   };
 
   return resultado;

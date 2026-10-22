@@ -8,6 +8,7 @@ import {
   fingerprintDominio,
   mesclarDadosErp,
   normalizarDadosErp,
+  obterMaiorTimestampConhecido,
   registrarMutacaoErp,
 } from './sync';
 import { useUi } from './ui';
@@ -102,7 +103,7 @@ export const useErp = create<ErpState>()((set, get) => ({
   },
 
   restaurarDemo: () => {
-    const agora = Date.now();
+    const agora = Math.max(Date.now(), obterMaiorTimestampConhecido(get().data) + 1);
     const demo = normalizarDadosErp(gerarDadosDemo())!;
     const updatedAt: Record<string, number> = { config: agora };
     for (const col of COLECOES_ARRAY) {
@@ -124,7 +125,7 @@ export const useErp = create<ErpState>()((set, get) => ({
   },
 
   zerarSistema: () => {
-    const agora = Date.now();
+    const agora = Math.max(Date.now(), obterMaiorTimestampConhecido(get().data) + 1);
     const vazio = dadosVazios();
     vazio.audit = [entradaAuditoria({ acao: 'Sistema', descricao: 'Sistema zerado' })];
     vazio._meta = {

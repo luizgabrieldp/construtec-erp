@@ -167,6 +167,37 @@ export function mesclarConvites(
   return Array.from(map.values());
 }
 
+export function obterMaiorTimestampAuth(
+  usuarios: Usuario[],
+  convites: ConviteAcesso[],
+  usuarioAtual?: Usuario | null,
+): number {
+  let maior = 0;
+  if (
+    usuarioAtual &&
+    typeof usuarioAtual.atualizadoEm === 'number' &&
+    Number.isFinite(usuarioAtual.atualizadoEm) &&
+    usuarioAtual.atualizadoEm > maior
+  ) {
+    maior = usuarioAtual.atualizadoEm;
+  }
+  if (Array.isArray(usuarios)) {
+    for (const u of usuarios) {
+      if (u && typeof u.atualizadoEm === 'number' && Number.isFinite(u.atualizadoEm) && u.atualizadoEm > maior) {
+        maior = u.atualizadoEm;
+      }
+    }
+  }
+  if (Array.isArray(convites)) {
+    for (const c of convites) {
+      if (c && typeof c.atualizadoEm === 'number' && Number.isFinite(c.atualizadoEm) && c.atualizadoEm > maior) {
+        maior = c.atualizadoEm;
+      }
+    }
+  }
+  return maior;
+}
+
 function fingerprintAuth(usuarios: Usuario[], convites: ConviteAcesso[]): string {
   const uOrd = [...usuarios].sort((a, b) => a.id.localeCompare(b.id));
   const cOrd = [...convites].sort((a, b) => a.codigo.localeCompare(b.codigo));
@@ -269,12 +300,17 @@ export const useAuth = create<AuthState>()(
         const atual = get().usuarioAtual;
         if (!atual) return;
 
+        const agora = Math.max(
+          Date.now(),
+          obterMaiorTimestampAuth(get().usuarios, get().convites, atual) + 1,
+        );
+
         const atualizado: Usuario = {
           ...atual,
           nome: dados.nome?.trim() || atual.nome,
           emailOuLogin: dados.emailOuLogin?.trim() || atual.emailOuLogin,
           senha: dados.senha?.trim() || atual.senha,
-          atualizadoEm: Date.now(),
+          atualizadoEm: agora,
         };
 
         const existeNaLista = get().usuarios.some((u) => u.id === atual.id);
@@ -294,14 +330,18 @@ export const useAuth = create<AuthState>()(
         const aleatorio = Math.random().toString(36).substring(2, 8).toUpperCase();
         const prefixo = perfil === 'admin' ? 'ADM' : 'OBRA';
         const codigo = `${prefixo}-${aleatorio}`;
+        const agora = Math.max(
+          Date.now(),
+          obterMaiorTimestampAuth(get().usuarios, get().convites, get().usuarioAtual) + 1,
+        );
 
         const novoConvite: ConviteAcesso = {
           id: uid('inv'),
           codigo,
           perfil,
           usado: false,
-          criadoEm: new Date().toISOString(),
-          atualizadoEm: Date.now(),
+          criadoEm: new Date(agora).toISOString(),
+          atualizadoEm: agora,
         };
 
         const novosConvites = [novoConvite, ...get().convites];
@@ -329,7 +369,10 @@ export const useAuth = create<AuthState>()(
           return { ok: false, error: 'Este login/e-mail já está cadastrado no sistema.' };
         }
 
-        const agora = Date.now();
+        const agora = Math.max(
+          Date.now(),
+          obterMaiorTimestampAuth(get().usuarios, get().convites, get().usuarioAtual) + 1,
+        );
         const novoUsuario: Usuario = {
           id: uid('usr'),
           nome: dados.nome.trim(),
@@ -360,12 +403,20 @@ export const useAuth = create<AuthState>()(
       },
 
       alternarStatusUsuario: (usuarioId) => {
-        const agora = Date.now();
+        const agora = Math.max(
+          Date.now(),
+          obterMaiorTimestampAuth(get().usuarios, get().convites, get().usuarioAtual) + 1,
+        );
         const novosUsuarios = get().usuarios.map((u) =>
           u.id === usuarioId ? { ...u, ativo: !u.ativo, atualizadoEm: agora } : u
         );
-        set({ usuarios: novosUsuarios });
-        void sincronizarAuthNuvem(novosUsuarios, get().convites, get().usuarioAtual);
+        const atual = get().usuarioAtual;
+        const novoUsuarioAtual =
+          atual && atual.id === usuarioId
+            ? novosUsuarios.find((u) => u.id === usuarioId) ?? atual
+            : atual;
+        set({ usuarios: novosUsuarios, usuarioAtual: novoUsuarioAtual });
+        void sincronizarAuthNuvem(novosUsuarios, get().convites, novoUsuarioAtual);
       },
     }),
     {
@@ -402,7 +453,10 @@ try {
         const fpMesclado = fingerprintAuth(usuariosMesclados, convitesMesclados);
         const fpNuvem = fingerprintAuth(nuvemU, nuvemC);
 
-        if (fpMesclado !== fpLocal) {
+        if (
+          fpMesclado !== fpLocal ||
+          canonicalizarJson(s.usuarioAtual) !== canonicalizarJson(usuarioAtualSincronizado)
+        ) {
           useAuth.setState({
             usuarios: usuariosMesclados,
             convites: convitesMesclados,
