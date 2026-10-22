@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Menu, ShieldAlert, LogOut, X, WifiOff, RefreshCw } from 'lucide-react';
+import { Menu, ShieldAlert, LogOut, X } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
 import { UserInfoCard, ThemeSwitcher } from './Switchers';
 import { useQuick } from './quick';
@@ -50,23 +50,19 @@ function SyncStatusBadge() {
   if (!online) {
     const labelOffline =
       pendingCount > 0 ? `Offline • ${pendingCount} pendente(s)` : 'Offline • Salvo local';
-    const labelOfflineCurto =
-      pendingCount > 0 ? `Offline • ${pendingCount} pend.` : 'Offline • Salvo local';
 
     return (
       <button
         type="button"
         onClick={() => void forcarSincronizacaoAgora()}
-        title="Sem conexão no momento. Suas edições estão salvas neste aparelho e subirão automaticamente assim que a internet voltar, sem apagar dados de outros usuários."
-        className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 active:scale-95 transition-all cursor-pointer shrink-0 tabular-nums"
+        title={`${labelOffline}. Sem conexão no momento — suas edições estão salvas neste aparelho e subirão automaticamente assim que a internet voltar.`}
+        aria-label={labelOffline}
+        className="inline-flex size-7 items-center justify-center rounded-full hover:bg-amber-500/10 active:scale-95 transition-all cursor-pointer shrink-0"
       >
-        <span className="relative flex size-2 shrink-0">
+        <span className="relative flex size-2.5 shrink-0">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-75" />
-          <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+          <span className="relative inline-flex size-2.5 rounded-full bg-amber-500 ring-4 ring-amber-500/20" />
         </span>
-        <WifiOff className="size-3 shrink-0" />
-        <span className="hidden sm:inline">{labelOffline}</span>
-        <span className="sm:hidden">{labelOfflineCurto}</span>
       </button>
     );
   }
@@ -77,10 +73,10 @@ function SyncStatusBadge() {
         type="button"
         onClick={() => void forcarSincronizacaoAgora()}
         title="Sincronizando e mesclando alterações em tempo real com a nuvem..."
-        className="inline-flex items-center gap-1.5 rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 text-[11px] font-semibold text-brand hover:bg-brand/15 active:scale-95 transition-all cursor-pointer shrink-0 tabular-nums"
+        aria-label="Sincronizando..."
+        className="inline-flex size-7 items-center justify-center rounded-full hover:bg-brand/10 active:scale-95 transition-all cursor-pointer shrink-0"
       >
-        <RefreshCw className="size-3 animate-spin shrink-0" />
-        <span>Sincronizando...</span>
+        <span className="inline-flex size-2.5 shrink-0 rounded-full bg-brand animate-pulse ring-4 ring-brand/20" />
       </button>
     );
   }
@@ -91,13 +87,11 @@ function SyncStatusBadge() {
     <button
       type="button"
       onClick={() => void forcarSincronizacaoAgora()}
-      title="Conectado em tempo real com a nuvem. Clique para verificar a latência e sincronizar agora."
-      className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 active:scale-95 transition-all cursor-pointer shrink-0 tabular-nums"
+      title={`Online • ${msTexto}. Conectado em tempo real com a nuvem. Clique para verificar a latência e sincronizar agora.`}
+      aria-label={`Online • ${msTexto}`}
+      className="inline-flex size-7 items-center justify-center rounded-full hover:bg-emerald-500/10 active:scale-95 transition-all cursor-pointer shrink-0"
     >
-      <span className="relative flex size-2 shrink-0">
-        <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-      </span>
-      <span>Online • {msTexto}</span>
+      <span className="inline-flex size-2.5 shrink-0 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20" />
     </button>
   );
 }
