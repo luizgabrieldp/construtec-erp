@@ -649,13 +649,19 @@ export function mesclarDadosErp(
 
   const lastWriteL = metaLocal.lastWriteAt ?? 0;
   const lastWriteR = metaRemoto.lastWriteAt ?? 0;
-  const maiorConhecido = Math.max(
+  let maiorConhecido = Math.max(
     lastWriteL,
     lastWriteR,
     resetAt,
-    ...Object.values(mergedUpdatedAt),
-    ...Object.values(mergedDeletedIds),
+    obterMaiorTimestampConhecido(local),
+    obterMaiorTimestampConhecido(remoto),
   );
+  for (const ts of Object.values(mergedUpdatedAt)) {
+    if (typeof ts === 'number' && Number.isFinite(ts) && ts > maiorConhecido) maiorConhecido = ts;
+  }
+  for (const ts of Object.values(mergedDeletedIds)) {
+    if (typeof ts === 'number' && Number.isFinite(ts) && ts > maiorConhecido) maiorConhecido = ts;
+  }
 
   resultado._meta = {
     updatedAt: mergedUpdatedAt,

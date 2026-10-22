@@ -294,6 +294,51 @@ try {
   assert.equal(useErp.getState().data._meta.systemResetAt, tsErpFuturo + 2);
   assert.equal(useErp.getState().data._meta.lastWriteAt, tsErpFuturo + 2);
 
+  console.log('6. Testando propagação de relógio lógico quando fingerprintDominio é igual mas nuvem tem timestamp maior...');
+  const { repository } = await server.ssrLoadModule('/src/data/repository.ts');
+  const estadoInicialPropagacao = normalizarDadosErp(dadosVazios());
+  estadoInicialPropagacao.obras.push({
+    id: 'obr-prop-1',
+    nome: 'Obra Mesma Versão',
+    cliente: 'Cliente X',
+    endereco: 'Av. Central',
+    status: 'em_andamento',
+    orcamento: 50000,
+    dataInicio: '2026-10-01',
+  });
+  // Dispositivo local (iPad com relógio atrasado) tem a obra com timestamp 500_000
+  const localAntigo = registrarMutacaoErp(dadosVazios(), estadoInicialPropagacao, 'cli_ipad', 500_000);
+  repository.save(localAntigo);
+  useErp.setState({ data: localAntigo });
+  assert.equal(obterMaiorTimestampConhecido(useErp.getState().data), 500_000);
+
+  // Outro aparelho (iPhone 1 com relógio em tsErpFuturo + 50_000) salvou exatamente o mesmo conteúdo de domínio,
+  // porém com timestamp muito maior na nuvem/storage:
+  const nuvemMesmoDominioTsMaior = structuredClone(localAntigo);
+  const tsMuitoMaior = tsErpFuturo + 50_000;
+  nuvemMesmoDominioTsMaior._meta.updatedAt['obras:obr-prop-1'] = tsMuitoMaior;
+  nuvemMesmoDominioTsMaior._meta.lastWriteAt = tsMuitoMaior;
+  assert.equal(fingerprintDominio(localAntigo), fingerprintDominio(nuvemMesmoDominioTsMaior));
+
+  // Quando o repositório recebe/persiste esse estado e notifica via storage/subscribe:
+  globalThis.localStorage.setItem('construtec:data', JSON.stringify(nuvemMesmoDominioTsMaior));
+  for (const fn of windowListeners.get('storage') || []) {
+    fn({ key: 'construtec:data' });
+  }
+
+  // O useErp deve ter absorvido o novo relógio lógico mesmo com fingerprintDominio idêntico!
+  assert.equal(obterMaiorTimestampConhecido(useErp.getState().data), tsMuitoMaior);
+
+  // E se o usuário editar 'obr-prop-1' em seguida no iPad (mesmo com relógio local atrasado),
+  // a mutação receberá tsMuitoMaior + 1 e vencerá na mesclagem com a nuvem!
+  useErp.getState().mutate((d) => {
+    d.obras[0].nome = 'Obra Editada Após Propagação de Timestamp';
+  });
+  const aposMutacaoIpad = useErp.getState().data;
+  assert.equal(aposMutacaoIpad._meta.updatedAt['obras:obr-prop-1'], tsMuitoMaior + 1);
+  const mescladoComNuvem = mesclarDadosErp(nuvemMesmoDominioTsMaior, aposMutacaoIpad);
+  assert.equal(mescladoComNuvem.obras[0].nome, 'Obra Editada Após Propagação de Timestamp');
+
   console.log('✅ Todos os testes de sincronização multi-dispositivo e Relógio Lógico Monotônico passaram!');
 } catch (err) {
   console.error('❌ Erro no teste:', err);

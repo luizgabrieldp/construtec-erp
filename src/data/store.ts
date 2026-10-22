@@ -154,7 +154,11 @@ repository.subscribe(() => {
   if (!externo) return;
   const atual = useErp.getState().data;
   const mesclado = sincronizarRecorrencias(mesclarDadosErp(atual, externo));
-  if (fingerprintDominio(atual) !== fingerprintDominio(mesclado) || atual.audit.length !== mesclado.audit.length) {
+  if (
+    fingerprintDominio(atual) !== fingerprintDominio(mesclado) ||
+    atual.audit.length !== mesclado.audit.length ||
+    obterMaiorTimestampConhecido(mesclado) > obterMaiorTimestampConhecido(atual)
+  ) {
     useErp.setState({ data: mesclado });
   }
 });

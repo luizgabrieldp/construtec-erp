@@ -6,6 +6,7 @@ import {
   fingerprintDominio,
   mesclarDadosErp,
   normalizarDadosErp,
+  obterMaiorTimestampConhecido,
   possuiEstadoSincronizavelErp,
   sanitizarParaFirestore,
 } from './sync';
@@ -160,6 +161,7 @@ class FirestoreRepository implements ErpRepository {
       return;
     }
 
+    this.lastCloudData = consolidado;
     this.persistirLocal(consolidado);
     this.agendarSincronizacaoNuvem(consolidado, false);
   }
@@ -216,7 +218,11 @@ class FirestoreRepository implements ErpRepository {
         this.lastCloudData = alvo;
         this.persistirLocal(alvo, { forceReset });
 
-        if (!localAntes || fingerprintDominio(localAntes) !== fingerprintDominio(alvo)) {
+        if (
+          !localAntes ||
+          fingerprintDominio(localAntes) !== fingerprintDominio(alvo) ||
+          obterMaiorTimestampConhecido(alvo) > obterMaiorTimestampConhecido(localAntes)
+        ) {
           this.notificarListeners();
         }
 
@@ -225,7 +231,8 @@ class FirestoreRepository implements ErpRepository {
           nuvemAtual !== null &&
           possuiEstadoSincronizavelErp(nuvemAtual) &&
           fingerprintDominio(nuvemAtual) === fingerprintDominio(alvo) &&
-          (nuvemAtual.audit?.length ?? 0) === (alvo.audit?.length ?? 0);
+          (nuvemAtual.audit?.length ?? 0) === (alvo.audit?.length ?? 0) &&
+          obterMaiorTimestampConhecido(nuvemAtual) >= obterMaiorTimestampConhecido(alvo);
 
         const payload = sanitizarParaFirestore(alvo);
 
@@ -336,8 +343,10 @@ class FirestoreRepository implements ErpRepository {
           const fpNuvem = fingerprintDominio(dadosNuvem);
           const fpMesclado = fingerprintDominio(mesclado);
           const fpLocal = local ? fingerprintDominio(local) : '';
+          const tsAvancou =
+            obterMaiorTimestampConhecido(mesclado) > obterMaiorTimestampConhecido(local);
 
-          if (fpMesclado !== fpLocal) {
+          if (fpMesclado !== fpLocal || tsAvancou) {
             this.persistirLocal(mesclado);
             this.notificarListeners();
           }

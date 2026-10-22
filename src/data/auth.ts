@@ -212,6 +212,7 @@ async function sincronizarAuthNuvem(
   try {
     let usuariosFinais = mesclarUsuarios(usuariosLocais, [], usuarioAtual);
     let convitesFinais = mesclarConvites(convitesLocais, []);
+    let fpNuvem = '';
 
     try {
       const snap = await getDoc(AUTH_DOC_REF);
@@ -219,18 +220,43 @@ async function sincronizarAuthNuvem(
         const d = snap.data();
         const nuvemU = Array.isArray(d?.usuarios) ? (d.usuarios as Usuario[]) : [];
         const nuvemC = Array.isArray(d?.convites) ? (d.convites as ConviteAcesso[]) : [];
+        fpNuvem = fingerprintAuth(nuvemU, nuvemC);
         usuariosFinais = mesclarUsuarios(usuariosFinais, nuvemU, usuarioAtual);
         convitesFinais = mesclarConvites(convitesFinais, nuvemC);
       }
     } catch {}
 
-    const payload = {
-      usuarios: JSON.parse(JSON.stringify(usuariosFinais)),
-      convites: JSON.parse(JSON.stringify(convitesFinais)),
-    };
+    const s = useAuth.getState();
+    const usuarioAtualSincronizado = s.usuarioAtual
+      ? usuariosFinais.find((u) => u.id === s.usuarioAtual!.id) ?? s.usuarioAtual
+      : null;
 
-    await setDoc(AUTH_DOC_REF, payload);
-    setDoc(AUTH_BACKUP_REF, payload).catch(() => {});
+    if (
+      fingerprintAuth(s.usuarios, s.convites) !== fingerprintAuth(usuariosFinais, convitesFinais) ||
+      canonicalizarJson(s.usuarioAtual) !== canonicalizarJson(usuarioAtualSincronizado)
+    ) {
+      useAuth.setState({
+        usuarios: usuariosFinais,
+        convites: convitesFinais,
+        usuarioAtual:
+          usuarioAtualSincronizado && usuarioAtualSincronizado.ativo === false
+            ? null
+            : usuarioAtualSincronizado,
+      });
+      if (usuarioAtualSincronizado && usuarioAtualSincronizado.ativo !== false) {
+        useUi.getState().setPerfil(usuarioAtualSincronizado.perfil);
+      }
+    }
+
+    if (fingerprintAuth(usuariosFinais, convitesFinais) !== fpNuvem) {
+      const payload = {
+        usuarios: JSON.parse(JSON.stringify(usuariosFinais)),
+        convites: JSON.parse(JSON.stringify(convitesFinais)),
+      };
+
+      await setDoc(AUTH_DOC_REF, payload);
+      setDoc(AUTH_BACKUP_REF, payload).catch(() => {});
+    }
   } catch {}
 }
 
@@ -462,6 +488,11 @@ try {
             convites: convitesMesclados,
             usuarioAtual: usuarioAtualSincronizado,
           });
+          if (usuarioAtualSincronizado && usuarioAtualSincronizado.ativo === false) {
+            useAuth.setState({ usuarioAtual: null });
+          } else if (usuarioAtualSincronizado) {
+            useUi.getState().setPerfil(usuarioAtualSincronizado.perfil);
+          }
         }
 
         // Se o aparelho local tinha usuário cadastrado ou convite que faltava na nuvem, resgata para a nuvem
@@ -474,4 +505,18 @@ try {
     },
     () => {}
   );
+
+  if (typeof window !== 'undefined') {
+    const resincronizarAuthAoFocar = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      const s = useAuth.getState();
+      void sincronizarAuthNuvem(s.usuarios, s.convites, s.usuarioAtual);
+    };
+    window.addEventListener('online', resincronizarAuthAoFocar);
+    window.addEventListener('focus', resincronizarAuthAoFocar);
+    window.addEventListener('pageshow', resincronizarAuthAoFocar);
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', resincronizarAuthAoFocar);
+    }
+  }
 } catch {}
