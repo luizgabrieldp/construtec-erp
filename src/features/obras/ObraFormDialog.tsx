@@ -1,14 +1,17 @@
 import { useEffect, useState } from 'react';
+import { Trash2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button, Field, Input, Select } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { useErp } from '@/data/store';
-import type { Obra, ObraStatus, ObraFase } from '@/domain/types';
+import { useIsAdmin } from '@/hooks';
+import type { Obra, ObraStatus } from '@/domain/types';
 import { LABEL_OBRA_STATUS } from '@/domain/labels';
 import { today, addMonths } from '@/lib/dates';
 import { uid } from '@/lib/utils';
 import { fmtBRL, round2 } from '@/lib/format';
 import { FaseObraStepper } from './FaseObraStepper';
+import { ConfirmarExclusaoObraDialog } from './ConfirmarExclusaoObraDialog';
 
 interface ObraFormDialogProps {
   open: boolean;
@@ -19,7 +22,9 @@ interface ObraFormDialogProps {
 const CORES_DISPONIVEIS = ['#FF6B00', '#38BDF8', '#A78BFA', '#10B981', '#F59E0B', '#EC4899', '#6366F1'];
 
 export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialogProps) {
+  const isAdmin = useIsAdmin();
   const mutate = useErp((s) => s.mutate);
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
 
   const [nome, setNome] = useState('');
   const [cliente, setCliente] = useState('');
@@ -31,7 +36,7 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
   const [orcamento, setOrcamento] = useState('');
   const [valorContrato, setValorContrato] = useState('');
   const [status, setStatus] = useState<ObraStatus>('andamento');
-  const [fase, setFase] = useState<ObraFase>('fundacao');
+  const [fase, setFase] = useState<string>('fundacao');
   const [cor, setCor] = useState(CORES_DISPONIVEIS[0]);
 
   useEffect(() => {
@@ -139,7 +144,11 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
 
         {/* Fases da Obra Clicável */}
         <div className="sm:col-span-2 rounded-xl border border-line bg-surface-2/40 p-3">
-          <FaseObraStepper faseAtual={fase} onChange={(nova) => setFase(nova)} />
+          <FaseObraStepper
+            obraId={obraParaEditar?.id}
+            faseAtual={fase}
+            onChange={(nova) => setFase(nova)}
+          />
         </div>
 
         <Field label="Cliente / Contratante (opcional)">
@@ -208,15 +217,42 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
           </div>
         </Field>
 
-        <div className="flex gap-2 pt-3 sm:col-span-2 sm:justify-end">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit">
-            {obraParaEditar ? 'Salvar Alterações' : 'Cadastrar Obra'}
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-2 pt-3 sm:col-span-2 border-t border-line/60">
+          <div>
+            {obraParaEditar && isAdmin && (
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                icon={<Trash2 className="size-4" />}
+                onClick={() => setModalExcluirAberto(true)}
+              >
+                Excluir Obra
+              </Button>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit">
+              {obraParaEditar ? 'Salvar Alterações' : 'Cadastrar Obra'}
+            </Button>
+          </div>
         </div>
       </form>
+
+      {obraParaEditar && (
+        <ConfirmarExclusaoObraDialog
+          open={modalExcluirAberto}
+          onClose={() => setModalExcluirAberto(false)}
+          obra={obraParaEditar}
+          onConfirmado={() => {
+            setModalExcluirAberto(false);
+            onClose();
+          }}
+        />
+      )}
     </Dialog>
   );
 }

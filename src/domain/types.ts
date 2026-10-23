@@ -17,6 +17,12 @@ export type ThemePref = 'light' | 'dark' | 'system';
 export type ObraStatus = 'planejamento' | 'andamento' | 'pausada' | 'concluida';
 export type ObraFase = 'fundacao' | 'estrutura' | 'alvenaria' | 'instalacoes' | 'acabamento';
 
+export interface FaseCustomizada {
+  id: string;
+  label: string;
+  cor?: string;
+}
+
 export interface Obra {
   id: ID;
   nome: string;
@@ -29,7 +35,8 @@ export interface Obra {
   orcamento: number; // orçamento previsto de custo (opcional)
   valorContrato: number; // valor vendido ao cliente (opcional)
   status: ObraStatus;
-  fase?: ObraFase; // fase atual da obra (opcional, default 'fundacao')
+  fase?: string; // fase atual da obra (opcional, default 'fundacao' ou id de fase customizada)
+  fasesCustomizadas?: FaseCustomizada[]; // fases personalizadas exclusivas desta obra
   cor: string; // cor da obra em gráficos
 }
 

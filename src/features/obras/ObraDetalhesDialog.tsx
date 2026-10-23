@@ -2,16 +2,17 @@ import { useState } from 'react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Badge, Card, Progress, Button } from '@/components/ui';
 import { useData } from '@/data/store';
-import { useResumo } from '@/hooks';
+import { useResumo, useIsAdmin } from '@/hooks';
 import type { Obra, ServicoEmpreitada } from '@/domain/types';
 import { LABEL_OBRA_STATUS, LABEL_UNIDADE, LABEL_STATUS_SERVICO } from '@/domain/labels';
 import { fmtBRL, fmtDate, fmtPct } from '@/lib/format';
 import { diffDays } from '@/lib/dates';
-import { HardHat, Construction, Package, Calendar, Briefcase, Plus } from 'lucide-react';
+import { HardHat, Construction, Package, Calendar, Briefcase, Plus, Trash2 } from 'lucide-react';
 import { processarEstoque } from '@/domain/selectors';
 import { ServicoFormDialog } from '@/features/servicos/ServicoFormDialog';
 import { DetalhesServicoDialog } from '@/features/servicos/DetalhesServicoDialog';
 import { FaseObraStepper } from './FaseObraStepper';
+import { ConfirmarExclusaoObraDialog } from './ConfirmarExclusaoObraDialog';
 
 interface ObraDetalhesDialogProps {
   obra: Obra | null;
@@ -21,6 +22,8 @@ interface ObraDetalhesDialogProps {
 export function ObraDetalhesDialog({ obra, onClose }: ObraDetalhesDialogProps) {
   const data = useData();
   const r = useResumo();
+  const isAdmin = useIsAdmin();
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [servicoFormAberto, setServicoFormAberto] = useState(false);
   const [servicoSelecionado, setServicoSelecionado] = useState<ServicoEmpreitada | null>(null);
   const [servicoParaEditar, setServicoParaEditar] = useState<ServicoEmpreitada | null>(null);
@@ -277,8 +280,34 @@ export function ObraDetalhesDialog({ obra, onClose }: ObraDetalhesDialogProps) {
               ))}
             </div>
           </div>
+
+          {/* Zona Administrativa / Ações da Obra */}
+          {isAdmin && (
+            <div className="flex items-center justify-between pt-4 border-t border-line/60">
+              <span className="text-xs text-muted">Ações administrativas:</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                icon={<Trash2 className="size-4" />}
+                onClick={() => setModalExcluirAberto(true)}
+              >
+                Excluir Obra
+              </Button>
+            </div>
+          )}
         </div>
       </Dialog>
+
+      <ConfirmarExclusaoObraDialog
+        open={modalExcluirAberto}
+        onClose={() => setModalExcluirAberto(false)}
+        obra={obra}
+        onConfirmado={() => {
+          setModalExcluirAberto(false);
+          onClose();
+        }}
+      />
 
       {/* Modais de Serviços */}
       {servicoFormAberto && (

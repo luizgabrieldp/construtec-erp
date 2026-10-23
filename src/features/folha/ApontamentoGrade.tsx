@@ -56,6 +56,44 @@ export function ApontamentoGrade() {
   // 7 dias da semana: Segunda a Domingo
   const diasSemana = eachDay(semanaInicio, addDays(semanaInicio, 6));
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const stickyThRef = useRef<HTMLTableCellElement>(null);
+  const thRefs = useRef<(HTMLTableCellElement | null)[]>([]);
+
+  const rolarParaHoje = (smooth = true) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const hojeIdx = diasSemana.indexOf(hoje);
+    if (hojeIdx === -1) return;
+
+    // Se hoje for o primeiro dia da semana (Segunda), fica no início (0)
+    // Se hoje for Terça em diante, posicionamos o dia anterior logo após a coluna fixa,
+    // garantindo que "Hoje" seja a 2ª coluna visível (centralizada/em destaque)
+    // e o usuário veja claramente que é possível deslizar para trás e para frente.
+    const targetIdx = Math.max(0, hojeIdx - 1);
+    if (targetIdx === 0) {
+      container.scrollTo({ left: 0, behavior: smooth ? 'smooth' : 'auto' });
+      return;
+    }
+
+    const targetTh = thRefs.current[targetIdx];
+    const stickyTh = stickyThRef.current;
+    if (targetTh && stickyTh) {
+      const stickyWidth = stickyTh.offsetWidth;
+      const scrollPos = Math.max(0, targetTh.offsetLeft - stickyWidth);
+      container.scrollTo({ left: scrollPos, behavior: smooth ? 'smooth' : 'auto' });
+    }
+  };
+
+  useEffect(() => {
+    if (!diasSemana.includes(hoje)) return;
+    // Pequeno delay para garantir que o layout/tabela do DOM foi completamente dimensionado
+    const t = setTimeout(() => {
+      rolarParaHoje(true);
+    }, 120);
+    return () => clearTimeout(t);
+  }, [semanaInicio, hoje]);
+
   // Modal para alocar colaborador em múltiplas obras em um dia
   const [modalObras, setModalObras] = useState<{
     funcionarioId: string;
@@ -174,7 +212,14 @@ export function ApontamentoGrade() {
             <Button size="sm" variant="secondary" icon={<ChevronLeft className="size-4" />} onClick={() => mudarSemana(-1)}>
               <span className="hidden sm:inline">Semana</span> Anterior
             </Button>
-            <Button size="sm" variant="secondary" onClick={() => setSemanaInicio(startOfWeek(hoje))}>
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => {
+                setSemanaInicio(startOfWeek(hoje));
+                setTimeout(() => rolarParaHoje(true), 80);
+              }}
+            >
               Hoje
             </Button>
             <Button size="sm" variant="secondary" icon={<ChevronRight className="size-4" />} onClick={() => mudarSemana(1)}>
@@ -237,12 +282,15 @@ export function ApontamentoGrade() {
 
       {/* Grade de Apontamento com Scroll Horizontal e Coluna Fixa */}
       <div className="rounded-2xl border border-line bg-surface overflow-hidden shadow-xs">
-        <div className="overflow-x-auto scrollbar-thin">
+        <div ref={scrollContainerRef} className="overflow-x-auto scrollbar-thin">
           <table className="w-full text-left text-sm border-collapse">
             <thead className="border-b border-line bg-surface-2 text-xs font-semibold text-muted uppercase">
               <tr>
                 {/* Coluna Fixa: Colaborador / Função (Compacto no Mobile) */}
-                <th className="sticky left-0 top-0 z-30 bg-surface-2 px-2.5 py-3 w-32 min-w-[120px] max-w-[130px] sm:w-48 sm:min-w-[180px] sm:max-w-[200px] shadow-[2px_0_5px_rgba(0,0,0,0.06)] border-r border-line">
+                <th
+                  ref={stickyThRef}
+                  className="sticky left-0 top-0 z-30 bg-surface-2 px-2.5 py-3 w-32 min-w-[120px] max-w-[130px] sm:w-48 sm:min-w-[180px] sm:max-w-[200px] shadow-[2px_0_5px_rgba(0,0,0,0.06)] border-r border-line"
+                >
                   Colaborador
                 </th>
 
@@ -252,6 +300,9 @@ export function ApontamentoGrade() {
                   return (
                     <th
                       key={dia}
+                      ref={(el) => {
+                        thRefs.current[idx] = el;
+                      }}
                       className={cn(
                         'sticky top-0 z-20 bg-surface-2 px-1 py-2 sm:py-3 text-center min-w-[66px] sm:min-w-[84px] max-w-[96px] border-r border-line/40',
                         isHoje && 'bg-brand/10 text-brand font-bold',

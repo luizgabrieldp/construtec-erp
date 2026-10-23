@@ -3,8 +3,10 @@ import type {
   CategoriaGasto,
   FormaPagamento,
   Funcao,
+  Obra,
   ObraStatus,
   ObraFase,
+  FaseCustomizada,
   PeriodicidadeRecebimento,
   StatusPresenca,
   StatusServico,
@@ -94,6 +96,21 @@ export const FASES_OBRA_LISTA: { id: ObraFase; label: string; ordem: number; cor
   { id: 'instalacoes', label: 'Instalações', ordem: 4, cor: '#06B6D4' },
   { id: 'acabamento', label: 'Acabamento & Entrega', ordem: 5, cor: '#10B981' },
 ];
+
+export function getFasesObra(obra?: Obra | null): { id: string; label: string; cor?: string }[] {
+  if (obra?.fasesCustomizadas && obra.fasesCustomizadas.length > 0) {
+    return obra.fasesCustomizadas;
+  }
+  return FASES_OBRA_LISTA;
+}
+
+export function getLabelFase(faseId?: string, obra?: Obra | null): string {
+  if (!faseId) return 'Fundação';
+  const fases = getFasesObra(obra);
+  const encontrada = fases.find((f) => f.id === faseId);
+  if (encontrada) return encontrada.label;
+  return LABEL_OBRA_FASE[faseId as ObraFase] || faseId;
+}
 
 export const LABEL_TARIFA: Record<TarifaLocacao, string> = {
   diaria: 'Diária',
