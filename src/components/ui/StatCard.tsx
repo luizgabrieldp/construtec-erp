@@ -12,6 +12,7 @@ export interface StatCardProps {
   to?: To;
   onClick?: MouseEventHandler<HTMLElement>;
   title?: string;
+  'aria-label'?: string;
 }
 
 const TONE: Record<NonNullable<StatCardProps['tone']>, string> = {
@@ -32,13 +33,14 @@ export function StatCard({
   to,
   onClick,
   title,
+  'aria-label': ariaLabel,
 }: StatCardProps) {
   const isClickable = Boolean(to || onClick);
 
   const cardClasses = cn(
     'rounded-2xl border border-line bg-surface p-3.5 sm:p-5',
     isClickable &&
-      'block text-left select-none cursor-pointer transition-all duration-200 hover:border-brand/40 hover:bg-surface-2/40 hover:shadow-sm active:scale-98 sm:active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+      'block w-full text-left select-none cursor-pointer transition-all duration-200 ease-out hover:border-brand/40 hover:bg-surface-2/40 hover:shadow-sm active:scale-98 sm:active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
     className,
   );
 
@@ -64,7 +66,13 @@ export function StatCard({
 
   if (to) {
     return (
-      <Link to={to} className={cardClasses} title={title} onClick={onClick}>
+      <Link
+        to={to}
+        className={cardClasses}
+        title={title}
+        aria-label={ariaLabel}
+        onClick={onClick}
+      >
         {innerContent}
       </Link>
     );
@@ -75,8 +83,9 @@ export function StatCard({
       <button
         type="button"
         onClick={onClick}
-        className={cn(cardClasses, 'w-full')}
+        className={cardClasses}
         title={title}
+        aria-label={ariaLabel}
       >
         {innerContent}
       </button>
@@ -84,7 +93,7 @@ export function StatCard({
   }
 
   return (
-    <div className={cardClasses} title={title}>
+    <div className={cardClasses} title={title} aria-label={ariaLabel}>
       {innerContent}
     </div>
   );
