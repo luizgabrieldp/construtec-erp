@@ -1,13 +1,17 @@
-import type { ReactNode } from 'react';
+import type { MouseEventHandler, ReactNode } from 'react';
+import { Link, type To } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 
-interface StatCardProps {
+export interface StatCardProps {
   label: string;
   value: ReactNode;
   hint?: ReactNode;
   icon: ReactNode;
   tone?: 'brand' | 'green' | 'red' | 'amber' | 'blue';
   className?: string;
+  to?: To;
+  onClick?: MouseEventHandler<HTMLElement>;
+  title?: string;
 }
 
 const TONE: Record<NonNullable<StatCardProps['tone']>, string> = {
@@ -18,14 +22,36 @@ const TONE: Record<NonNullable<StatCardProps['tone']>, string> = {
   blue: 'bg-sky-500/10 text-sky-500',
 };
 
-export function StatCard({ label, value, hint, icon, tone = 'brand', className }: StatCardProps) {
-  return (
-    <div className={cn('rounded-2xl border border-line bg-surface p-3.5 sm:p-5', className)}>
+export function StatCard({
+  label,
+  value,
+  hint,
+  icon,
+  tone = 'brand',
+  className,
+  to,
+  onClick,
+  title,
+}: StatCardProps) {
+  const isClickable = Boolean(to || onClick);
+
+  const cardClasses = cn(
+    'rounded-2xl border border-line bg-surface p-3.5 sm:p-5',
+    isClickable &&
+      'block text-left select-none cursor-pointer transition-all duration-200 hover:border-brand/40 hover:bg-surface-2/40 hover:shadow-sm active:scale-98 sm:active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2',
+    className,
+  );
+
+  const innerContent = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-muted leading-tight line-clamp-1">
           {label}
         </span>
-        <span className={cn('grid size-7 sm:size-9 shrink-0 place-items-center rounded-lg sm:rounded-xl', TONE[tone])}>
+        <span
+          className={cn('grid size-7 sm:size-9 shrink-0 place-items-center rounded-lg sm:rounded-xl', TONE[tone])}
+          aria-hidden="true"
+        >
           {icon}
         </span>
       </div>
@@ -33,6 +59,33 @@ export function StatCard({ label, value, hint, icon, tone = 'brand', className }
         {value}
       </div>
       {hint && <div className="mt-1 text-[11px] sm:text-xs text-muted leading-snug line-clamp-1">{hint}</div>}
+    </>
+  );
+
+  if (to) {
+    return (
+      <Link to={to} className={cardClasses} title={title} onClick={onClick}>
+        {innerContent}
+      </Link>
+    );
+  }
+
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(cardClasses, 'w-full')}
+        title={title}
+      >
+        {innerContent}
+      </button>
+    );
+  }
+
+  return (
+    <div className={cardClasses} title={title}>
+      {innerContent}
     </div>
   );
 }

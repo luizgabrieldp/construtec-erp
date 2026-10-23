@@ -80,6 +80,8 @@ export function DashboardPage() {
           icon={<Building2 className="size-4 sm:size-5" />}
           tone="blue"
           hint={`${obrasPlanejamento} planej. · ${obrasConcluidas} concl.`}
+          to="/obras"
+          title="Ver obras ativas"
         />
 
         <StatCard
@@ -88,6 +90,8 @@ export function DashboardPage() {
           icon={<HardHat className="size-4 sm:size-5 text-emerald-500" />}
           tone="green"
           hint={`de ${colaboradoresAtivos.length} ativos`}
+          to="/equipe"
+          title="Ver equipe em campo"
         />
 
         <StatCard
@@ -96,6 +100,8 @@ export function DashboardPage() {
           icon={<UserX className="size-4 sm:size-5 text-red-500" />}
           tone={faltasHoje > 0 ? 'red' : undefined}
           hint={faltasHoje === 0 ? '100% presente' : 'Ausências hoje'}
+          to="/equipe"
+          title="Ver presenças e faltas da equipe"
         />
 
         <StatCard
@@ -104,6 +110,8 @@ export function DashboardPage() {
           icon={<Calendar className="size-4 sm:size-5 text-amber-500" />}
           tone="amber"
           hint="Tempo decorrido"
+          to="/obras"
+          title="Ver cronogramas e prazos das obras"
         />
       </div>
 
