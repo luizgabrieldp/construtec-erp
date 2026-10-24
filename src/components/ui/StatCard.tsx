@@ -1,6 +1,7 @@
 import type { MouseEventHandler, ReactNode } from 'react';
 import { Link, type To } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { AntigravityParticlesCanvas } from './AntigravityParticlesCanvas';
 
 export interface StatCardProps {
   label: string;
@@ -119,18 +120,8 @@ export function StatCard({
         aria-hidden="true"
       />
 
-      {/* Partícula/bolinha suave interativa que acompanha o mouse */}
-      <div
-        className="pointer-events-none absolute size-2 rounded-full blur-[0.5px] opacity-0 group-hover:opacity-85 transition-opacity duration-300 z-0"
-        style={{
-          left: 'var(--mouse-x, -100px)',
-          top: 'var(--mouse-y, -100px)',
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: theme.particle,
-          boxShadow: `0 0 12px 3px ${theme.particleGlow}`,
-        }}
-        aria-hidden="true"
-      />
+      {/* Constelação orgânica e interativa de dezenas de partículas fluidas (Estilo Google Antigravity) */}
+      <AntigravityParticlesCanvas tone={tone} />
 
       {/* Conteúdo do Card */}
       <div className="relative z-10 flex flex-col justify-between h-full">
