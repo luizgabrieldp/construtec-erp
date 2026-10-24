@@ -20,8 +20,6 @@ interface ToneConfig {
   badge: string;
   radial: string;
   border: string;
-  particle: string;
-  particleGlow: string;
 }
 
 const TONE_THEME: Record<NonNullable<StatCardProps['tone']>, ToneConfig> = {
@@ -29,36 +27,26 @@ const TONE_THEME: Record<NonNullable<StatCardProps['tone']>, ToneConfig> = {
     badge: 'bg-brand/10 text-brand',
     radial: 'rgba(245, 158, 11, 0.14)',
     border: 'rgba(245, 158, 11, 0.4)',
-    particle: '#F59E0B',
-    particleGlow: 'rgba(245, 158, 11, 0.6)',
   },
   green: {
     badge: 'bg-emerald-500/10 text-emerald-500',
     radial: 'rgba(16, 185, 129, 0.14)',
     border: 'rgba(16, 185, 129, 0.4)',
-    particle: '#10B981',
-    particleGlow: 'rgba(16, 185, 129, 0.6)',
   },
   red: {
     badge: 'bg-red-500/10 text-red-500',
     radial: 'rgba(239, 68, 68, 0.14)',
     border: 'rgba(239, 68, 68, 0.4)',
-    particle: '#EF4444',
-    particleGlow: 'rgba(239, 68, 68, 0.6)',
   },
   amber: {
     badge: 'bg-amber-500/10 text-amber-500',
     radial: 'rgba(245, 158, 11, 0.14)',
     border: 'rgba(245, 158, 11, 0.4)',
-    particle: '#F59E0B',
-    particleGlow: 'rgba(245, 158, 11, 0.6)',
   },
   blue: {
     badge: 'bg-sky-500/10 text-sky-500',
     radial: 'rgba(14, 165, 233, 0.14)',
     border: 'rgba(14, 165, 233, 0.4)',
-    particle: '#0EA5E9',
-    particleGlow: 'rgba(14, 165, 233, 0.6)',
   },
 };
 

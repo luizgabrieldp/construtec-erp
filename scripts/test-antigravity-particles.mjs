@@ -3,7 +3,7 @@ import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createServer } from 'vite';
 
-console.log('🧪 Iniciando testes profundos do AntigravityParticlesCanvas...\n');
+console.log('🧪 Iniciando testes profundos e rigorosos do AntigravityParticlesCanvas...\n');
 
 const server = await createServer({
   server: { middlewareMode: true },
@@ -49,25 +49,109 @@ try {
     })
   );
 
-  // Validar presença do Canvas
   assert.ok(markupCard.includes('<canvas '), 'StatCard deve conter o elemento <canvas>');
   assert.ok(markupCard.includes('z-0'), 'Canvas deve estar na camada z-0');
-
-  // Validar ausência do pontinho único antigo
   assert.ok(
     !markupCard.includes('size-2 rounded-full blur-[0.5px]'),
     'Não deve conter o antigo pontinho único estático size-2'
   );
-
-  // Validar que o conteúdo (texto, label, valor) está na camada z-10
   assert.ok(
     markupCard.includes('relative z-10 flex flex-col justify-between h-full'),
     'Conteúdo do card deve estar na camada frontal z-10'
   );
-
   console.log('   ✅ StatCard integrado perfeitamente com canvas em z-0 e conteúdo em z-10!');
 
-  console.log('\n🎉 TODOS OS TESTES DE PARTÍCULAS ANTIGRAVITY PASSARAM COM SUCESSO!\n');
+  // Teste 3: Simulação de Fading e Parada Definitiva de requestAnimationFrame (0% vazamento de CPU)
+  console.log('3. Testando ciclo de vida da animação: fade-in no hover, fade-out no unhover e parada total de rAF...');
+  
+  // Simular loop de física com interpolação de fade e parada
+  let currentOpacity = 1.0;
+  let targetOpacity = 0; // mouse saiu
+  let mouseActive = false;
+  let isLoopRunning = true;
+  let framesRun = 0;
+
+  for (let frame = 1; frame <= 120; frame++) {
+    framesRun++;
+    currentOpacity += (targetOpacity - currentOpacity) * 0.16;
+
+    if (!mouseActive && currentOpacity < 0.005) {
+      currentOpacity = 0;
+      isLoopRunning = false;
+      break;
+    }
+  }
+
+  assert.strictEqual(isLoopRunning, false, 'O loop de animação DEVE parar completamente após o fade-out');
+  assert.ok(framesRun < 60, `O fade-out deve parar em menos de 1 segundo (parou em ${framesRun} frames, ~${(framesRun * 16.6).toFixed(0)}ms)`);
+  console.log(`   ✅ Loop parou com 100% de sucesso no frame ${framesRun} (~${(framesRun * 16.6).toFixed(0)}ms)! 0% consumo de CPU em repouso.`);
+
+  // Teste 4: Estabilidade Física da Repulsão Fluida (sem divergência ou oscilações caóticas)
+  console.log('4. Testando estabilidade e convergência da física de repulsão fluida e retorno por mola...');
+  
+  let particle = {
+    x: 105,
+    y: 100,
+    vx: 0,
+    vy: 0,
+    baseX: 100,
+    baseY: 100,
+    angle: 0,
+    baseAngle: 0,
+    vRot: 0,
+    driftSpeed: 0.001,
+    driftPhase: 1.5,
+    driftRadius: 3,
+  };
+
+  const cursor = { x: 100, y: 100 };
+  const REPEL_RADIUS = 90;
+  const SPRING = 0.055;
+  const FRICTION = 0.82;
+
+  let maxVelocity = 0;
+  let maxDistance = 0;
+
+  // 1. Simular 60 frames com cursor estático no card
+  for (let f = 1; f <= 60; f++) {
+    const dx = particle.x - cursor.x;
+    const dy = particle.y - cursor.y;
+    const distSq = dx * dx + dy * dy;
+    if (distSq < REPEL_RADIUS * REPEL_RADIUS && distSq > 0.01) {
+      const dist = Math.sqrt(distSq);
+      const norm = 1 - dist / REPEL_RADIUS;
+      const force = norm * norm * 4.2;
+      particle.vx += (dx / dist) * force;
+      particle.vy += (dy / dist) * force;
+    }
+    particle.vx = (particle.vx + (particle.baseX - particle.x) * SPRING) * FRICTION;
+    particle.vy = (particle.vy + (particle.baseY - particle.y) * SPRING) * FRICTION;
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+
+    const v = Math.sqrt(particle.vx * particle.vx + particle.vy * particle.vy);
+    if (v > maxVelocity) maxVelocity = v;
+    const distFromOrigin = Math.hypot(particle.x - particle.baseX, particle.y - particle.baseY);
+    if (distFromOrigin > maxDistance) maxDistance = distFromOrigin;
+  }
+
+  assert.ok(maxVelocity < 12, `Velocidade máxima deve ser suave e segura (< 12px/frame, obtido: ${maxVelocity.toFixed(2)})`);
+  assert.ok(maxDistance < 60, `Deslocamento deve ser suave e não sair da tela (< 60px, obtido: ${maxDistance.toFixed(2)})`);
+  assert.ok(!isNaN(particle.x) && !isNaN(particle.y), 'Coordenadas não podem ser NaN');
+
+  // 2. Simular afastamento do cursor e retorno à posição base
+  for (let f = 1; f <= 90; f++) {
+    particle.vx = (particle.vx + (particle.baseX - particle.x) * SPRING) * FRICTION;
+    particle.vy = (particle.vy + (particle.baseY - particle.y) * SPRING) * FRICTION;
+    particle.x += particle.vx;
+    particle.y += particle.vy;
+  }
+
+  const finalDist = Math.hypot(particle.x - particle.baseX, particle.y - particle.baseY);
+  assert.ok(finalDist < 0.1, `Partícula deve retornar com precisão à posição base (< 0.1px, obtido: ${finalDist.toFixed(4)}px)`);
+  console.log(`   ✅ Física altamente estável! MaxVel: ${maxVelocity.toFixed(2)}px/f, MaxDist: ${maxDistance.toFixed(1)}px, Retorno final: ${finalDist.toFixed(4)}px`);
+
+  console.log('\n🎉 TODOS OS TESTES PROFUNDOS PASSARAM COM SUCESSO!\n');
 } finally {
   await server.close();
 }

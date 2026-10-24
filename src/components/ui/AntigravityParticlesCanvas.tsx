@@ -6,29 +6,30 @@ export interface AntigravityParticlesCanvasProps {
   tone?: AntigravityTone;
   className?: string;
   particleCount?: number;
+  isHovered?: boolean;
 }
 
-// Cores de alta fidelidade da identidade visual da CONSTRUTEC e Google Antigravity
-const BRAND_AMBER = '#FF6B00';
-const GOOGLE_YELLOW = '#F59E0B';
-const GOOGLE_BLUE_LIGHT = '#38BDF8';
+// Paleta de alta fidelidade: identidade visual da CONSTRUTEC e Google Antigravity
+const BRAND_ORANGE = '#FF6B00';
+const GOOGLE_AMBER = '#F59E0B';
+const GOOGLE_SKY = '#38BDF8';
 const GOOGLE_BLUE = '#3B82F6';
-const GOOGLE_GREEN = '#10B981';
-const GOOGLE_RED = '#EF4444';
+const GOOGLE_EMERALD = '#10B981';
+const GOOGLE_CORAL = '#EF4444';
 
 function getPaletteForTone(tone?: AntigravityTone): string[] {
   switch (tone) {
     case 'green':
-      return [GOOGLE_GREEN, GOOGLE_GREEN, '#34D399', BRAND_AMBER, GOOGLE_BLUE_LIGHT, GOOGLE_YELLOW];
+      return [GOOGLE_EMERALD, GOOGLE_EMERALD, '#34D399', BRAND_ORANGE, GOOGLE_SKY, GOOGLE_AMBER];
     case 'red':
-      return [GOOGLE_RED, GOOGLE_RED, '#F87171', BRAND_AMBER, GOOGLE_YELLOW, GOOGLE_BLUE];
+      return [GOOGLE_CORAL, GOOGLE_CORAL, '#F87171', BRAND_ORANGE, GOOGLE_AMBER, GOOGLE_BLUE];
     case 'blue':
-      return [GOOGLE_BLUE, GOOGLE_BLUE_LIGHT, '#60A5FA', GOOGLE_GREEN, BRAND_AMBER, GOOGLE_YELLOW];
+      return [GOOGLE_BLUE, GOOGLE_SKY, '#60A5FA', GOOGLE_EMERALD, BRAND_ORANGE, GOOGLE_AMBER];
     case 'amber':
-      return [GOOGLE_YELLOW, '#FBBF24', BRAND_AMBER, GOOGLE_BLUE_LIGHT, GOOGLE_GREEN, GOOGLE_RED];
+      return [GOOGLE_AMBER, '#FBBF24', BRAND_ORANGE, GOOGLE_SKY, GOOGLE_EMERALD, GOOGLE_CORAL];
     case 'brand':
     default:
-      return [BRAND_AMBER, BRAND_AMBER, GOOGLE_YELLOW, GOOGLE_BLUE_LIGHT, GOOGLE_GREEN, GOOGLE_RED];
+      return [BRAND_ORANGE, BRAND_ORANGE, GOOGLE_AMBER, GOOGLE_SKY, GOOGLE_EMERALD, GOOGLE_CORAL];
   }
 }
 
@@ -42,7 +43,7 @@ interface Particle {
   vx: number;
   vy: number;
   radius: number;
-  type: 'circle' | 'pill' | 'ellipse';
+  type: 'circle' | 'pill' | 'ring' | 'ellipse';
   length: number;
   thickness: number;
   color: string;
@@ -53,27 +54,34 @@ interface Particle {
   driftSpeed: number;
   driftPhase: number;
   driftRadius: number;
+  initialized: boolean;
 }
 
 export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanvas({
   tone = 'brand',
   className = 'pointer-events-none absolute inset-0 w-full h-full rounded-2xl z-0',
   particleCount = 32,
+  isHovered,
 }: AntigravityParticlesCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // Armazenar callbacks e refs para controle externo de isHovered se fornecido
+  const controlRef = useRef<{
+    setHovered?: (hovered: boolean) => void;
+  }>({});
+
   useEffect(() => {
-    // 1. Verificações de ambiente SSR e detecção estrita de hover (desktop vs mobile)
+    // 1. Verificações de ambiente SSR, detecção de hover e acessibilidade
     if (typeof window === 'undefined') return;
 
-    const mediaQuery = window.matchMedia('(hover: hover)');
-    if (!mediaQuery.matches) {
+    const mediaQuery = typeof window.matchMedia === 'function' ? window.matchMedia('(hover: hover)') : null;
+    if (mediaQuery && !mediaQuery.matches) {
       // Telas touch/mobile: 0% de execução de animação para economizar 100% de bateria e CPU
       return;
     }
 
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    if (reducedMotion.matches) {
+    const reducedMotion = typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+    if (reducedMotion && reducedMotion.matches) {
       return;
     }
 
@@ -100,7 +108,7 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
       active: false,
     };
 
-    // 2. Inicialização do campo de partículas (estilo Google Antigravity)
+    // 2. Inicialização do campo de partículas (estilo visual Google Antigravity)
     const count = Math.max(28, Math.min(particleCount, 40));
     const cols = 8;
     const rows = Math.ceil(count / cols);
@@ -111,24 +119,28 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
       const col = i % cols;
       const row = Math.floor(i / cols);
 
-      // Distribuição uniforme com dispersão suave (evita aglomeração)
+      // Distribuição uniforme com dispersão suave para evitar aglomeração
       const baseXRatio = (col + 0.2 + Math.random() * 0.6) / cols;
       const baseYRatio = (row + 0.2 + Math.random() * 0.6) / rows;
 
       const shapeRand = Math.random();
-      let type: 'circle' | 'pill' | 'ellipse' = 'circle';
-      let radius = 1.1 + Math.random() * 1.3; // 1.1px a 2.4px
+      let type: 'circle' | 'pill' | 'ring' | 'ellipse' = 'circle';
+      let radius = 1.1 + Math.random() * 1.2; // 1.1px a 2.3px
       let length = 0;
       let thickness = 0;
 
-      if (shapeRand > 0.65) {
+      if (shapeRand > 0.70) {
         type = 'pill';
-        length = 5 + Math.random() * 4; // 5px a 9px
-        thickness = 2.0 + Math.random() * 1.0; // 2.0px a 3.0px
-      } else if (shapeRand > 0.45) {
+        length = 4.5 + Math.random() * 2.5; // 4.5px a 7.0px
+        thickness = 1.6 + Math.random() * 0.7; // 1.6px a 2.3px
+      } else if (shapeRand > 0.50) {
+        type = 'ring';
+        radius = 1.8 + Math.random() * 0.7; // 1.8px a 2.5px
+        thickness = 0.8 + Math.random() * 0.3; // 0.8px a 1.1px
+      } else if (shapeRand > 0.35) {
         type = 'ellipse';
-        length = 3.2 + Math.random() * 2.2; // raio maior
-        thickness = 1.4 + Math.random() * 1.0; // raio menor
+        length = 2.4 + Math.random() * 1.0; // radiusX
+        thickness = 1.2 + Math.random() * 0.5; // radiusY
       }
 
       const baseAngle = Math.random() * Math.PI * 2;
@@ -148,21 +160,24 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
         length,
         thickness,
         color,
-        alpha: 0.45 + Math.random() * 0.45,
+        alpha: 0.5 + Math.random() * 0.45,
         angle: baseAngle,
         baseAngle,
         vRot: 0,
         driftSpeed: 0.0008 + Math.random() * 0.0012,
         driftPhase: Math.random() * Math.PI * 2,
         driftRadius: 2.5 + Math.random() * 3.5,
+        initialized: false,
       });
     }
 
-    // 3. Ajuste de resolução e DPI (Retina 2x Mac / iPad)
+    // 3. Resolução e DPI Retina (2x Mac/iPad)
     const updateSize = () => {
       const rect = parent.getBoundingClientRect();
-      width = rect.width;
-      height = rect.height;
+      width = Math.max(0, rect.width);
+      height = Math.max(0, rect.height);
+      if (width === 0 || height === 0) return;
+
       dpr = Math.min(window.devicePixelRatio || 1, 2);
 
       canvas.width = Math.round(width * dpr);
@@ -173,16 +188,17 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
         const p = particles[i];
         p.baseX = p.baseXRatio * width;
         p.baseY = p.baseYRatio * height;
-        if (p.x === 0 && p.y === 0) {
+        if (!p.initialized) {
           p.x = p.baseX;
           p.y = p.baseY;
+          p.initialized = true;
         }
       }
     };
 
     updateSize();
 
-    // ResizeObserver para manter nitidez impecável mesmo se o layout mudar
+    // ResizeObserver com fallback para evento resize da janela
     let resizeObserver: ResizeObserver | null = null;
     if (typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => {
@@ -190,23 +206,30 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
       });
       resizeObserver.observe(parent);
     }
+    window.addEventListener('resize', updateSize);
 
-    // 4. Loop de física fluida e renderização do Canvas 2D
-    const REPEL_RADIUS = 95;
+    // 4. Parâmetros de física fluida e amortecimento estável
+    const REPEL_RADIUS = 90;
     const REPEL_RADIUS_SQ = REPEL_RADIUS * REPEL_RADIUS;
-    const SPRING = 0.045;
+    const SPRING = 0.055;
     const FRICTION = 0.82;
-    const CONNECT_DIST = 42;
-    const CONNECT_DIST_SQ = CONNECT_DIST * CONNECT_DIST;
 
     const renderLoop = (time: number) => {
       // Interpolação de fade suave
-      currentOpacity += (targetOpacity - currentOpacity) * 0.12;
+      currentOpacity += (targetOpacity - currentOpacity) * 0.16;
+
+      // Parada completa da animação quando o mouse sai e o fade-out conclui (0% CPU e bateria)
+      if (!mouse.active && currentOpacity < 0.005) {
+        currentOpacity = 0;
+        ctx.clearRect(0, 0, width, height);
+        animating = false;
+        rafId = null;
+        return;
+      }
 
       ctx.clearRect(0, 0, width, height);
 
-      let totalVelocity = 0;
-
+      // Atualização física das partículas
       for (let i = 0; i < particles.length; i++) {
         const p = particles[i];
 
@@ -222,69 +245,47 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
           const dy = p.y - mouse.y;
           const distSq = dx * dx + dy * dy;
 
-          if (distSq < REPEL_RADIUS_SQ && distSq > 0.1) {
+          if (distSq < REPEL_RADIUS_SQ && distSq > 0.01) {
             const dist = Math.sqrt(distSq);
-            const normDist = dist / REPEL_RADIUS;
-            const force = Math.pow(1 - normDist, 1.6) * 11;
+            const norm = 1 - dist / REPEL_RADIUS;
+            const force = norm * norm * 4.2;
             const nx = dx / dist;
             const ny = dy / dist;
 
-            // Repulsão radial
+            // Repulsão radial suave
             p.vx += nx * force;
             p.vy += ny * force;
 
-            // Vórtice tangencial
-            p.vx += -ny * force * 0.26;
-            p.vy += nx * force * 0.26;
+            // Vórtice tangencial fluido
+            const swirlDirection = p.driftPhase > Math.PI ? 1 : -1;
+            p.vx += -ny * force * 0.22 * swirlDirection;
+            p.vy += nx * force * 0.22 * swirlDirection;
 
-            // Rotação sutil
-            p.vRot += (nx * ny) * 0.08;
+            // Perturbação de rotação orgânica
+            p.vRot += (nx * ny) * 0.04 + norm * 0.03 * swirlDirection;
           }
         }
 
-        // Retorno elástico (mola e amortecimento)
+        // Retorno elástico (mola suave e amortecimento com fricção)
         p.vx = (p.vx + (targetX - p.x) * SPRING) * FRICTION;
         p.vy = (p.vy + (targetY - p.y) * SPRING) * FRICTION;
         p.x += p.vx;
         p.y += p.vy;
 
-        // Amortecimento de rotação para o ângulo de repouso
-        p.vRot = (p.vRot + (p.baseAngle - p.angle) * 0.04) * 0.85;
+        // Amortecimento de rotação para orientação estável
+        p.vRot = (p.vRot + (p.baseAngle - p.angle) * 0.05) * 0.86;
         p.angle += p.vRot;
-
-        totalVelocity += Math.abs(p.vx) + Math.abs(p.vy);
       }
 
-      // Conexões ultra-sutis de constelação entre partículas próximas
-      if (currentOpacity > 0.04) {
-        ctx.lineWidth = 0.75;
-        for (let i = 0; i < particles.length; i++) {
-          const p1 = particles[i];
-          for (let j = i + 1; j < particles.length; j++) {
-            const p2 = particles[j];
-            const dx = p1.x - p2.x;
-            const dy = p1.y - p2.y;
-            const dSq = dx * dx + dy * dy;
-
-            if (dSq < CONNECT_DIST_SQ) {
-              const d = Math.sqrt(dSq);
-              const lineAlpha = (1 - d / CONNECT_DIST) * 0.16 * currentOpacity;
-              ctx.strokeStyle = `rgba(180, 195, 220, ${lineAlpha})`;
-              ctx.beginPath();
-              ctx.moveTo(p1.x, p1.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.stroke();
-            }
-          }
-        }
-
-        // Renderização individual com formatos fiéis ao Google Antigravity
+      // Renderização das partículas no Canvas 2D
+      if (currentOpacity > 0.005) {
         for (let i = 0; i < particles.length; i++) {
           const p = particles[i];
           const alpha = p.alpha * currentOpacity;
           if (alpha <= 0.01) continue;
 
           ctx.fillStyle = p.color;
+          ctx.strokeStyle = p.color;
           ctx.globalAlpha = alpha;
 
           if (p.type === 'circle') {
@@ -303,6 +304,13 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
             }
             ctx.fill();
             ctx.restore();
+          } else if (p.type === 'ring') {
+            ctx.save();
+            ctx.lineWidth = p.thickness;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
           } else if (p.type === 'ellipse') {
             ctx.save();
             ctx.translate(p.x, p.y);
@@ -314,14 +322,6 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
           }
         }
         ctx.globalAlpha = 1;
-      }
-
-      // Parada completa da animação quando o mouse sai e as partículas assentam (0% CPU)
-      if (!mouse.active && currentOpacity < 0.01 && totalVelocity < 0.04) {
-        ctx.clearRect(0, 0, width, height);
-        animating = false;
-        rafId = null;
-        return;
       }
 
       rafId = requestAnimationFrame(renderLoop);
@@ -369,20 +369,56 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
       }
     };
 
+    const handleWindowBlur = () => {
+      if (mouse.active) {
+        targetOpacity = 0;
+        mouse.active = false;
+      }
+    };
+
+    // Registrar controle para o caso de prop isHovered externa
+    controlRef.current.setHovered = (hovered: boolean) => {
+      if (hovered) {
+        const rect = parent.getBoundingClientRect();
+        if (mouse.x === -999) {
+          mouse.x = rect.width / 2;
+          mouse.y = rect.height / 2;
+        }
+        mouse.active = true;
+        startAnimation();
+      } else {
+        targetOpacity = 0;
+        mouse.active = false;
+        mouse.x = -999;
+        mouse.y = -999;
+      }
+    };
+
     parent.addEventListener('pointerenter', handlePointerEnter);
     parent.addEventListener('pointermove', handlePointerMove, { passive: true });
     parent.addEventListener('pointerleave', handlePointerLeave);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('blur', handleWindowBlur);
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
       resizeObserver?.disconnect();
+      window.removeEventListener('resize', updateSize);
       parent.removeEventListener('pointerenter', handlePointerEnter);
       parent.removeEventListener('pointermove', handlePointerMove);
       parent.removeEventListener('pointerleave', handlePointerLeave);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('blur', handleWindowBlur);
+      controlRef.current.setHovered = undefined;
     };
   }, [tone, particleCount]);
+
+  // Se a prop isHovered for explicitamente passada, refletir no loop
+  useEffect(() => {
+    if (isHovered !== undefined && controlRef.current.setHovered) {
+      controlRef.current.setHovered(isHovered);
+    }
+  }, [isHovered]);
 
   return (
     <canvas
