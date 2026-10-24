@@ -7,7 +7,7 @@ import type { Obra, ServicoEmpreitada } from '@/domain/types';
 import { LABEL_OBRA_STATUS, LABEL_UNIDADE, LABEL_STATUS_SERVICO } from '@/domain/labels';
 import { fmtBRL, fmtDate, fmtPct } from '@/lib/format';
 import { diffDays } from '@/lib/dates';
-import { HardHat, Construction, Package, Calendar, Briefcase, Plus, Trash2 } from 'lucide-react';
+import { HardHat, Construction, Package, Calendar, Briefcase, Plus, Trash2, Edit2 } from 'lucide-react';
 import { processarEstoque } from '@/domain/selectors';
 import { ServicoFormDialog } from '@/features/servicos/ServicoFormDialog';
 import { DetalhesServicoDialog } from '@/features/servicos/DetalhesServicoDialog';
@@ -17,9 +17,10 @@ import { ConfirmarExclusaoObraDialog } from './ConfirmarExclusaoObraDialog';
 interface ObraDetalhesDialogProps {
   obra: Obra | null;
   onClose: () => void;
+  onEditar?: (obra: Obra) => void;
 }
 
-export function ObraDetalhesDialog({ obra, onClose }: ObraDetalhesDialogProps) {
+export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDialogProps) {
   const data = useData();
   const r = useResumo();
   const isAdmin = useIsAdmin();
@@ -283,17 +284,30 @@ export function ObraDetalhesDialog({ obra, onClose }: ObraDetalhesDialogProps) {
 
           {/* Zona Administrativa / Ações da Obra */}
           {isAdmin && (
-            <div className="flex items-center justify-between pt-4 border-t border-line/60">
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-line/60">
               <span className="text-xs text-muted">Ações administrativas:</span>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                icon={<Trash2 className="size-4" />}
-                onClick={() => setModalExcluirAberto(true)}
-              >
-                Excluir Obra
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={<Edit2 className="size-4" />}
+                  onClick={() => {
+                    onClose();
+                    onEditar?.(obra);
+                  }}
+                >
+                  Editar Obra
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                  icon={<Trash2 className="size-4" />}
+                  onClick={() => setModalExcluirAberto(true)}
+                >
+                  Excluir Obra
+                </Button>
+              </div>
             </div>
           )}
         </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Building2, Eye, Edit2, Calendar, HardHat, CheckCircle2, Clock, Trash2 } from 'lucide-react';
+import { Plus, Search, Building2, Eye, Calendar, HardHat, CheckCircle2, Clock } from 'lucide-react';
 import { Button, Input, PageHeader, Card, Badge, Progress } from '@/components/ui';
 import { StatCard } from '@/components/ui/StatCard';
 import { useData } from '@/data/store';
@@ -10,7 +10,6 @@ import { fmtBRL, fmtPct } from '@/lib/format';
 import { diffDays } from '@/lib/dates';
 import { ObraFormDialog } from '@/features/obras/ObraFormDialog';
 import { ObraDetalhesDialog } from '@/features/obras/ObraDetalhesDialog';
-import { ConfirmarExclusaoObraDialog } from '@/features/obras/ConfirmarExclusaoObraDialog';
 import { FaseObraStepper } from '@/features/obras/FaseObraStepper';
 
 export function ObrasPage() {
@@ -23,7 +22,6 @@ export function ObrasPage() {
   const [modalFormOpen, setModalFormOpen] = useState(false);
   const [obraEditando, setObraEditando] = useState<Obra | null>(null);
   const [obraVisualizando, setObraVisualizando] = useState<Obra | null>(null);
-  const [obraParaExcluir, setObraParaExcluir] = useState<Obra | null>(null);
 
   const obrasAndamento = data.obras.filter((o) => o.status === 'andamento').length;
   const obrasPlanejamento = data.obras.filter((o) => o.status === 'planejamento').length;
@@ -217,37 +215,16 @@ export function ObrasPage() {
                 </div>
 
                 {/* Rodapé de Ações */}
-                <div className="flex items-center justify-between border-t border-line bg-surface-2/40 px-4 py-3">
+                <div className="border-t border-line bg-surface-2/40 px-4 py-3">
                   <Button
                     size="sm"
-                    variant="ghost"
+                    variant="secondary"
+                    className="w-full justify-center"
                     icon={<Eye className="size-3.5" />}
                     onClick={() => setObraVisualizando(obra)}
                   >
                     Detalhes da Obra
                   </Button>
-                  {isAdmin && (
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        icon={<Edit2 className="size-3.5" />}
-                        onClick={() => abrirEdicao(obra)}
-                      >
-                        Editar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                        icon={<Trash2 className="size-3.5" />}
-                        onClick={() => setObraParaExcluir(obra)}
-                        title="Excluir obra"
-                      >
-                        Excluir
-                      </Button>
-                    </div>
-                  )}
                 </div>
               </Card>
             );
@@ -264,17 +241,7 @@ export function ObrasPage() {
       <ObraDetalhesDialog
         obra={obraVisualizando}
         onClose={() => setObraVisualizando(null)}
-      />
-      <ConfirmarExclusaoObraDialog
-        open={!!obraParaExcluir}
-        onClose={() => setObraParaExcluir(null)}
-        obra={obraParaExcluir}
-        onConfirmado={() => {
-          setObraParaExcluir(null);
-          if (obraVisualizando?.id === obraParaExcluir?.id) {
-            setObraVisualizando(null);
-          }
-        }}
+        onEditar={abrirEdicao}
       />
     </>
   );
