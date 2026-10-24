@@ -31,9 +31,10 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
 
   if (!obra) return null;
 
-  const ro = r.porObra[obra.id];
+  const obraAtual = data.obras.find((o) => o.id === obra.id) ?? obra;
+  const ro = r.porObra[obraAtual.id];
   const { estoque } = processarEstoque(data, r.hoje);
-  const estoqueObra = estoque[obra.id] || {};
+  const estoqueObra = estoque[obraAtual.id] || {};
 
   // Materiais alocados nesta obra com saldo em estoque
   const materiaisComSaldo = data.materiais
@@ -48,39 +49,39 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
     .filter((item) => item.quantidade > 0);
 
   // Máquinas alocadas
-  const locacoesObra = data.locacoes.filter((l) => l.obraId === obra.id && l.status !== 'cancelada');
+  const locacoesObra = data.locacoes.filter((l) => l.obraId === obraAtual.id && l.status !== 'cancelada');
 
   // Serviços e empreitadas vinculados a esta obra
-  const servicosObra = (data.servicos || []).filter((s) => s.obraId === obra.id);
+  const servicosObra = (data.servicos || []).filter((s) => s.obraId === obraAtual.id);
 
   // Operários que atuam nesta obra
   const operariosObra = data.funcionarios.filter((f) => {
     return (
-      f.obraPadraoId === obra.id ||
+      f.obraPadraoId === obraAtual.id ||
       Object.values(data.apontamentos).some(
         (ap) =>
           ap.funcionarioId === f.id &&
-          (ap.centroId === obra.id || (ap.centroIds && ap.centroIds.includes(obra.id))),
+          (ap.centroId === obraAtual.id || (ap.centroIds && ap.centroIds.includes(obraAtual.id))),
       )
     );
   });
 
-  const prazoTotal = Math.max(1, diffDays(obra.dataInicio, obra.previsaoEntrega));
-  const decorrido = Math.max(0, Math.min(1, diffDays(obra.dataInicio, r.hoje) / prazoTotal));
+  const prazoTotal = Math.max(1, diffDays(obraAtual.dataInicio, obraAtual.previsaoEntrega));
+  const decorrido = Math.max(0, Math.min(1, diffDays(obraAtual.dataInicio, r.hoje) / prazoTotal));
 
   return (
     <>
       <Dialog
         open={!!obra}
         onClose={onClose}
-        title={obra.nome}
-        subtitle={`${obra.cliente || 'Sem cliente'} • ${obra.endereco || 'Endereço não informado'}`}
+        title={obraAtual.nome}
+        subtitle={`${obraAtual.cliente || 'Sem cliente'} • ${obraAtual.endereco || 'Endereço não informado'}`}
         wide
       >
         <div className="space-y-6">
           {/* Fase Atual Clicável */}
           <div className="rounded-xl border border-line bg-surface-2/50 p-3">
-            <FaseObraStepper obraId={obra.id} obraNome={obra.nome} faseAtual={obra.fase || 'fundacao'} />
+            <FaseObraStepper obraId={obraAtual.id} obraNome={obraAtual.nome} faseAtual={obraAtual.fase || 'fundacao'} />
           </div>
 
           {/* Cabeçalho de Status e Prazos */}
@@ -88,19 +89,19 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
             <div className="rounded-xl border border-line bg-surface-2 p-3">
               <span className="text-xs text-muted">Status</span>
               <div className="mt-1">
-                <Badge tone={obra.status === 'andamento' ? 'green' : 'neutral'}>{LABEL_OBRA_STATUS[obra.status]}</Badge>
+                <Badge tone={obraAtual.status === 'andamento' ? 'green' : 'neutral'}>{LABEL_OBRA_STATUS[obraAtual.status]}</Badge>
               </div>
             </div>
             <div className="rounded-xl border border-line bg-surface-2 p-3">
               <span className="text-xs text-muted">Responsável Técnico</span>
-              <div className="mt-1 text-sm font-semibold truncate">{obra.responsavel || 'Não especificado'}</div>
-              {obra.arquiteto && <div className="text-[11px] text-muted truncate">Arq: {obra.arquiteto}</div>}
+              <div className="mt-1 text-sm font-semibold truncate">{obraAtual.responsavel || 'Não especificado'}</div>
+              {obraAtual.arquiteto && <div className="text-[11px] text-muted truncate">Arq: {obraAtual.arquiteto}</div>}
             </div>
             <div className="rounded-xl border border-line bg-surface-2 p-3">
               <span className="text-xs text-muted">Período de Obra</span>
               <div className="mt-1 text-xs font-semibold flex items-center gap-1">
                 <Calendar className="size-3.5 text-muted" />
-                {fmtDate(obra.dataInicio)} a {fmtDate(obra.previsaoEntrega)}
+                {fmtDate(obraAtual.dataInicio)} a {fmtDate(obraAtual.previsaoEntrega)}
               </div>
             </div>
             <div className="rounded-xl border border-line bg-surface-2 p-3">
@@ -115,7 +116,7 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
               <div>
                 <span className="text-xs text-muted">Consumo do Orçamento</span>
                 <div className="text-lg font-bold">
-                  {fmtBRL(ro?.comprometido || 0)} <span className="text-xs font-normal text-muted">de {fmtBRL(obra.orcamento)}</span>
+                  {fmtBRL(ro?.comprometido || 0)} <span className="text-xs font-normal text-muted">de {fmtBRL(obraAtual.orcamento)}</span>
                 </div>
               </div>
               <div className="text-right">
@@ -130,19 +131,19 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
             <div className="grid grid-cols-2 gap-2 border-t border-line pt-3 text-center text-xs sm:grid-cols-4">
               <div>
                 <span className="text-muted">Materiais</span>
-                <div className="font-semibold text-brand">{fmtBRL(ro?.porGrupo.materiais || 0)}</div>
+                <div className="font-semibold text-brand">{fmtBRL(ro?.porGrupo?.materiais || 0)}</div>
               </div>
               <div>
                 <span className="text-muted">Mão de Obra</span>
-                <div className="font-semibold text-sky-500">{fmtBRL(ro?.porGrupo.mao_de_obra || 0)}</div>
+                <div className="font-semibold text-sky-500">{fmtBRL(ro?.porGrupo?.mao_de_obra || 0)}</div>
               </div>
               <div>
                 <span className="text-muted">Locações</span>
-                <div className="font-semibold text-violet-400">{fmtBRL(ro?.porGrupo.locacao || 0)}</div>
+                <div className="font-semibold text-violet-400">{fmtBRL(ro?.porGrupo?.locacao || 0)}</div>
               </div>
               <div>
                 <span className="text-muted">Empreitadas</span>
-                <div className="font-semibold text-emerald-500">{fmtBRL(ro?.porGrupo.servicos || 0)}</div>
+                <div className="font-semibold text-emerald-500">{fmtBRL(ro?.porGrupo?.servicos || 0)}</div>
               </div>
             </div>
           </Card>
@@ -286,14 +287,14 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
           {isAdmin && (
             <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-line/60">
               <span className="text-xs text-muted">Ações administrativas:</span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Button
                   size="sm"
                   variant="secondary"
                   icon={<Edit2 className="size-4" />}
                   onClick={() => {
                     onClose();
-                    onEditar?.(obra);
+                    onEditar?.(obraAtual);
                   }}
                 >
                   Editar Obra
@@ -316,7 +317,7 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
       <ConfirmarExclusaoObraDialog
         open={modalExcluirAberto}
         onClose={() => setModalExcluirAberto(false)}
-        obra={obra}
+        obra={obraAtual}
         onConfirmado={() => {
           setModalExcluirAberto(false);
           onClose();
@@ -329,7 +330,7 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
           open={servicoFormAberto}
           onClose={() => setServicoFormAberto(false)}
           servicoParaEditar={servicoParaEditar}
-          obraPadraoId={obra.id}
+          obraPadraoId={obraAtual.id}
         />
       )}
 
