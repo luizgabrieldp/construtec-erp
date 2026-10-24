@@ -116,7 +116,18 @@ export function FasesObraConfigDialog({ open, onClose, obra }: FasesObraConfigDi
       (d) => {
         const ob = d.obras.find((o) => o.id === obra.id);
         if (ob) {
-          ob.fasesCustomizadas = fasesValidas;
+          const isPadraoExato =
+            fasesValidas.length === FASES_OBRA_LISTA.length &&
+            fasesValidas.every(
+              (f, i) => f.id === FASES_OBRA_LISTA[i].id && f.label === FASES_OBRA_LISTA[i].label,
+            );
+
+          if (isPadraoExato) {
+            delete ob.fasesCustomizadas;
+          } else {
+            ob.fasesCustomizadas = fasesValidas;
+          }
+
           // Se a fase atual não existir mais na lista nova, atualiza para a primeira
           const idsValidos = new Set(fasesValidas.map((f) => f.id));
           if (!ob.fase || !idsValidos.has(ob.fase)) {

@@ -84,6 +84,11 @@ export function StatCard({
     e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
   };
 
+  const handleMouseLeave = (e: React.MouseEvent<HTMLElement>) => {
+    e.currentTarget.style.setProperty('--mouse-x', '-100px');
+    e.currentTarget.style.setProperty('--mouse-y', '-100px');
+  };
+
   const cardClasses = cn(
     'group relative overflow-hidden rounded-2xl border border-line bg-surface p-3.5 sm:p-5 transition-all duration-300 ease-out sm:hover:-translate-y-1 sm:hover:shadow-lg sm:hover:shadow-black/5 dark:sm:hover:shadow-black/20',
     isClickable &&
@@ -166,6 +171,7 @@ export function StatCard({
         aria-label={ariaLabel}
         onClick={onClick}
         onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
         {innerContent}
       </Link>
@@ -181,6 +187,7 @@ export function StatCard({
         title={title}
         aria-label={ariaLabel}
         onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
       >
         {innerContent}
       </button>
@@ -193,6 +200,7 @@ export function StatCard({
       title={title}
       aria-label={ariaLabel}
       onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
       {innerContent}
     </div>

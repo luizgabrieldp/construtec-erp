@@ -73,7 +73,11 @@ try {
     })
   );
 
-  assert.ok(markupStatic.startsWith('<div class="rounded-2xl border border-line bg-surface p-3.5 sm:p-5"'), `Esperado <div ..., obtido: ${markupStatic.slice(0, 80)}`);
+  assert.ok(
+    markupStatic.startsWith('<div class="') &&
+      markupStatic.includes('rounded-2xl border border-line bg-surface p-3.5 sm:p-5'),
+    `Esperado <div contendo classes de card, obtido: ${markupStatic.slice(0, 80)}`
+  );
   assert.ok(!markupStatic.includes('cursor-pointer'), 'Não deve ter cursor-pointer quando estático');
   assert.ok(!markupStatic.includes('active:scale'), 'Não deve ter active:scale quando estático');
   console.log('   ✅ Card estático limpo sem classes interativas desnecessárias!');

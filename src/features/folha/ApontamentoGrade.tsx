@@ -59,6 +59,7 @@ export function ApontamentoGrade() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const stickyThRef = useRef<HTMLTableCellElement>(null);
   const thRefs = useRef<(HTMLTableCellElement | null)[]>([]);
+  const isInitialMount = useRef(true);
 
   const rolarParaHoje = (smooth = true) => {
     const container = scrollContainerRef.current;
@@ -79,19 +80,50 @@ export function ApontamentoGrade() {
     const targetTh = thRefs.current[targetIdx];
     const stickyTh = stickyThRef.current;
     if (targetTh && stickyTh) {
-      const stickyWidth = stickyTh.offsetWidth;
-      const scrollPos = Math.max(0, targetTh.offsetLeft - stickyWidth);
+      const targetRect = targetTh.getBoundingClientRect();
+      const stickyRect = stickyTh.getBoundingClientRect();
+      let scrollPos = 0;
+
+      if (targetRect.width > 0 && stickyRect.width > 0) {
+        // Cálculo geométrico de alta fidelidade imune a zoom e peculiaridades de tabelas
+        const delta = targetRect.left - stickyRect.right;
+        scrollPos = Math.max(0, container.scrollLeft + delta);
+      } else {
+        // Fallback por offsetLeft
+        const stickyWidth = stickyTh.offsetWidth;
+        scrollPos = Math.max(0, targetTh.offsetLeft - stickyWidth);
+      }
+
       container.scrollTo({ left: scrollPos, behavior: smooth ? 'smooth' : 'auto' });
     }
   };
 
   useEffect(() => {
     if (!diasSemana.includes(hoje)) return;
-    // Pequeno delay para garantir que o layout/tabela do DOM foi completamente dimensionado
+
+    // No carregamento inicial, abre direto no dia de hoje (sem atraso perceptível)
+    // Em mudanças posteriores de semana pelo usuário, anima suavemente
+    const smooth = !isInitialMount.current;
+    isInitialMount.current = false;
+
+    const rafId = requestAnimationFrame(() => {
+      rolarParaHoje(smooth);
+    });
+
     const t = setTimeout(() => {
-      rolarParaHoje(true);
-    }, 120);
-    return () => clearTimeout(t);
+      rolarParaHoje(smooth);
+    }, 100);
+
+    const handleResize = () => {
+      rolarParaHoje(false);
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      clearTimeout(t);
+      window.removeEventListener('resize', handleResize);
+    };
   }, [semanaInicio, hoje]);
 
   // Modal para alocar colaborador em múltiplas obras em um dia

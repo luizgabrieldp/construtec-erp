@@ -91,10 +91,16 @@ export function FaseObraStepper({
 
         {/* Grade com os botões das fases da obra */}
         <div
-          className="grid gap-1"
-          style={{
-            gridTemplateColumns: `repeat(${Math.max(1, fases.length)}, minmax(0, 1fr))`,
-          }}
+          className={cn(
+            fases.length <= 5
+              ? 'grid gap-1'
+              : 'flex gap-1 overflow-x-auto scrollbar-thin pb-1',
+          )}
+          style={
+            fases.length <= 5
+              ? { gridTemplateColumns: `repeat(${Math.max(1, fases.length)}, minmax(0, 1fr))` }
+              : undefined
+          }
         >
           {fases.map((f, idx) => {
             const isAtiva = f.id === faseAtual;
@@ -108,6 +114,7 @@ export function FaseObraStepper({
                 title={`Clique para definir fase: ${f.label}`}
                 className={cn(
                   'group relative flex flex-col items-center justify-center rounded-lg border py-1.5 px-1 text-center transition-all cursor-pointer select-none',
+                  fases.length > 5 && 'min-w-[70px] sm:min-w-[84px] flex-1',
                   isAtiva
                     ? 'border-brand bg-brand text-white shadow-xs font-bold'
                     : isConcluida
@@ -132,12 +139,12 @@ export function FaseObraStepper({
                 </div>
                 <span
                   className={cn(
-                    'mt-0.5 truncate text-[10px] leading-tight w-full',
+                    'mt-0.5 truncate text-[10px] leading-tight w-full block text-center',
                     isAtiva ? 'font-bold text-white' : 'font-medium',
                   )}
                   title={f.label}
                 >
-                  {f.label.split(' ')[0]}
+                  {f.label}
                 </span>
               </button>
             );

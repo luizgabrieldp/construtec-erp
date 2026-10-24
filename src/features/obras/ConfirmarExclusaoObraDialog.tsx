@@ -68,6 +68,15 @@ export function ConfirmarExclusaoObraDialog({
             delete f.obraPadraoId;
           }
         }
+
+        // Desvincula tarefas associadas à obra excluída
+        if (Array.isArray(d.tarefas)) {
+          for (const t of d.tarefas) {
+            if (t.obraId === obra.id) {
+              delete t.obraId;
+            }
+          }
+        }
       },
       {
         acao: 'Obras',

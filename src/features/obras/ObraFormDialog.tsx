@@ -3,7 +3,7 @@ import { Trash2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button, Field, Input, Select } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
-import { useErp } from '@/data/store';
+import { useErp, useData } from '@/data/store';
 import { useIsAdmin } from '@/hooks';
 import type { Obra, ObraStatus } from '@/domain/types';
 import { LABEL_OBRA_STATUS } from '@/domain/labels';
@@ -22,9 +22,14 @@ interface ObraFormDialogProps {
 const CORES_DISPONIVEIS = ['#FF6B00', '#38BDF8', '#A78BFA', '#10B981', '#F59E0B', '#EC4899', '#6366F1'];
 
 export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialogProps) {
+  const data = useData();
   const isAdmin = useIsAdmin();
   const mutate = useErp((s) => s.mutate);
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+
+  const obraAtual = obraParaEditar
+    ? data.obras.find((o) => o.id === obraParaEditar.id) ?? obraParaEditar
+    : null;
 
   const [nome, setNome] = useState('');
   const [cliente, setCliente] = useState('');
@@ -40,19 +45,19 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
   const [cor, setCor] = useState(CORES_DISPONIVEIS[0]);
 
   useEffect(() => {
-    if (obraParaEditar) {
-      setNome(obraParaEditar.nome);
-      setCliente(obraParaEditar.cliente);
-      setEndereco(obraParaEditar.endereco);
-      setResponsavel(obraParaEditar.responsavel || '');
-      setArquiteto(obraParaEditar.arquiteto || '');
-      setDataInicio(obraParaEditar.dataInicio);
-      setPrevisaoEntrega(obraParaEditar.previsaoEntrega);
-      setOrcamento(obraParaEditar.orcamento ? String(obraParaEditar.orcamento) : '');
-      setValorContrato(obraParaEditar.valorContrato ? String(obraParaEditar.valorContrato) : '');
-      setStatus(obraParaEditar.status);
-      setFase(obraParaEditar.fase || 'fundacao');
-      setCor(obraParaEditar.cor);
+    if (obraAtual) {
+      setNome(obraAtual.nome);
+      setCliente(obraAtual.cliente);
+      setEndereco(obraAtual.endereco);
+      setResponsavel(obraAtual.responsavel || '');
+      setArquiteto(obraAtual.arquiteto || '');
+      setDataInicio(obraAtual.dataInicio);
+      setPrevisaoEntrega(obraAtual.previsaoEntrega);
+      setOrcamento(obraAtual.orcamento ? String(obraAtual.orcamento) : '');
+      setValorContrato(obraAtual.valorContrato ? String(obraAtual.valorContrato) : '');
+      setStatus(obraAtual.status);
+      setFase(obraAtual.fase || 'fundacao');
+      setCor(obraAtual.cor);
     } else {
       setNome('');
       setCliente('');
@@ -67,7 +72,7 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
       setFase('fundacao');
       setCor(CORES_DISPONIVEIS[Math.floor(Math.random() * CORES_DISPONIVEIS.length)]);
     }
-  }, [obraParaEditar, open]);
+  }, [obraAtual?.id, open]);
 
   const salvar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,7 +150,8 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
         {/* Fases da Obra Clicável */}
         <div className="sm:col-span-2 rounded-xl border border-line bg-surface-2/40 p-3">
           <FaseObraStepper
-            obraId={obraParaEditar?.id}
+            obraId={obraAtual?.id}
+            obraNome={obraAtual?.nome}
             faseAtual={fase}
             onChange={(nova) => setFase(nova)}
           />
@@ -242,11 +248,11 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
         </div>
       </form>
 
-      {obraParaEditar && (
+      {obraAtual && (
         <ConfirmarExclusaoObraDialog
           open={modalExcluirAberto}
           onClose={() => setModalExcluirAberto(false)}
-          obra={obraParaEditar}
+          obra={obraAtual}
           onConfirmado={() => {
             setModalExcluirAberto(false);
             onClose();
