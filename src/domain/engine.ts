@@ -164,7 +164,7 @@ export function calcularFolha(
   fim: ISODate,
   apontamentos: Record<string, Apontamento>,
   ajustes: AjusteFolha[] = [],
-  tipoFechamento: 'semanal' | 'quinzenal' | 'mensal' = 'semanal',
+  tipoFechamento: 'semanal' | 'quinzenal' | 'mensal' | 'personalizado' = 'semanal',
 ): ResultadoFolha {
   const porCentroDias: Record<CentroId, number> = {};
   let dias = 0;
@@ -189,6 +189,9 @@ export function calcularFolha(
       valorBase = round2(f.salario / 2);
     } else if (tipoFechamento === 'semanal') {
       valorBase = round2(f.salario / 4);
+    } else if (tipoFechamento === 'personalizado') {
+      const totalDiasPeriodo = Math.max(1, eachDay(inicio, fim).length);
+      valorBase = round2((f.salario / 30) * Math.min(30, totalDiasPeriodo));
     } else {
       valorBase = round2(f.salario);
     }

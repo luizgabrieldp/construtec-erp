@@ -1,5 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Plus, Check, ShieldAlert, Sparkles, Building2 } from 'lucide-react';
+import {
+  Plus,
+  Check,
+  ShieldAlert,
+  Sparkles,
+  Building2,
+  Users,
+  Search,
+  CheckSquare,
+  Square,
+  Trash2,
+  AlertTriangle,
+} from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button, Field, Input, Select, Badge } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
@@ -9,7 +21,7 @@ import type { Funcionario, Funcao, Regime, TipoPix } from '@/domain/types';
 import { LABEL_FUNCAO, LABEL_REGIME, getLabelFuncao } from '@/domain/labels';
 import { today } from '@/lib/dates';
 import { fmtBRL, round2 } from '@/lib/format';
-import { cn, uid } from '@/lib/utils';
+import { cn, uid, normalizarTexto } from '@/lib/utils';
 
 interface FuncionarioFormDialogProps {
   open: boolean;
@@ -40,6 +52,15 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
   const [criandoNovaFuncao, setCriandoNovaFuncao] = useState(false);
   const [nomeNovaFuncao, setNomeNovaFuncao] = useState('');
 
+  // Gestão de equipe em lote para Empreiteiro
+  const isEmpreiteiro = funcao === 'empreiteiro' || funcao.toLowerCase().includes('empreiteir');
+  const [equipeEmpreiteiroIds, setEquipeEmpreiteiroIds] = useState<Set<string>>(new Set());
+  const [buscaEquipe, setBuscaEquipe] = useState('');
+
+  // Modais de exclusão
+  const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
+  const [bloqueioExclusao, setBloqueioExclusao] = useState<string | null>(null);
+
   // Permissões do encarregado ao editar:
   // Encarregado NÃO pode editar diária/salário, função e regime. Pode editar nome, apelido, telefone, CPF, Pix e obra padrão.
   const isEdicao = !!funcionarioParaEditar;
@@ -60,6 +81,89 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
       f.id !== funcionarioParaEditar?.id,
   );
 
+  // Colaboradores candidatos a fazer parte da equipe deste empreiteiro
+  const colaboradoresCandidatos = data.funcionarios.filter(
+    (f) =>
+      f.ativo &&
+      f.id !== funcionarioParaEditar?.id &&
+      f.funcao !== 'empreiteiro' &&
+      !f.funcao.toLowerCase().includes('empreiteir'),
+  );
+
+  const colaboradoresCandidatosFiltrados = colaboradoresCandidatos.filter((f) => {
+    if (!buscaEquipe.trim()) return true;
+    const q = normalizarTexto(buscaEquipe);
+    const matchNome = normalizarTexto(f.nome).includes(q);
+    const matchApelido = f.apelido?.trim() ? normalizarTexto(f.apelido).includes(q) : false;
+    const matchFuncao = normalizarTexto(getLabelFuncao(f.funcao)).includes(q);
+    return matchNome || matchApelido || matchFuncao;
+  });
+
+  const toggleMembroEquipe = (id: string) => {
+    setEquipeEmpreiteiroIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selecionarTodosFiltrados = () => {
+    setEquipeEmpreiteiroIds((prev) => {
+      const next = new Set(prev);
+      colaboradoresCandidatosFiltrados.forEach((c) => next.add(c.id));
+      return next;
+    });
+  };
+
+  const limparSelecaoEquipe = () => {
+    setEquipeEmpreiteiroIds(new Set());
+  };
+
+  const handleTentativaExcluir = () => {
+    if (!funcionarioParaEditar) return;
+    const temFechamento = (data.fechamentos || []).some((fech) => fech.funcionarioId === funcionarioParaEditar.id);
+    const temContaPagar = (data.contasPagar || []).some((cp) => cp.funcionarioId === funcionarioParaEditar.id);
+
+    if (temFechamento || temContaPagar) {
+      setBloqueioExclusao(
+        'Este colaborador possui histórico financeiro (fechamentos de folha ou contas a pagar geradas) e não pode ser excluído permanentemente para preservar a integridade dos relatórios contábeis. Recomendamos desativá-lo caso não atue mais na empresa.',
+      );
+    } else {
+      setModalExcluirAberto(true);
+    }
+  };
+
+  const executarExclusao = () => {
+    if (!funcionarioParaEditar) return;
+    const fId = funcionarioParaEditar.id;
+    const fNome = funcionarioParaEditar.nome;
+
+    mutate(
+      (d) => {
+        d.funcionarios = d.funcionarios.filter((x) => x.id !== fId);
+        Object.keys(d.apontamentos).forEach((k) => {
+          if (d.apontamentos[k]?.funcionarioId === fId || k.startsWith(`${fId}|`)) {
+            delete d.apontamentos[k];
+          }
+        });
+        d.funcionarios.forEach((x) => {
+          if (x.empreiteiroId === fId) {
+            x.empreiteiroId = undefined;
+          }
+        });
+      },
+      {
+        acao: 'Equipe',
+        descricao: `Excluiu colaborador de teste "${fNome}"`,
+      },
+    );
+
+    toast(`Colaborador "${fNome}" excluído permanentemente.`);
+    setModalExcluirAberto(false);
+    onClose();
+  };
+
   useEffect(() => {
     if (funcionarioParaEditar) {
       setNome(funcionarioParaEditar.nome);
@@ -75,6 +179,11 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
       setEmpreiteiroId(funcionarioParaEditar.empreiteiroId || '');
       setAdmissao(funcionarioParaEditar.admissao);
       setObraPadraoId(funcionarioParaEditar.obraPadraoId || '');
+
+      const vinculados = data.funcionarios
+        .filter((f) => f.empreiteiroId === funcionarioParaEditar.id)
+        .map((f) => f.id);
+      setEquipeEmpreiteiroIds(new Set(vinculados));
     } else {
       setNome('');
       setApelido('');
@@ -89,10 +198,14 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
       setEmpreiteiroId('');
       setAdmissao(today());
       setObraPadraoId(data.obras[0]?.id || '');
+      setEquipeEmpreiteiroIds(new Set());
     }
     setCriandoNovaFuncao(false);
     setNomeNovaFuncao('');
-  }, [funcionarioParaEditar, open, data.obras]);
+    setBuscaEquipe('');
+    setModalExcluirAberto(false);
+    setBloqueioExclusao(null);
+  }, [funcionarioParaEditar, open, data.obras, data.funcionarios]);
 
   // Atalhos para chave Pix
   const aplicarTelefoneComoPix = () => {
@@ -161,6 +274,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
     };
 
     if (funcionarioParaEditar) {
+      const empreiteiroAlvoId = funcionarioParaEditar.id;
       mutate(
         (d) => {
           const idx = d.funcionarios.findIndex((f) => f.id === funcionarioParaEditar.id);
@@ -185,19 +299,41 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
               };
             }
           }
+
+          // Se for empreiteiro, atualiza os colaboradores vinculados em lote
+          if (isEmpreiteiro) {
+            d.funcionarios.forEach((f) => {
+              if (f.id === empreiteiroAlvoId) return;
+              if (equipeEmpreiteiroIds.has(f.id)) {
+                f.empreiteiroId = empreiteiroAlvoId;
+              } else if (f.empreiteiroId === empreiteiroAlvoId) {
+                f.empreiteiroId = undefined;
+              }
+            });
+          }
         },
         { acao: 'Equipe', descricao: `Atualizou colaborador "${nome.trim()}"` },
       );
       toast(`Dados de ${nome.trim()} atualizados`);
     } else {
+      const novoId = uid('fn');
       const novo: Funcionario = {
-        id: uid('fn'),
+        id: novoId,
         ...dadosFuncionario,
         ativo: true,
       };
       mutate(
         (d) => {
           d.funcionarios.push(novo);
+
+          // Se for novo empreiteiro, vincula a equipe selecionada a ele
+          if (isEmpreiteiro && equipeEmpreiteiroIds.size > 0) {
+            d.funcionarios.forEach((f) => {
+              if (equipeEmpreiteiroIds.has(f.id)) {
+                f.empreiteiroId = novoId;
+              }
+            });
+          }
         },
         {
           acao: 'Equipe',
@@ -213,7 +349,8 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
   };
 
   return (
-    <Dialog
+    <>
+      <Dialog
       open={open}
       onClose={onClose}
       title={funcionarioParaEditar ? 'Editar Colaborador' : 'Novo Colaborador'}
@@ -456,7 +593,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
             </Select>
           </Field>
 
-          {funcao !== 'empreiteiro' && (
+          {!isEmpreiteiro && (
             <Field label="Empreiteiro Responsável (Opcional)">
               <Select value={empreiteiroId} onChange={(e) => setEmpreiteiroId(e.target.value)}>
                 <option value="">Nenhum (Diretor da Construtora / Próprio)</option>
@@ -470,13 +607,184 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
           )}
         </div>
 
-        <div className="flex gap-2 pt-2 justify-end">
-          <Button type="button" variant="secondary" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button type="submit">Salvar Colaborador</Button>
+        {/* Se for Empreiteiro: Gestão de Equipe em Bloco */}
+        {isEmpreiteiro && (
+          <div className="space-y-3 rounded-xl border border-line bg-surface-2/60 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted">
+                <Users className="size-4 text-brand" />
+                <span>Equipe deste Empreiteiro</span>
+                <Badge tone={equipeEmpreiteiroIds.size > 0 ? 'blue' : 'neutral'} className="ml-1 text-[11px]">
+                  {equipeEmpreiteiroIds.size} selecionado{equipeEmpreiteiroIds.size === 1 ? '' : 's'}
+                </Badge>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  onClick={selecionarTodosFiltrados}
+                  icon={<CheckSquare className="size-3.5" />}
+                >
+                  Marcar Todos
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={limparSelecaoEquipe}
+                  icon={<Square className="size-3.5" />}
+                >
+                  Limpar
+                </Button>
+              </div>
+            </div>
+
+            <p className="text-xs text-muted">
+              Marque os colaboradores abaixo para vinculá-los a este empreiteiro de forma imediata em lote:
+            </p>
+
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted" />
+              <Input
+                placeholder="Filtrar colaboradores por nome ou função..."
+                value={buscaEquipe}
+                onChange={(e) => setBuscaEquipe(e.target.value)}
+                className="pl-8 h-9 text-xs"
+              />
+            </div>
+
+            <div className="max-h-52 overflow-y-auto rounded-lg border border-line bg-surface p-2 space-y-1 divide-y divide-line/40">
+              {colaboradoresCandidatosFiltrados.length === 0 ? (
+                <div className="py-6 text-center text-xs text-muted">
+                  Nenhum colaborador encontrado com o filtro atual.
+                </div>
+              ) : (
+                colaboradoresCandidatosFiltrados.map((c) => {
+                  const marcado = equipeEmpreiteiroIds.has(c.id);
+                  const outroEmpreiteiro =
+                    c.empreiteiroId && c.empreiteiroId !== funcionarioParaEditar?.id
+                      ? data.funcionarios.find((x) => x.id === c.empreiteiroId)
+                      : null;
+
+                  return (
+                    <label
+                      key={c.id}
+                      className={cn(
+                        'flex items-center justify-between p-2 rounded-lg cursor-pointer transition-colors text-xs',
+                        marcado ? 'bg-brand/10 border border-brand/30' : 'hover:bg-surface-2/70',
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <input
+                          type="checkbox"
+                          checked={marcado}
+                          onChange={() => toggleMembroEquipe(c.id)}
+                          className="size-4 rounded border-line text-brand focus:ring-brand accent-brand cursor-pointer"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-semibold text-fg truncate">
+                            {c.apelido?.trim() ? `${c.apelido.trim()} (${c.nome})` : c.nome}
+                          </div>
+                          {outroEmpreiteiro && (
+                            <div className="text-[10px] text-amber-500 font-medium">
+                              Atualmente com: {outroEmpreiteiro.apelido?.trim() || outroEmpreiteiro.nome}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <Badge tone="neutral" className="text-[10px] shrink-0 ml-2">
+                        {getLabelFuncao(c.funcao)}
+                      </Badge>
+                    </label>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-line/60">
+          {isEdicao ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+              icon={<Trash2 className="size-4" />}
+              onClick={handleTentativaExcluir}
+            >
+              Excluir Colaborador
+            </Button>
+          ) : (
+            <div />
+          )}
+
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="secondary" onClick={onClose}>
+              Cancelar
+            </Button>
+            <Button type="submit">Salvar Colaborador</Button>
+          </div>
         </div>
       </form>
     </Dialog>
+
+    {/* Modal de Confirmação de Exclusão Definitiva */}
+    <Dialog
+      open={modalExcluirAberto}
+      onClose={() => setModalExcluirAberto(false)}
+      title="Excluir Colaborador Permanentemente"
+      subtitle="Confirmação de exclusão para usuários de teste"
+    >
+      <div className="space-y-4">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-500 flex items-start gap-2.5">
+          <AlertTriangle className="size-5 shrink-0 mt-0.5" />
+          <div>
+            <strong>Atenção:</strong> Tem certeza que deseja apagar permanentemente o colaborador{' '}
+            <strong>{funcionarioParaEditar?.nome}</strong>? Esta ação é definitiva e removerá o cadastro e todos os apontamentos de presença de teste associados.
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="secondary" onClick={() => setModalExcluirAberto(false)}>
+            Cancelar
+          </Button>
+          <Button
+            variant="primary"
+            className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+            onClick={executarExclusao}
+          >
+            Sim, Excluir Definitivamente
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+
+    {/* Modal de Bloqueio de Exclusão (Histórico Financeiro Protegido) */}
+    <Dialog
+      open={!!bloqueioExclusao}
+      onClose={() => setBloqueioExclusao(null)}
+      title="Exclusão Não Permitida"
+      subtitle="Proteção de integridade contábil e histórico financeiro"
+    >
+      <div className="space-y-4">
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-500 flex items-start gap-2.5">
+          <AlertTriangle className="size-5 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <strong>Histórico Financeiro Vinculado:</strong>
+            <p>{bloqueioExclusao}</p>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="secondary" onClick={() => setBloqueioExclusao(null)}>
+            Entendi, Fechar
+          </Button>
+        </div>
+      </div>
+    </Dialog>
+    </>
   );
 }

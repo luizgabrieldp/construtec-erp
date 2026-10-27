@@ -19,7 +19,7 @@ interface ReciboEmpreiteiroDialogProps {
   empreiteiroIdPadrao?: string;
   inicioPadrao?: string;
   fimPadrao?: string;
-  tipoPadrao?: 'semanal' | 'quinzenal' | 'mensal';
+  tipoPadrao?: 'semanal' | 'quinzenal' | 'mensal' | 'personalizado';
 }
 
 export function ReciboEmpreiteiroDialog({
@@ -47,12 +47,12 @@ export function ReciboEmpreiteiroDialog({
     return empreiteiroIdPadrao || empreiteiros[0]?.id || '';
   });
 
-  const [tipo, setTipo] = useState<'semanal' | 'quinzenal' | 'mensal'>(tipoPadrao);
+  const [tipo, setTipo] = useState<'semanal' | 'quinzenal' | 'mensal' | 'personalizado'>(tipoPadrao);
   const [inicio, setInicio] = useState(inicioPadrao || `${hoje.slice(0, 7)}-01`);
   const [fim, setFim] = useState(fimPadrao || `${hoje.slice(0, 7)}-15`);
   const [imprimindo, setImprimindo] = useState(false);
 
-  const aplicarTipoPeriodo = (novoTipo: 'semanal' | 'quinzenal' | 'mensal') => {
+  const aplicarTipoPeriodo = (novoTipo: 'semanal' | 'quinzenal' | 'mensal' | 'personalizado') => {
     setTipo(novoTipo);
     if (novoTipo === 'mensal') {
       setInicio(startOfMonth(hoje));
@@ -61,6 +61,8 @@ export function ReciboEmpreiteiroDialog({
       const sem = startOfWeek(hoje);
       setInicio(sem);
       setFim(addDays(sem, 6));
+    } else if (novoTipo === 'personalizado') {
+      // Mantém as datas atuais
     } else {
       const mesAtual = hoje.slice(0, 7);
       setInicio(`${mesAtual}-01`);

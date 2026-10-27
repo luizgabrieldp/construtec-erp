@@ -11,7 +11,7 @@ export interface DadosRecibo {
   funcionarioFuncao: string;
   funcionarioRegime: string;
   funcionarioTelefone?: string;
-  tipo: 'semanal' | 'quinzenal' | 'mensal';
+  tipo: 'semanal' | 'quinzenal' | 'mensal' | 'personalizado';
   inicio: string;
   fim: string;
   diasTrabalhados: number;

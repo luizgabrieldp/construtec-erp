@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manual de Novidades e Atualizações — CONSTRUTEC</title>
+  <style>
+    :root {
+      --brand: #FF6B00;
+      --brand-dark: #E05300;
+      --bg: #F8FAFC;
+      --surface: #FFFFFF;
+      --line: #E2E8F0;
+      --fg: #0F172A;
+      --muted: #475569;
+      --card-bg: #F1F5F9;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg);
+      color: var(--fg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      padding: 24px 16px 60px;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      background: var(--surface);
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+      padding: 36px 40px;
+    }
+
+    /* Barra de Ações (Oculta na Impressão) */
+    .action-bar {
+      max-width: 820px;
+      margin: 0 auto 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 18px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: var(--brand-dark);
+    }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--fg);
+      border-color: var(--line);
+    }
+    .btn-secondary:hover {
+      background: var(--card-bg);
+    }
+
+    /* Cabeçalho do Documento */
+    .header {
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 24px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+
+    .header-logo {
+      height: 48px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .header-title h1 {
+      font-size: 22px;
+      color: var(--fg);
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .header-title p {
+      font-size: 13px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .badge-doc {
+      display: inline-block;
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: #FFF7ED;
+      color: var(--brand);
+      border: 1px solid #FFEDD5;
+      border-radius: 999px;
+      margin-top: 6px;
+    }
+
+    /* Introdução Amigável */
+    .intro-box {
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 30px;
+    }
+
+    .intro-box h2 {
+      font-size: 15px;
+      color: #166534;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .intro-box p {
+      font-size: 13px;
+      color: #15803D;
+      line-height: 1.5;
+    }
+
+    /* Seções de Recursos / Passo a Passo */
+    .section-card {
+      margin-bottom: 28px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      background: #FFFFFF;
+      page-break-inside: avoid;
+    }
+
+    .section-header {
+      background: #F8FAFC;
+      border-bottom: 1px solid var(--line);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .step-number {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 700;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .section-header h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--fg);
+    }
+
+    .section-body {
+      padding: 20px;
+    }
+
+    .section-body p {
+      font-size: 13.5px;
+      color: var(--muted);
+      margin-bottom: 14px;
+      line-height: 1.6;
+    }
+
+    .steps-list {
+      list-style: none;
+      counter-reset: sub-step;
+      margin-top: 10px;
+    }
+
+    .steps-list li {
+      position: relative;
+      padding-left: 28px;
+      margin-bottom: 12px;
+      font-size: 13.5px;
+      color: var(--fg);
+      line-height: 1.5;
+    }
+
+    .steps-list li::before {
+      counter-increment: sub-step;
+      content: counter(sub-step);
+      position: absolute;
+      left: 0;
+      top: 1px;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: var(--card-bg);
+      color: var(--fg);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--line);
+    }
+
+    .highlight-tip {
+      background: #F8FAFC;
+      border-left: 3px solid var(--brand);
+      padding: 10px 14px;
+      border-radius: 0 8px 8px 0;
+      margin-top: 12px;
+      font-size: 12.5px;
+      color: var(--muted);
+    }
+
+    .highlight-tip strong {
+      color: var(--fg);
+    }
+
+    /* Rodapé */
+    .footer {
+      border-top: 1px solid var(--line);
+      padding-top: 20px;
+      margin-top: 36px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    /* Regras de Impressão */
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+
+      .action-bar {
+        display: none !important;
+      }
+
+      .container {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+        max-width: 100%;
+      }
+
+      .section-card {
+        border: 1px solid #CBD5E1;
+        break-inside: avoid;
+        margin-bottom: 20px;
+      }
+
+      .header {
+        border-bottom: 2px solid #000;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de Ações Rápidas -->
+  <div class="action-bar">
+    <a href="/" class="btn btn-secondary">← Voltar ao Sistema</a>
+    <button onclick="window.print()" class="btn btn-primary">
+      🖨️ Imprimir / Salvar em PDF
+    </button>
+  </div>
+
+  <div class="container">
+    <!-- Cabeçalho -->
+    <header class="header">
+      <div class="header-title">
+        <h1>Guia Rápido de Atualizações</h1>
+        <p>Sistema Construtec de Gestão de Obras e Folha de Pagamento</p>
+        <span class="badge-doc">Versão Simplificada para o Cliente</span>
+      </div>
+      <img src="/logo-completo-trim.png" alt="CONSTRUTEC" class="header-logo" onerror="this.style.display='none'">
+    </header>
+
+    <!-- Caixa de Boas-vindas -->
+    <div class="intro-box">
+      <h2>✨ O que mudou no seu sistema?</h2>
+      <p>
+        O sistema foi atualizado com melhorias focadas na rotina real do canteiro de obras e no fechamento de pagamentos. Tudo ficou mais flexível, fácil de usar no celular ou no computador, e sem complicações técnicas. Veja abaixo o passo a passo de cada novidade.
+      </p>
+    </div>
+
+    <!-- Módulo 1: Fechamento Quinzenal Flexível -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">1</div>
+        <h3>Fechamento Quinzenal Flexível e Período Personalizado</h3>
+      </div>
+      <div class="section-body">
+        <p>
+          Antes, ao escolher "Quinzenal", as datas vinham travadas do dia 1 ao 15 ou do 16 ao fim do mês. Agora você pode <strong>puxar a quinzena de uma segunda até uma sexta-feira</strong> ou escolher exatamente o dia que preferir!
+        </p>
+        <ul class="steps-list">
+          <li>Acesse o menu <strong>Folha de Pagamento</strong> e clique em <strong>Fechar em Bloco</strong>.</li>
+          <li>No campo <strong>Tipo da Folha</strong>, escolha <strong>Quinzenal</strong> (ou <strong>Personalizado</strong> para datas 100% livres).</li>
+          <li>Se escolher <em>Quinzenal</em>, selecione o atalho do mês e <strong>ajuste livremente a Data Início e a Data Fim</strong> no calendário ao lado.</li>
+          <li>O sistema calculará automaticamente apenas os dias de trabalho desse período escolhido e gerará as contas a pagar no dia de vencimento desejado.</li>
+        </ul>
+        <div class="highlight-tip">
+          💡 <strong>Dica prática:</strong> Se o dia 1º caiu numa quarta-feira, você pode puxar o início para a segunda-feira anterior (dia 29 ou 30) para fechar duas semanas completas de trabalho sem dor de cabeça!
+        </div>
+      </div>
+    </div>
+
+    <!-- Módulo 2: Filtro por Obra na Frequência -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">2</div>
+        <h3>Frequência: Filtro por Obra e por Empreiteiro</h3>
+      </div>
+      <div class="section-body">
+        <p>
+          Agora ficou muito mais rápido marcar a presença dos operários quando você chega em um canteiro de obras específico. Você não precisa mais rolar por dezenas de nomes de outras obras.
+        </p>
+        <ul class="steps-list">
+          <li>Acesse a página <strong>Equipe</strong> e desça até a tabela de <strong>Grade de Apontamento Semanal</strong>.</li>
+          <li>No filtro superior, clique em <strong>Todas as Obras</strong> e selecione a obra onde você está no momento (ex.: <em>Residencial Flores</em>).</li>
+          <li>A tela passará a mostrar <strong>apenas os profissionais daquela obra</strong>.</li>
+          <li>Ao clicar para marcar presença (1 para dia inteiro ou ½ para meio período), o sistema já grava automaticamente a presença alocada naquela obra!</li>
+          <li>Se desejar, você também pode filtrar por <strong>Empreiteiro</strong> para conferir só o pessoal daquele encarregado.</li>
+        </ul>
+        <div class="highlight-tip">
+          💡 <strong>Dica prática:</strong> Para voltar a ver todo mundo junto, basta clicar em <strong>"Limpar filtros"</strong> ou escolher <em>"Todas as Obras"</em>.
+        </div>
+      </div>
+    </div>
+
+    <!-- Módulo 3: Vincular Equipe ao Empreiteiro em Bloco -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">3</div>
+        <h3>Vincular Vários Ajudantes a um Empreiteiro de Uma Só Vez</h3>
+      </div>
+      <div class="section-body">
+        <p>
+          Quando um novo empreiteiro entra na empresa com a equipe dele, você não precisa mais abrir o cadastro de cada ajudante um por um. Agora você vincula todo mundo de uma vez só!
+        </p>
+        <ul class="steps-list">
+          <li>Acesse o menu <strong>Equipe</strong> e clique em <strong>Editar</strong> no Empreiteiro (ou em <em>Novo Colaborador</em> com função Empreiteiro).</li>
+          <li>Role a tela até a nova seção: <strong>"Equipe deste Empreiteiro"</strong>.</li>
+          <li>Você verá a lista com todos os operários. Basta <strong>marcar as caixinhas (checkbox)</strong> de quem pertence à equipe dele.</li>
+          <li>Você pode usar a barra de busca para achar nomes rapidamente ou clicar em <strong>"Marcar Todos"</strong>.</li>
+          <li>Clique em <strong>Salvar Colaborador</strong>. Pronto! Todos os operários marcados agora já respondem àquele empreiteiro.</li>
+        </ul>
+        <div class="highlight-tip">
+          💡 <strong>Transparência:</strong> Se algum profissional já estiver vinculado a outro empreiteiro, o sistema avisará na tela para você ter certeza antes de transferir.
+        </div>
+      </div>
+    </div>
+
+    <!-- Módulo 4: Exclusão Segura de Usuários de Teste -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="step-number">4</div>
+        <h3>Excluir Usuários de Teste com Total Segurança</h3>
+      </div>
+      <div class="section-body">
+        <p>
+          Agora existe a opção de <strong>Excluir</strong> definitivamente nomes que foram criados apenas para teste, deixando sua lista de equipe limpa.
+        </p>
+        <ul class="steps-list">
+          <li>Na tabela de colaboradores da página <strong>Equipe</strong>, clique no botão vermelho <strong>Excluir</strong> ao lado de Editar e Desativar.</li>
+          <li><strong>Se foi um usuário de teste (sem histórico financeiro):</strong> Uma janela de confirmação se abrirá e você poderá apagá-lo definitivamente com 1 clique.</li>
+          <li><strong>Se for um profissional com pagamentos ou folhas já fechadas:</strong> O sistema exibirá um aviso de proteção e não permitirá apagar, sugerindo que você apenas o <strong>Desative</strong>. Isso garante que nenhum relatório financeiro antigo seja danificado ou perca informações de valores pagos!</li>
+        </ul>
+        <div class="highlight-tip">
+          🛡️ <strong>Segurança Contábil:</strong> Essa regra foi criada para que ninguém apague por engano recibos ou comprovantes de pagamentos já realizados no passado.
+        </div>
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="footer">
+      <p><strong>CONSTRUTEC — Construção Civil & Reformas em Geral</strong></p>
+      <p>Petrolina - PE • Suporte e Atendimento ao Cliente</p>
+      <p style="margin-top: 6px; font-size: 11px; color: #94A3B8;">Documento gerado automaticamente para orientação dos usuários do sistema.</p>
+    </footer>
+  </div>
+
+</body>
+</html>

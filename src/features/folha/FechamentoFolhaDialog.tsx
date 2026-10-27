@@ -25,7 +25,7 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
   const mutate = useErp((s) => s.mutate);
 
   const [funcionarioId, setFuncionarioId] = useState(data.funcionarios[0]?.id || '');
-  const [tipo, setTipo] = useState<'semanal' | 'quinzenal' | 'mensal'>('semanal');
+  const [tipo, setTipo] = useState<'semanal' | 'quinzenal' | 'mensal' | 'personalizado'>('semanal');
   const [inicio, setInicio] = useState(startOfWeek(addDays(hoje, -7))); // Semana passada
   const [fim, setFim] = useState(addDays(startOfWeek(addDays(hoje, -7)), 6));
   const [vencimento, setVencimento] = useState(addDays(today(), 5));
@@ -63,7 +63,7 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
     }
   };
 
-  const trocarTipo = (novoTipo: 'semanal' | 'quinzenal' | 'mensal') => {
+  const trocarTipo = (novoTipo: 'semanal' | 'quinzenal' | 'mensal' | 'personalizado') => {
     setTipo(novoTipo);
     if (novoTipo === 'mensal') {
       const mesPassado = startOfMonth(addDays(hoje, -28));
@@ -71,6 +71,8 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
       setFim(endOfMonth(mesPassado));
     } else if (novoTipo === 'quinzenal') {
       aplicarQuinzena(quinzenaOpcao);
+    } else if (novoTipo === 'personalizado') {
+      // Mantém datas atuais prontas para edição
     } else {
       const semPassada = startOfWeek(addDays(hoje, -7));
       setInicio(semPassada);
@@ -199,10 +201,11 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
             </Field>
 
             <Field label="Tipo de Fechamento">
-              <Select value={tipo} onChange={(e) => trocarTipo(e.target.value as 'semanal' | 'quinzenal' | 'mensal')}>
+              <Select value={tipo} onChange={(e) => trocarTipo(e.target.value as 'semanal' | 'quinzenal' | 'mensal' | 'personalizado')}>
                 <option value="semanal">Semanal (Diaristas)</option>
                 <option value="quinzenal">Quinzenal</option>
                 <option value="mensal">Mensal (Mensalistas)</option>
+                <option value="personalizado">Personalizado (Período Livre)</option>
               </Select>
             </Field>
 

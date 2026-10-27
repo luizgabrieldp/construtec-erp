@@ -137,6 +137,13 @@ export function ApontamentoGrade() {
 
   const [busca, setBusca] = useState('');
   const [filtroFuncao, setFiltroFuncao] = useState('todos');
+  const [filtroObra, setFiltroObra] = useState<string>('todas');
+  const [filtroEmpreiteiro, setFiltroEmpreiteiro] = useState<string>('todos');
+
+  // Lista de empreiteiros para filtro
+  const empreiteirosDisponiveis = data.funcionarios.filter(
+    (f) => f.ativo && (f.funcao === 'empreiteiro' || f.funcao.toLowerCase().includes('empreiteir')),
+  );
 
   const mudarSemana = (deltaSemanas: number) => {
     setSemanaInicio(addDays(semanaInicio, deltaSemanas * 7));
@@ -150,12 +157,13 @@ export function ApontamentoGrade() {
   ) => {
     mutate((d) => {
       const k = chaveApontamento(funcionarioId, dia);
-      const centroId = centrosAtuais[0] || d.obras[0]?.id || SEDE;
+      const obraPadrao = filtroObra !== 'todas' ? filtroObra : (centrosAtuais[0] || d.obras[0]?.id || SEDE);
+      const centros = centrosAtuais.length > 0 ? centrosAtuais : [obraPadrao];
       d.apontamentos[k] = {
         funcionarioId,
         data: dia,
-        centroId,
-        centroIds: centrosAtuais.length > 0 ? centrosAtuais : [centroId],
+        centroId: centros[0],
+        centroIds: centros,
         status: novoStatus,
       };
     });
@@ -217,7 +225,32 @@ export function ApontamentoGrade() {
   const funcionariosFiltrados = data.funcionarios
     .filter((f) => f.ativo)
     .filter((f) => {
+      // Filtro por Função
       if (filtroFuncao !== 'todos' && f.funcao !== filtroFuncao) return false;
+
+      // Filtro por Empreiteiro
+      if (filtroEmpreiteiro !== 'todos') {
+        const ehProprioEmpreiteiro = f.id === filtroEmpreiteiro;
+        const ehMembroEquipe = f.empreiteiroId === filtroEmpreiteiro;
+        if (!ehProprioEmpreiteiro && !ehMembroEquipe) return false;
+      }
+
+      // Filtro por Obra
+      if (filtroObra !== 'todas') {
+        const temObraPadrao = f.obraPadraoId === filtroObra;
+        const tevePresencaNaObra = diasSemana.some((dia) => {
+          const k = chaveApontamento(f.id, dia);
+          const ap = data.apontamentos[k];
+          if (!ap || ap.status === 'falta') return false;
+          if (ap.centroIds && ap.centroIds.length > 0) {
+            return ap.centroIds.includes(filtroObra);
+          }
+          return ap.centroId === filtroObra;
+        });
+
+        if (!temObraPadrao && !tevePresencaNaObra) return false;
+      }
+
       if (busca.trim()) {
         const qNorm = normalizarTexto(busca);
         const qDigits = busca.replace(/\D/g, '');
@@ -282,20 +315,56 @@ export function ApontamentoGrade() {
           </div>
         </div>
 
-        {/* Linha de Busca e Filtro de Função */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line/60 pt-3">
-          <div className="flex flex-wrap items-center gap-2 flex-1 max-w-md">
-            <input
-              type="text"
-              placeholder="Buscar por nome ou apelido na grade..."
-              value={busca}
-              onChange={(e) => setBusca(e.target.value)}
-              className="w-full sm:w-64 rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs text-fg placeholder:text-muted focus:border-brand focus:outline-none"
-            />
+        {/* Linha de Busca e Filtros Rápidos (Obra, Empreiteiro, Função) */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 border-t border-line/60 pt-3">
+          <div className="flex flex-wrap items-center gap-2 flex-1">
+            <div className="relative w-full sm:w-56">
+              <input
+                type="text"
+                placeholder="Buscar por nome ou apelido..."
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+                className="w-full rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs text-fg placeholder:text-muted focus:border-brand focus:outline-none"
+              />
+            </div>
+
+            {/* Filtro por Obra */}
+            <select
+              value={filtroObra}
+              onChange={(e) => setFiltroObra(e.target.value)}
+              className="rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs font-medium text-fg focus:border-brand focus:outline-none"
+              title="Filtrar colaboradores por Obra"
+            >
+              <option value="todas">Todas as Obras</option>
+              <option value={SEDE}>Sede / Matriz</option>
+              {data.obras.map((o) => (
+                <option key={o.id} value={o.id}>
+                  Obra: {o.nome}
+                </option>
+              ))}
+            </select>
+
+            {/* Filtro por Empreiteiro */}
+            <select
+              value={filtroEmpreiteiro}
+              onChange={(e) => setFiltroEmpreiteiro(e.target.value)}
+              className="rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs font-medium text-fg focus:border-brand focus:outline-none"
+              title="Filtrar colaboradores por Empreiteiro responsável"
+            >
+              <option value="todos">Todos os Empreiteiros</option>
+              {empreiteirosDisponiveis.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  Empr.: {emp.apelido?.trim() ? `${emp.apelido.trim()} (${emp.nome})` : emp.nome}
+                </option>
+              ))}
+            </select>
+
+            {/* Filtro por Função */}
             <select
               value={filtroFuncao}
               onChange={(e) => setFiltroFuncao(e.target.value)}
               className="rounded-lg border border-line bg-surface-2 px-2.5 py-1.5 text-xs text-fg focus:border-brand focus:outline-none"
+              title="Filtrar por Cargo / Função"
             >
               <option value="todos">Todas as Funções</option>
               {todasFuncoes.map((fn) => (
@@ -304,6 +373,21 @@ export function ApontamentoGrade() {
                 </option>
               ))}
             </select>
+
+            {(filtroObra !== 'todas' || filtroEmpreiteiro !== 'todos' || filtroFuncao !== 'todos' || busca.trim()) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setFiltroObra('todas');
+                  setFiltroEmpreiteiro('todos');
+                  setFiltroFuncao('todos');
+                  setBusca('');
+                }}
+                className="text-[11px] text-brand hover:underline font-semibold cursor-pointer"
+              >
+                Limpar filtros
+              </button>
+            )}
           </div>
 
           <div className="text-[11px] text-muted">
@@ -433,10 +517,11 @@ export function ApontamentoGrade() {
                         const ap = data.apontamentos[k];
                         const status: StatusPresenca = ap?.status || 'falta';
 
+                        const centroPadrao = filtroObra !== 'todas' ? filtroObra : (f.obraPadraoId || data.obras[0]?.id || SEDE);
                         const centros: CentroId[] =
                           ap?.centroIds && ap.centroIds.length > 0
                             ? ap.centroIds
-                            : [ap?.centroId || f.obraPadraoId || data.obras[0]?.id || SEDE];
+                            : [ap?.centroId || centroPadrao];
 
                         const fator = FATOR_PRESENCA[status];
                         totalDiasFunc += fator;

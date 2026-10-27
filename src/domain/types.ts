@@ -206,7 +206,7 @@ export interface Distribuicao {
 export interface FechamentoFolha {
   id: ID;
   funcionarioId: ID;
-  tipo: 'semanal' | 'quinzenal' | 'mensal';
+  tipo: 'semanal' | 'quinzenal' | 'mensal' | 'personalizado';
   inicio: ISODate;
   fim: ISODate;
   diasTrabalhados: number;

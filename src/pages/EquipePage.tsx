@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { HardHat, Plus, Search, UserCheck, Users, UserX, Edit } from 'lucide-react';
+import { HardHat, Plus, Search, UserCheck, Users, UserX, Edit, Trash2, AlertTriangle } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Input, PageHeader, Select } from '@/components/ui';
+import { Dialog } from '@/components/ui/Dialog';
+import { toast } from '@/components/ui/Toast';
 import { StatCard } from '@/components/ui/StatCard';
 import { WhatsAppBadge } from '@/components/brand/WhatsAppIcon';
 import { useData, useErp } from '@/data/store';
@@ -24,6 +26,8 @@ export function EquipePage() {
   const [filtroStatus, setFiltroStatus] = useState<string>('ativos');
   const [dialogNovoOpen, setDialogNovoOpen] = useState(false);
   const [funcionarioEditar, setFuncionarioEditar] = useState<Funcionario | null>(null);
+  const [colaboradorParaExcluir, setColaboradorParaExcluir] = useState<Funcionario | null>(null);
+  const [bloqueioExclusao, setBloqueioExclusao] = useState<{ funcionario: Funcionario; motivo: string } | null>(null);
 
   // Funções disponíveis
   const todasFuncoes = [
@@ -78,6 +82,52 @@ export function EquipePage() {
       const item = d.funcionarios.find((x) => x.id === f.id);
       if (item) item.ativo = !item.ativo;
     });
+  };
+
+  const tentarExcluirFuncionario = (f: Funcionario) => {
+    const temFechamento = (data.fechamentos || []).some((fech) => fech.funcionarioId === f.id);
+    const temContaPagar = (data.contasPagar || []).some((cp) => cp.funcionarioId === f.id);
+
+    if (temFechamento || temContaPagar) {
+      const motivo =
+        temFechamento && temContaPagar
+          ? 'Este colaborador possui fechamentos de folha e lançamentos de contas a pagar registrados no histórico financeiro.'
+          : temFechamento
+          ? 'Este colaborador possui fechamentos de folha registrados no histórico financeiro.'
+          : 'Este colaborador possui lançamentos de contas a pagar no sistema financeiro.';
+      setBloqueioExclusao({ funcionario: f, motivo });
+    } else {
+      setColaboradorParaExcluir(f);
+    }
+  };
+
+  const confirmarExclusao = () => {
+    if (!colaboradorParaExcluir) return;
+    const fId = colaboradorParaExcluir.id;
+    const fNome = colaboradorParaExcluir.nome;
+
+    mutate(
+      (d) => {
+        d.funcionarios = d.funcionarios.filter((x) => x.id !== fId);
+        Object.keys(d.apontamentos).forEach((k) => {
+          if (d.apontamentos[k]?.funcionarioId === fId || k.startsWith(`${fId}|`)) {
+            delete d.apontamentos[k];
+          }
+        });
+        d.funcionarios.forEach((x) => {
+          if (x.empreiteiroId === fId) {
+            x.empreiteiroId = undefined;
+          }
+        });
+      },
+      {
+        acao: 'Equipe',
+        descricao: `Excluiu colaborador de teste "${fNome}"`,
+      },
+    );
+
+    toast(`Colaborador "${fNome}" excluído permanentemente.`);
+    setColaboradorParaExcluir(null);
   };
 
   return (
@@ -284,10 +334,20 @@ export function EquipePage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className={f.ativo ? 'text-red-500 hover:text-red-600' : 'text-emerald-500 hover:text-emerald-600'}
+                            className={f.ativo ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-500/10' : 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10'}
                             onClick={() => alternarStatusFuncionario(f)}
                           >
                             {f.ativo ? 'Desativar' : 'Reativar'}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                            icon={<Trash2 className="size-3.5" />}
+                            onClick={() => tentarExcluirFuncionario(f)}
+                            title="Excluir Colaborador"
+                          >
+                            Excluir
                           </Button>
                         </div>
                       </td>
@@ -318,6 +378,80 @@ export function EquipePage() {
         onClose={() => setFuncionarioEditar(null)}
         funcionarioParaEditar={funcionarioEditar}
       />
+
+      {/* Modal de Confirmação de Exclusão Definitiva */}
+      <Dialog
+        open={!!colaboradorParaExcluir}
+        onClose={() => setColaboradorParaExcluir(null)}
+        title="Excluir Colaborador Permanentemente"
+        subtitle="Confirmação de exclusão para colaboradores de teste"
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-500 flex items-start gap-2.5">
+            <AlertTriangle className="size-5 shrink-0 mt-0.5" />
+            <div>
+              <strong>Atenção:</strong> Tem certeza que deseja apagar permanentemente o colaborador{' '}
+              <strong>{colaboradorParaExcluir?.nome}</strong>? Esta ação é irreversível e removerá o cadastro e todos os apontamentos de presença de teste associados.
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" onClick={() => setColaboradorParaExcluir(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="primary"
+              className="bg-red-600 hover:bg-red-700 text-white border-red-600"
+              onClick={confirmarExclusao}
+            >
+              Sim, Excluir Definitivamente
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      {/* Modal de Bloqueio de Exclusão (Histórico Financeiro Protegido) */}
+      <Dialog
+        open={!!bloqueioExclusao}
+        onClose={() => setBloqueioExclusao(null)}
+        title="Exclusão Não Permitida"
+        subtitle="Proteção de integridade contábil e histórico financeiro"
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-500 flex items-start gap-2.5">
+            <AlertTriangle className="size-5 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <strong>Histórico Financeiro Vinculado:</strong>
+              <p>{bloqueioExclusao?.motivo}</p>
+              <p className="mt-1 text-fg/80">
+                Para manter a integridade dos relatórios contábeis da empresa, o colaborador{' '}
+                <strong>{bloqueioExclusao?.funcionario.nome}</strong> deve ser mantido como <strong>Inativo</strong> em vez de excluído.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex justify-between items-center pt-2">
+            {bloqueioExclusao?.funcionario.ativo && (
+              <Button
+                variant="secondary"
+                className="text-amber-500 border-amber-500/40 hover:bg-amber-500/10"
+                onClick={() => {
+                  if (bloqueioExclusao) {
+                    alternarStatusFuncionario(bloqueioExclusao.funcionario);
+                    toast(`Colaborador "${bloqueioExclusao.funcionario.nome}" desativado.`);
+                    setBloqueioExclusao(null);
+                  }
+                }}
+              >
+                Desativar Agora
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setBloqueioExclusao(null)} className="ml-auto">
+              Entendi, Fechar
+            </Button>
+          </div>
+        </div>
+      </Dialog>
     </>
   );
 }

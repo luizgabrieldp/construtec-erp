@@ -24,7 +24,7 @@ import { LABEL_FUNCAO, getLabelFuncao } from '@/domain/labels';
 import { calcularFolha } from '@/domain/engine';
 import { addDays, endOfMonth, startOfMonth, startOfWeek, today } from '@/lib/dates';
 import { fmtBRL, fmtDate, round2 } from '@/lib/format';
-import { uid } from '@/lib/utils';
+import { cn, uid } from '@/lib/utils';
 import { WhatsAppButton } from '@/components/brand/WhatsAppIcon';
 import { RecibosFolhaDialog, type DadosRecibo } from './RecibosFolhaDialog';
 import { ReciboEmpreiteiroDialog } from './ReciboEmpreiteiroDialog';
@@ -40,7 +40,7 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
   const mutate = useErp((s) => s.mutate);
 
   // Parâmetros de período
-  const [tipo, setTipo] = useState<'semanal' | 'quinzenal' | 'mensal'>('semanal');
+  const [tipo, setTipo] = useState<'semanal' | 'quinzenal' | 'mensal' | 'personalizado'>('semanal');
   const [inicio, setInicio] = useState(startOfWeek(addDays(hoje, -7)));
   const [fim, setFim] = useState(addDays(startOfWeek(addDays(hoje, -7)), 6));
   const [vencimento, setVencimento] = useState(addDays(today(), 5));
@@ -99,7 +99,7 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
     }
   };
 
-  const trocarTipo = (novoTipo: 'semanal' | 'quinzenal' | 'mensal') => {
+  const trocarTipo = (novoTipo: 'semanal' | 'quinzenal' | 'mensal' | 'personalizado') => {
     setTipo(novoTipo);
     if (novoTipo === 'mensal') {
       const mesPassado = startOfMonth(addDays(hoje, -28));
@@ -107,6 +107,8 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
       setFim(endOfMonth(mesPassado));
     } else if (novoTipo === 'quinzenal') {
       aplicarQuinzena(quinzenaOpcao);
+    } else if (novoTipo === 'personalizado') {
+      // Mantém as datas atuais prontas para edição livre
     } else {
       const semPassada = startOfWeek(addDays(hoje, -7));
       setInicio(semPassada);
@@ -455,17 +457,18 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
             1. Período de Apuração e Vencimento
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className={cn("grid gap-3 sm:grid-cols-2", tipo === 'quinzenal' ? "lg:grid-cols-5" : "lg:grid-cols-4")}>
             <Field label="Tipo da Folha">
-              <Select value={tipo} onChange={(e) => trocarTipo(e.target.value as 'semanal' | 'quinzenal' | 'mensal')}>
+              <Select value={tipo} onChange={(e) => trocarTipo(e.target.value as 'semanal' | 'quinzenal' | 'mensal' | 'personalizado')}>
                 <option value="semanal">Semanal (Diaristas)</option>
                 <option value="quinzenal">Quinzenal</option>
                 <option value="mensal">Mensal (Mensalistas)</option>
+                <option value="personalizado">Personalizado (Período Livre)</option>
               </Select>
             </Field>
 
-            {tipo === 'quinzenal' ? (
-              <Field label="Quinzena de Apuração">
+            {tipo === 'quinzenal' && (
+              <Field label="Atalho de Quinzena">
                 <Select value={quinzenaOpcao} onChange={(e) => aplicarQuinzena(e.target.value)}>
                   <option value="atual_1">1ª Quinzena deste mês (Dia 01 a 15)</option>
                   <option value="atual_2">2ª Quinzena deste mês (Dia 16 ao fim)</option>
@@ -473,23 +476,15 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
                   <option value="anterior_1">1ª Quinzena do mês anterior (Dia 01 a 15)</option>
                 </Select>
               </Field>
-            ) : (
-              <Field label="Início do Período">
-                <Input type="date" required value={inicio} onChange={(e) => setInicio(e.target.value)} />
-              </Field>
             )}
 
-            {tipo === 'quinzenal' ? (
-              <Field label="Intervalo Selecionado">
-                <div className="flex h-10 items-center rounded-xl border border-line bg-surface px-3 text-xs font-semibold text-fg">
-                  {fmtDate(inicio)} a {fmtDate(fim)}
-                </div>
-              </Field>
-            ) : (
-              <Field label="Fim do Período">
-                <Input type="date" required value={fim} onChange={(e) => setFim(e.target.value)} />
-              </Field>
-            )}
+            <Field label="Início do Período">
+              <Input type="date" required value={inicio} onChange={(e) => setInicio(e.target.value)} />
+            </Field>
+
+            <Field label="Fim do Período">
+              <Input type="date" required value={fim} onChange={(e) => setFim(e.target.value)} />
+            </Field>
 
             <Field label="Vencimento do Pagamento">
               <Input type="date" required value={vencimento} onChange={(e) => setVencimento(e.target.value)} />
