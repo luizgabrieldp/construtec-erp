@@ -93,7 +93,7 @@ export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
           'Em Configurações > Notificações & PWA, confira instruções para adicionar o app à Tela de Início no iPhone/iPad e Android para receber alertas com a tela bloqueada.',
         icone: 'Smartphone',
         ondeEncontrar: 'Menu Lateral > Configurações > Notificações & PWA',
-        dica: 'Utilize o botão "Disparar Notificação de Teste" para validar as notificações no seu aparelho.',
+        dica: 'Utilize o botão "Testar Notificação Agora" para validar as notificações em segundo plano no seu aparelho.',
       },
       {
         passo: 5,

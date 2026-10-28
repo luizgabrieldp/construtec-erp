@@ -79,11 +79,12 @@ export const sendNotification = async (title: string, options?: NotificationOpti
   if (Notification.permission !== 'granted') return;
 
   const { icon, badge } = getNotificationAssets();
-  const notificationOptions: NotificationOptions & { vibrate?: number[]; renotify?: boolean } = {
+  const notificationOptions: NotificationOptions & { vibrate?: number[]; renotify?: boolean; silent?: boolean | null } = {
     icon,
     badge,
     vibrate: [200, 100, 200],
     renotify: true,
+    silent: false,
     ...options,
   };
 
@@ -266,11 +267,38 @@ export const testarNotificacaoSegundoPlano = async (delayMs = 3000) => {
     'info',
   );
 
-  setTimeout(() => {
-    sendNotification('CONSTRUTEC ERP • Notificação em Segundo Plano', {
-      body: 'Alerta recebido com sucesso com o app em segundo plano! O sistema está pronto para emitir avisos de tarefas e obras.',
-      tag: 'teste-segundo-plano',
-    });
-  }, delayMs);
+  let agendouNoSW = false;
+  if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const targetWorker = reg.active || navigator.serviceWorker.controller;
+      if (targetWorker) {
+        targetWorker.postMessage({
+          type: 'SCHEDULE_NOTIFICATION',
+          title: 'CONSTRUTEC ERP • Notificação em Segundo Plano',
+          options: {
+            body: 'Alerta recebido com sucesso com o app em segundo plano! O sistema está pronto para emitir avisos de tarefas e obras.',
+            tag: 'teste-segundo-plano',
+            vibrate: [200, 100, 200],
+            renotify: true,
+            silent: false,
+          },
+          delay: delayMs,
+        });
+        agendouNoSW = true;
+      }
+    } catch {}
+  }
+
+  // Fallback caso Service Worker não esteja disponível no momento
+  if (!agendouNoSW) {
+    setTimeout(() => {
+      sendNotification('CONSTRUTEC ERP • Notificação em Segundo Plano', {
+        body: 'Alerta recebido com sucesso com o app em segundo plano! O sistema está pronto para emitir avisos de tarefas e obras.',
+        tag: 'teste-segundo-plano',
+        silent: false,
+      });
+    }, delayMs);
+  }
 };
 

@@ -171,6 +171,10 @@ export function TarefasPage() {
       });
   }, [data.tarefas, abaAtiva, filtroObra, filtroPrioridade, busca, hoje, semanaInicio, semanaFim, obrasMap]);
 
+  const atrasadasVisiveis = useMemo(() => {
+    return tarefasFiltradas.filter((t) => !t.concluida && t.data < hoje).length;
+  }, [tarefasFiltradas, hoje]);
+
   const toggleConcluida = (t: Tarefa) => {
     const novoStatus = !t.concluida;
     mutate(
@@ -325,13 +329,13 @@ export function TarefasPage() {
       </Card>
 
       {/* Banner de Tarefas Atrasadas na aba Hoje */}
-      {abaAtiva === 'hoje' && metricas.atrasadas > 0 && (
+      {abaAtiva === 'hoje' && atrasadasVisiveis > 0 && (
         <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-600 dark:text-red-400 font-semibold shadow-xs">
           <div className="flex items-center gap-2.5">
             <AlertCircle className="size-4.5 shrink-0 text-red-500" />
             <div>
               <span className="font-bold">
-                {metricas.atrasadas} {metricas.atrasadas === 1 ? 'tarefa atrasada pendente' : 'tarefas atrasadas pendentes'}
+                {atrasadasVisiveis} {atrasadasVisiveis === 1 ? 'tarefa atrasada pendente' : 'tarefas atrasadas pendentes'}
               </span>
               <span className="hidden sm:inline font-normal text-muted ml-1.5">
                 • Permanecem no topo até serem concluídas ou excluídas.

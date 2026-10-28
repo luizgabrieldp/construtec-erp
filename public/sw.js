@@ -55,6 +55,7 @@ self.addEventListener('push', (event) => {
         badge: data.badge || options.badge,
         vibrate: data.vibrate || [200, 100, 200],
         renotify: data.renotify !== undefined ? data.renotify : true,
+        silent: data.silent !== undefined ? data.silent : false,
         data: data.data || {},
       };
     } catch {
@@ -67,7 +68,9 @@ self.addEventListener('push', (event) => {
 
 // Suporte a Mensagens Diretas entre App e Service Worker (ex: disparo em background/teste)
 self.addEventListener('message', (event) => {
-  if (event.data && (event.data.type === 'SHOW_NOTIFICATION' || event.data.type === 'TEST_NOTIFICATION')) {
+  if (!event.data) return;
+
+  if (event.data.type === 'SHOW_NOTIFICATION' || event.data.type === 'TEST_NOTIFICATION') {
     const { title, options } = event.data;
     event.waitUntil(
       self.registration.showNotification(title || 'CONSTRUTEC ERP', {
@@ -76,7 +79,31 @@ self.addEventListener('message', (event) => {
         tag: options?.tag || 'construtec-aviso',
         vibrate: [200, 100, 200],
         renotify: true,
+        silent: false,
         ...options,
+      })
+    );
+  } else if (event.data.type === 'SCHEDULE_NOTIFICATION') {
+    const { title, options, delay = 3000 } = event.data;
+    // Utiliza event.waitUntil para reter o ciclo de vida do Service Worker em segundo plano mesmo com tela bloqueada
+    event.waitUntil(
+      new Promise((resolve) => {
+        setTimeout(async () => {
+          try {
+            await self.registration.showNotification(title || 'CONSTRUTEC ERP', {
+              icon: '/apple-touch-icon-dark.png',
+              badge: '/favicon-32x32.png',
+              tag: options?.tag || 'construtec-aviso',
+              vibrate: [200, 100, 200],
+              renotify: true,
+              silent: false,
+              ...options,
+            });
+          } catch (e) {
+            console.error('Falha ao exibir notificação agendada no SW:', e);
+          }
+          resolve();
+        }, delay);
       })
     );
   }
@@ -87,9 +114,23 @@ self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'construtec-tarefas-sync' || event.tag === 'verificar-tarefas') {
     event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-        clientList.forEach((client) => {
-          client.postMessage({ type: 'BACKGROUND_SYNC_TRIGGER' });
-        });
+        if (clientList.length > 0) {
+          clientList.forEach((client) => {
+            client.postMessage({ type: 'BACKGROUND_SYNC_TRIGGER' });
+          });
+        } else {
+          // Quando o app está totalmente fechado, emite lembrete periódico nativo de verificação de pendências
+          return self.registration.showNotification('CONSTRUTEC ERP • Lembrete Operacional', {
+            body: 'Verifique suas tarefas e pendências agendadas para hoje na obra.',
+            icon: '/apple-touch-icon-dark.png',
+            badge: '/favicon-32x32.png',
+            tag: 'construtec-tarefas-sync-lembrete',
+            vibrate: [200, 100, 200],
+            renotify: false,
+            silent: false,
+            data: { url: '/tarefas' },
+          });
+        }
       })
     );
   }
@@ -117,7 +158,10 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
-        if (client.url && 'focus' in client) {
+        if ('focus' in client) {
+          if (targetUrl && client.url && !client.url.includes(targetUrl) && 'navigate' in client) {
+            client.navigate(targetUrl);
+          }
           return client.focus();
         }
       }

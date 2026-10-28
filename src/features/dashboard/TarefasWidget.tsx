@@ -114,6 +114,7 @@ export function TarefasWidget() {
         descricao: `${novoStatus ? 'Concluiu' : 'Reabriu'} tarefa: ${t.titulo}`,
       },
     );
+    toast(novoStatus ? `Tarefa "${t.titulo}" marcada como concluída!` : `Tarefa "${t.titulo}" reaberta!`, 'success');
   };
 
   const excluirTarefa = (t: Tarefa, e: React.MouseEvent) => {

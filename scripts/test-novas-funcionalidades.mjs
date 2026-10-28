@@ -319,6 +319,9 @@ try {
   const swCode = readFileSync(resolve('public/sw.js'), 'utf-8');
   assert.ok(swCode.includes('periodicsync'), 'Service Worker deve suportar periodicsync');
   assert.ok(swCode.includes('vibrate'), 'Service Worker deve incluir vibração nas notificações');
+  assert.ok(swCode.includes('SCHEDULE_NOTIFICATION'), 'Service Worker deve suportar SCHEDULE_NOTIFICATION para segundo plano');
+  assert.ok(swCode.includes('silent'), 'Service Worker deve configurar opções sonoras (silent: false)');
+  assert.ok(widgetCode.includes('toast'), 'TarefasWidget deve emitir toast feedback nas ações');
   console.log('   ✅ Gestão Contínua, Exclusão Ágil e Notificações em Segundo Plano validadas com 100% de sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');

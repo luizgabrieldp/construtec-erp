@@ -84,7 +84,7 @@ try {
   assert.ok(titulosPassos.some((t) => t.includes('Identificar Responsáveis na Lista')));
   assert.ok(titulosPassos.some((t) => t.includes('Concluir Tarefas Diretamente pelo Sino')));
   assert.ok(titulosPassos.some((t) => t.includes('Exportar o Guia de Novidades v1.8.1 em PDF')));
-  console.log('   ✅ Releases v1.8.2 e v1.8.1 validadas com sucesso!');
+  console.log('   ✅ Releases v1.8.3, v1.8.2 e v1.8.1 validadas com sucesso!');
 
   // Teste 3: Lógica de filtragem de lembretes por destinatário em verificarLembretesTarefas
   console.log('3. Testando lógica de relevância de lembretes em notifications.ts...');
