@@ -23,7 +23,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
 import { useAuth } from '@/data/auth';
-import { marcarNotificacoesComoLidas } from '@/lib/notifications';
+import { marcarNotificacoesComoLidas, isTarefaRelevanteParaUsuario } from '@/lib/notifications';
 import { useHoje } from '@/hooks';
 import type { Tarefa, PrioridadeTarefa } from '@/domain/types';
 import { LABEL_RECORRENCIA_TAREFA, LABEL_PRIORIDADE_TAREFA } from '@/domain/labels';
@@ -41,15 +41,19 @@ export function TarefasPage() {
   const usuarioAtual = useAuth((s) => s.usuarioAtual);
   const usuarioId = usuarioAtual?.id;
 
-  // Marcação inteligente: ao montar a página de tarefas, marca como lidas as notificações de tarefas pendentes
+  // Marcação inteligente: ao montar a página de tarefas, marca como lidas as notificações de tarefas pendentes (de hoje ou atrasadas e relevantes para o usuário)
   useEffect(() => {
     if (!data?.tarefas || data.tarefas.length === 0) return;
-    const pendentes = data.tarefas.filter((t) => !t.concluida);
+    const pendentes = data.tarefas.filter((t) => {
+      if (t.concluida) return false;
+      if (t.data > hoje) return false;
+      return isTarefaRelevanteParaUsuario(t, usuarioAtual);
+    });
     const idsParaMarcar = pendentes.map((t) => `tarefa-${t.id}`);
     if (idsParaMarcar.length > 0) {
       marcarNotificacoesComoLidas(idsParaMarcar, usuarioId);
     }
-  }, [data?.tarefas, usuarioId]);
+  }, [data?.tarefas, hoje, usuarioAtual, usuarioId]);
 
   const [abaAtiva, setAbaAtiva] = useState<FiltroAba>('todas');
   const [busca, setBusca] = useState('');

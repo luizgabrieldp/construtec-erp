@@ -109,7 +109,12 @@ export const sendNotification = async (title: string, options?: NotificationOpti
   }
 
   try {
-    new Notification(title, notificationOptions);
+    const notif = new Notification(title, notificationOptions);
+    notif.onclick = () => {
+      try {
+        window.focus();
+      } catch {}
+    };
   } catch (e) {
     console.warn('Erro ao disparar notificação via Notification API:', e);
   }
@@ -211,12 +216,12 @@ export const verificarNotificacaoNovaVersao = (usuarioIdParam?: string) => {
 /**
  * Inicia o verificador em background a cada 60 segundos
  */
-export const iniciarVerificadorTarefas = (intervaloMs = 60000) => {
+export const iniciarVerificadorTarefas = (intervaloMs = 60000, usuarioIdParam?: string) => {
   verificarLembretesTarefas();
-  verificarNotificacaoNovaVersao();
+  verificarNotificacaoNovaVersao(usuarioIdParam);
   const timer = setInterval(() => {
     verificarLembretesTarefas();
-    verificarNotificacaoNovaVersao();
+    verificarNotificacaoNovaVersao(usuarioIdParam);
   }, intervaloMs);
   return () => clearInterval(timer);
 };

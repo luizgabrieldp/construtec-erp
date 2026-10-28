@@ -212,6 +212,40 @@ try {
 
   console.log('   ✅ Notificação automática de versão e isolamento per-user testados e aprovados!');
 
+  // Teste 7: Validar que TarefasPage não marca tarefas futuras nem irrelevantes como lidas
+  console.log('7. Validando filtro de leitura inteligente de tarefas em TarefasPage (hoje vs futuras)...');
+  const tarefasPageSrc = readFileSync(resolve('src/pages/TarefasPage.tsx'), 'utf-8');
+  assert.ok(tarefasPageSrc.includes('isTarefaRelevanteParaUsuario'), 'TarefasPage deve filtrar por relevância ao usuário');
+  assert.ok(tarefasPageSrc.includes('t.data > hoje'), 'TarefasPage não deve marcar tarefas futuras como lidas');
+
+  // Testar a regra de filtragem de pendentes
+  const ontem = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  const amanha = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const tarefasMistas = [
+    { id: 'tf-hoje', titulo: 'Concretar pilar', data: hoje, concluida: false, destinatarioTipo: 'todos' },
+    { id: 'tf-ontem', titulo: 'Comprar pregos', data: ontem, concluida: false, destinatarioTipo: 'todos' },
+    { id: 'tf-futura', titulo: 'Pintura final', data: amanha, concluida: false, destinatarioTipo: 'todos' },
+    { id: 'tf-outro', titulo: 'Relatório diretoria', data: hoje, concluida: false, destinatarioTipo: 'eu', destinatarioId: userEncarregado.id, criadoPorId: userEncarregado.id },
+  ];
+
+  // Simulando filtragem executada pelo useEffect em TarefasPage para userAdmin
+  const pendentesAdminTarefasPage = tarefasMistas.filter((t) => {
+    if (t.concluida) return false;
+    if (t.data > hoje) return false;
+    return isRelevante(t, userAdmin);
+  });
+  const idsAdmin = pendentesAdminTarefasPage.map((t) => `tarefa-${t.id}`);
+  assert.deepEqual(idsAdmin, ['tarefa-tf-hoje', 'tarefa-tf-ontem'], 'Deve marcar apenas tarefas de hoje ou atrasadas e relevantes');
+  assert.ok(!idsAdmin.includes('tarefa-tf-futura'), 'Tarefa futura NÃO deve ser marcada');
+  assert.ok(!idsAdmin.includes('tarefa-tf-outro'), 'Tarefa privada de outro usuário NÃO deve ser marcada');
+
+  // Validar também callback onclick de foco na janela no fallback Notification
+  const notifSrc = readFileSync(resolve('src/lib/notifications.ts'), 'utf-8');
+  assert.ok(notifSrc.includes('notif.onclick'), 'Notification fallback deve conter onclick para foco da janela');
+  assert.ok(notifSrc.includes('usuarioIdParam'), 'iniciarVerificadorTarefas deve propagar usuarioIdParam');
+
+  console.log('   ✅ Leitura inteligente de tarefas pendentes validada sem marcação indevida de futuras!');
+
   console.log('\n🎉 TODOS OS TESTES DE EDGE CASES PASSARAM COM SUCESSO!\n');
 } catch (err) {
   console.error('❌ Falha nos testes de edge cases:', err);

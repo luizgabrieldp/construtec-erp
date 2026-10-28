@@ -304,7 +304,7 @@ export function AppShell() {
 
   useEffect(() => {
     verificarNotificacaoNovaVersao(usuarioAtual?.id);
-    const cancelar = iniciarVerificadorTarefas(60000);
+    const cancelar = iniciarVerificadorTarefas(60000, usuarioAtual?.id);
     return cancelar;
   }, [usuarioAtual?.id]);
 
