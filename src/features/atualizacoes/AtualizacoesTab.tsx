@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Sparkles,
   Printer,
@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { Badge, Button, Card } from '@/components/ui';
 import { ATUALIZACOES_SISTEMA, type ReleaseVersao } from '@/data/atualizacoes';
+import { useAuth } from '@/data/auth';
+import { getNotificacoesLidas, saveNotificacoesLidas } from '@/components/layout/NotificacoesPopover';
 import { PassoAPassoDialog } from './PassoAPassoDialog';
 
 export function AtualizacoesTab() {
@@ -19,13 +21,26 @@ export function AtualizacoesTab() {
   const [modalAberto, setModalAberto] = useState(false);
   const [autoPrint, setAutoPrint] = useState(false);
 
+  const usuarioAtual = useAuth((s) => s.usuarioAtual);
+  const usuarioId = usuarioAtual?.id;
+  const ultimaVersao = ATUALIZACOES_SISTEMA[0];
+
+  // Leitura inteligente: ao abrir a aba de atualizações, marca a versão recente como visualizada
+  useEffect(() => {
+    if (!ultimaVersao) return;
+    const key = `versao-${ultimaVersao.versao}`;
+    const lidas = getNotificacoesLidas(usuarioId);
+    if (!lidas.has(key)) {
+      lidas.add(key);
+      saveNotificacoesLidas(lidas, usuarioId);
+    }
+  }, [ultimaVersao?.versao, usuarioId]);
+
   const abrirPassoAPasso = (versao: ReleaseVersao, imprimir = false) => {
     setVersaoSelecionada(versao);
     setAutoPrint(imprimir);
     setModalAberto(true);
   };
-
-  const ultimaVersao = ATUALIZACOES_SISTEMA[0];
 
   return (
     <div className="space-y-6">

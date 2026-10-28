@@ -13,7 +13,7 @@ import { NAV, navDoPerfil, podeAcessar } from '@/app/nav';
 import { useUi } from '@/data/ui';
 import { useAuth } from '@/data/auth';
 import { useSyncStatus, forcarSincronizacaoAgora } from '@/data/repository';
-import { iniciarVerificadorTarefas } from '@/lib/notifications';
+import { iniciarVerificadorTarefas, verificarNotificacaoNovaVersao } from '@/lib/notifications';
 import { isTyping, useHoje } from '@/hooks';
 import { fmtDateLong } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -303,6 +303,7 @@ export function AppShell() {
   }, [usuarioAtual]);
 
   useEffect(() => {
+    verificarNotificacaoNovaVersao(usuarioAtual?.id);
     const cancelar = iniciarVerificadorTarefas(60000);
     return cancelar;
   }, [usuarioAtual?.id]);

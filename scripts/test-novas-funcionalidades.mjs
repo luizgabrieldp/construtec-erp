@@ -32,14 +32,26 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v181 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v181.versao, 'v1.8.1', 'A versão mais recente deve ser v1.8.1');
+  const v182 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v182.versao, 'v1.8.2', 'A versão mais recente deve ser v1.8.2');
+  assert.ok(v182.titulo.includes('Notificação Automática'), 'Título da v1.8.2 deve mencionar Notificação Automática');
+  assert.ok(v182.descricao.length > 50, 'Descrição da v1.8.2 deve ser rica e no estilo App Store');
+  assert.ok(v182.mudancas.length >= 3, 'v1.8.2 deve listar as mudanças detalhadas');
+  assert.ok(v182.passosVisuais.length >= 5, 'v1.8.2 deve conter passos ilustrados');
+
+  const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
+  v182.mudancas.forEach((m) => {
+    assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
+    assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
+  });
+
+  const v181 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.1');
+  assert.ok(v181, 'v1.8.1 deve estar presente no histórico');
   assert.ok(v181.titulo.includes('Notificações In-App'), 'Título da v1.8.1 deve mencionar Notificações In-App');
   assert.ok(v181.descricao.length > 50, 'Descrição deve ser rica e no estilo App Store');
   assert.ok(v181.mudancas.length >= 4, 'v1.8.1 deve listar as mudanças detalhadas');
   assert.ok(v181.passosVisuais.length >= 4, 'v1.8.1 deve conter passos ilustrados');
 
-  const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
   v181.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
@@ -52,7 +64,7 @@ try {
   assert.ok(v180.mudancas.length >= 4, 'v1.8.0 deve listar as mudanças detalhadas');
   assert.ok(v180.passosVisuais.length >= 4, 'v1.8.0 deve conter passos ilustrados');
 
-  console.log('   ✅ Histórico de versões estruturado e validado com sucesso (v1.8.1 e v1.8.0)!');
+  console.log('   ✅ Histórico de versões estruturado e validado com sucesso (v1.8.2, v1.8.1 e v1.8.0)!');
 
   // Teste 2: Validar aba Atualizações em ConfiguracoesPage.tsx
   console.log('2. Validando posicionamento da aba "Atualizações" em ConfiguracoesPage.tsx...');
@@ -269,6 +281,17 @@ try {
   assert.ok(tarefasPageCode.includes('Para todos'), 'TarefasPage deve exibir tag Para todos');
   assert.ok(tarefasPageCode.includes('t.destinatarioNome'), 'TarefasPage deve exibir destinatarioNome');
   console.log('   ✅ Notificações In-App e Destinatários de Tarefas validados com 100% de sucesso!');
+
+  // Teste 10: Validar Notificação Automática de Novas Versões & Leitura Inteligente (v1.8.2)
+  console.log('10. Validando Notificação Automática de Novas Versões & Leitura Inteligente (v1.8.2)...');
+  assert.ok(appShellCode.includes('verificarNotificacaoNovaVersao'), 'AppShell deve chamar verificarNotificacaoNovaVersao no boot');
+  assert.ok(notifCode.includes('verificarNotificacaoNovaVersao'), 'notifications.ts deve exportar verificarNotificacaoNovaVersao');
+  assert.ok(notifCode.includes('construtec:notificacoes:versao_notificada'), 'notifications.ts deve registrar versao_notificada per-user no localStorage');
+  assert.ok(popoverCode.includes('novasLidas'), 'NotificacoesPopover deve gerenciar marcação de lidas');
+  assert.ok(tarefasPageCode.includes('marcarNotificacoesComoLidas'), 'TarefasPage deve marcar tarefas pendentes como lidas ao montar');
+  const atualizacoesTabCode = readFileSync(resolve('src/features/atualizacoes/AtualizacoesTab.tsx'), 'utf-8');
+  assert.ok(atualizacoesTabCode.includes('getNotificacoesLidas'), 'AtualizacoesTab deve verificar leitura da versão recente');
+  console.log('   ✅ Notificação automática e leitura inteligente validadas com 100% de sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');
 } catch (err) {

@@ -31,33 +31,31 @@ import type { Tarefa } from '@/domain/types';
 
 const STORAGE_KEY = 'construtec:notificacoes:lidas:v1';
 
-function getStorageKey(usuarioId?: string) {
+export function getStorageKey(usuarioId?: string) {
   return usuarioId ? `construtec:notificacoes:lidas:${usuarioId}:v1` : STORAGE_KEY;
 }
 
-function getNotificacoesLidas(usuarioId?: string): Set<string> {
+export function getNotificacoesLidas(usuarioId?: string): Set<string> {
   if (typeof window === 'undefined') return new Set();
   try {
     const key = getStorageKey(usuarioId);
-    let raw = localStorage.getItem(key);
-    if (!raw && usuarioId) {
-      raw = localStorage.getItem(STORAGE_KEY);
-    }
+    const raw = localStorage.getItem(key);
     return raw ? new Set(JSON.parse(raw)) : new Set();
   } catch {
     return new Set();
   }
 }
 
-function saveNotificacoesLidas(set: Set<string>, usuarioId?: string) {
+export function saveNotificacoesLidas(set: Set<string>, usuarioId?: string) {
   if (typeof window === 'undefined') return;
   try {
     const list = Array.from(set);
     const json = JSON.stringify(list);
-    if (usuarioId) {
-      localStorage.setItem(getStorageKey(usuarioId), json);
-    }
-    localStorage.setItem(STORAGE_KEY, json);
+    const key = getStorageKey(usuarioId);
+    localStorage.setItem(key, json);
+    window.dispatchEvent(
+      new CustomEvent('construtec:notificacoes:lidas', { detail: { usuarioId } })
+    );
   } catch {}
 }
 
@@ -80,9 +78,18 @@ export function NotificacoesPopover() {
 
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Recarrega lista de lidas se o usuário conectado mudar
+  // Recarrega lista de lidas se o usuário mudar ou se outro componente disparar atualização
   useEffect(() => {
-    setNotificacoesLidas(getNotificacoesLidas(usuarioId));
+    const recarregar = () => {
+      setNotificacoesLidas(getNotificacoesLidas(usuarioId));
+    };
+    recarregar();
+    window.addEventListener('construtec:notificacoes:lidas', recarregar);
+    window.addEventListener('storage', recarregar);
+    return () => {
+      window.removeEventListener('construtec:notificacoes:lidas', recarregar);
+      window.removeEventListener('storage', recarregar);
+    };
   }, [usuarioId]);
 
   // Fecha o popover automaticamente se houver navegação de rota
@@ -122,6 +129,41 @@ export function NotificacoesPopover() {
   }, [data?.tarefas, hoje, usuarioAtual]);
 
   const versaoRecente: ReleaseVersao | undefined = ATUALIZACOES_SISTEMA[0];
+
+  // Leitura inteligente automática: ao abrir o popover ou alternar abas, marca como lidas as notificações visíveis
+  useEffect(() => {
+    if (!aberto) return;
+
+    const novasLidas = new Set(getNotificacoesLidas(usuarioId));
+    let mudou = false;
+
+    // Marca as tarefas pendentes de hoje como lidas ao visualizar
+    if (abaAtiva === 'tarefas' || aberto) {
+      tarefasPendentes.forEach((t) => {
+        const k = `tarefa-${t.id}`;
+        if (!novasLidas.has(k)) {
+          novasLidas.add(k);
+          mudou = true;
+        }
+      });
+    }
+
+    // Marca o aviso de atualização como lido ao visualizar
+    if (abaAtiva === 'sistema' || aberto) {
+      if (versaoRecente) {
+        const k = `versao-${versaoRecente.versao}`;
+        if (!novasLidas.has(k)) {
+          novasLidas.add(k);
+          mudou = true;
+        }
+      }
+    }
+
+    if (mudou) {
+      setNotificacoesLidas(novasLidas);
+      saveNotificacoesLidas(novasLidas, usuarioId);
+    }
+  }, [aberto, abaAtiva, tarefasPendentes, versaoRecente, usuarioId]);
 
   // Identificadores não lidos
   const tarefasNaoLidas = useMemo(() => {

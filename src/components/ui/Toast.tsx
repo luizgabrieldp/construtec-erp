@@ -1,16 +1,18 @@
 import { create } from 'zustand';
-import { CheckCircle2, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+export type ToastTone = 'success' | 'error' | 'info';
 
 interface Toast {
   id: number;
   message: string;
-  tone: 'success' | 'error';
+  tone: ToastTone;
 }
 
 interface ToastState {
   toasts: Toast[];
-  push: (message: string, tone?: Toast['tone']) => void;
+  push: (message: string, tone?: ToastTone) => void;
 }
 
 let n = 0;
@@ -23,7 +25,7 @@ export const useToast = create<ToastState>()((set) => ({
   },
 }));
 
-export const toast = (message: string, tone?: Toast['tone']) => useToast.getState().push(message, tone);
+export const toast = (message: string, tone?: ToastTone) => useToast.getState().push(message, tone);
 
 export function Toaster() {
   const toasts = useToast((s) => s.toasts);
@@ -37,7 +39,13 @@ export function Toaster() {
             'border-line bg-surface text-fg',
           )}
         >
-          {t.tone === 'success' ? <CheckCircle2 className="size-4 text-emerald-500" /> : <AlertTriangle className="size-4 text-red-500" />}
+          {t.tone === 'success' ? (
+            <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
+          ) : t.tone === 'info' ? (
+            <Info className="size-4 text-brand shrink-0" />
+          ) : (
+            <AlertTriangle className="size-4 text-red-500 shrink-0" />
+          )}
           {t.message}
         </div>
       ))}

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CheckSquare,
   Plus,
@@ -22,6 +22,8 @@ import { PageHeader, Card, Badge, Button, Input, Select } from '@/components/ui'
 import { StatCard } from '@/components/ui/StatCard';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
+import { useAuth } from '@/data/auth';
+import { marcarNotificacoesComoLidas } from '@/lib/notifications';
 import { useHoje } from '@/hooks';
 import type { Tarefa, PrioridadeTarefa } from '@/domain/types';
 import { LABEL_RECORRENCIA_TAREFA, LABEL_PRIORIDADE_TAREFA } from '@/domain/labels';
@@ -36,6 +38,18 @@ export function TarefasPage() {
   const data = useData();
   const mutate = useErp((s) => s.mutate);
   const hoje = useHoje();
+  const usuarioAtual = useAuth((s) => s.usuarioAtual);
+  const usuarioId = usuarioAtual?.id;
+
+  // Marcação inteligente: ao montar a página de tarefas, marca como lidas as notificações de tarefas pendentes
+  useEffect(() => {
+    if (!data?.tarefas || data.tarefas.length === 0) return;
+    const pendentes = data.tarefas.filter((t) => !t.concluida);
+    const idsParaMarcar = pendentes.map((t) => `tarefa-${t.id}`);
+    if (idsParaMarcar.length > 0) {
+      marcarNotificacoesComoLidas(idsParaMarcar, usuarioId);
+    }
+  }, [data?.tarefas, usuarioId]);
 
   const [abaAtiva, setAbaAtiva] = useState<FiltroAba>('todas');
   const [busca, setBusca] = useState('');

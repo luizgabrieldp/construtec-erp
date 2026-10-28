@@ -36,9 +36,25 @@ try {
 
   console.log('   ✅ Módulos carregados com sucesso!');
 
-  // Teste 2: Validar versão v1.8.1 e passos visuais
-  console.log('2. Validando integridade da release v1.8.1 em ATUALIZACOES_SISTEMA...');
-  const v181 = ATUALIZACOES_SISTEMA[0];
+  // Teste 2: Validar versões v1.8.2 e v1.8.1 e passos visuais
+  console.log('2. Validando integridade das releases v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
+  const v182 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v182.versao, 'v1.8.2');
+  assert.equal(v182.dataPublicacao, '27 de Outubro de 2026 às 23:10');
+  assert.equal(v182.titulo, 'Notificação Automática de Novas Versões & Leitura Inteligente sem Cliques Extras');
+  assert.deepEqual(v182.tags, ['Novo', 'Melhoria', 'Correção']);
+  assert.equal(v182.mudancas.length, 3);
+  assert.equal(v182.passosVisuais.length, 5);
+
+  const titulosPassos182 = v182.passosVisuais.map((p) => p.titulo);
+  assert.ok(titulosPassos182.some((t) => t.includes('Notificação Automática')));
+  assert.ok(titulosPassos182.some((t) => t.includes('Leitura Inteligente')));
+  assert.ok(titulosPassos182.some((t) => t.includes('Marcação Automática em Tarefas')));
+  assert.ok(titulosPassos182.some((t) => t.includes('Isolamento de Leitura por Conta')));
+  assert.ok(titulosPassos182.some((t) => t.includes('Exportação do Guia v1.8.2 em PDF')));
+
+  const v181 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.1');
+  assert.ok(v181, 'v1.8.1 deve existir no histórico');
   assert.equal(v181.versao, 'v1.8.1');
   assert.equal(v181.dataPublicacao, '27 de Outubro de 2026 às 22:20');
   assert.equal(v181.titulo, 'Notificações In-App no Topo, Destinatários de Lembretes & Ajustes em Obras');
@@ -52,7 +68,7 @@ try {
   assert.ok(titulosPassos.some((t) => t.includes('Identificar Responsáveis na Lista')));
   assert.ok(titulosPassos.some((t) => t.includes('Concluir Tarefas Diretamente pelo Sino')));
   assert.ok(titulosPassos.some((t) => t.includes('Exportar o Guia de Novidades v1.8.1 em PDF')));
-  console.log('   ✅ Release v1.8.1 e todos os 5 passos ilustrados validados!');
+  console.log('   ✅ Releases v1.8.2 e v1.8.1 validadas com sucesso!');
 
   // Teste 3: Lógica de filtragem de lembretes por destinatário em verificarLembretesTarefas
   console.log('3. Testando lógica de relevância de lembretes em notifications.ts...');
@@ -134,11 +150,13 @@ try {
 
   // Marcar todas como lidas
   pendentesAdmin.forEach((t) => notificacoesLidas.add(`tarefa-${t.id}`));
+  notificacoesLidas.add(`versao-${v182.versao}`);
   notificacoesLidas.add(`versao-${v181.versao}`);
 
   const naoLidasAdminAposMarcar = pendentesAdmin.filter((t) => !notificacoesLidas.has(`tarefa-${t.id}`));
   assert.equal(naoLidasAdminAposMarcar.length, 0, 'Após marcar todas, contador de tarefas não lidas deve ser 0');
-  assert.ok(notificacoesLidas.has(`versao-${v181.versao}`), 'Versão deve estar marcada como lida');
+  assert.ok(notificacoesLidas.has(`versao-${v182.versao}`), 'Versão v1.8.2 deve estar marcada como lida');
+  assert.ok(notificacoesLidas.has(`versao-${v181.versao}`), 'Versão v1.8.1 deve estar marcada como lida');
 
   console.log('   ✅ Contadores de notificações e marcar todas como lidas validados!');
 
@@ -154,6 +172,45 @@ try {
   const widgetSrc = readFileSync(resolve('src/features/dashboard/TarefasWidget.tsx'), 'utf-8');
   assert.ok(widgetSrc.includes("destinatarioTipo === 'todos'"), 'TarefasWidget deve exibir badge Para todos');
   console.log('   ✅ Ícone CheckCircle2, isolamento per-user e widget validados com sucesso!');
+
+  // Teste 6: Validar verificarNotificacaoNovaVersao e isolamento de storage sem contaminação
+  console.log('6. Validando verificarNotificacaoNovaVersao e isolamento per-user no localStorage...');
+  const {
+    verificarNotificacaoNovaVersao,
+    getNotificacoesLidas,
+    saveNotificacoesLidas,
+    marcarNotificacoesComoLidas,
+  } = await server.ssrLoadModule('/src/lib/notifications.ts');
+
+  // Testar disparo de versão para userAdmin
+  globalThis.localStorage.clear();
+  verificarNotificacaoNovaVersao(userAdmin.id);
+  const versaoNotificadaAdmin = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`);
+  assert.equal(versaoNotificadaAdmin, 'v1.8.2', 'Deve ter gravado a versão notificada para o admin');
+
+  // Segunda chamada não deve alterar ou re-notificar
+  verificarNotificacaoNovaVersao(userAdmin.id);
+  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.2');
+
+  // Outro usuário ainda não foi notificado
+  const versaoNotificadaOutro = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userEncarregado.id}`);
+  assert.equal(versaoNotificadaOutro, null, 'Encarregado não deve herdar notificação de versão do admin');
+
+  // Testar isolamento per-user de marcação de lidas
+  const lidasAdmin = getNotificacoesLidas(userAdmin.id);
+  assert.equal(lidasAdmin.size, 0);
+
+  marcarNotificacoesComoLidas(['tarefa-t1', 'versao-v1.8.2'], userAdmin.id);
+  const lidasAdminApos = getNotificacoesLidas(userAdmin.id);
+  assert.equal(lidasAdminApos.has('tarefa-t1'), true);
+  assert.equal(lidasAdminApos.has('versao-v1.8.2'), true);
+
+  // Encarregado NÃO deve ter herdado as notificações lidas pelo admin
+  const lidasEncarregado = getNotificacoesLidas(userEncarregado.id);
+  assert.equal(lidasEncarregado.has('tarefa-t1'), false, 'Encarregado não deve herdar notificações lidas do admin');
+  assert.equal(lidasEncarregado.has('versao-v1.8.2'), false, 'Encarregado não deve herdar versão lida do admin');
+
+  console.log('   ✅ Notificação automática de versão e isolamento per-user testados e aprovados!');
 
   console.log('\n🎉 TODOS OS TESTES DE EDGE CASES PASSARAM COM SUCESSO!\n');
 } catch (err) {

@@ -2,6 +2,52 @@ import { useErp } from '@/data/store';
 import { useAuth } from '@/data/auth';
 import { toast } from '@/components/ui/Toast';
 import { today } from '@/lib/dates';
+import { ATUALIZACOES_SISTEMA } from '@/data/atualizacoes';
+
+export const STORAGE_KEY_NOTIFICACOES_LIDAS = 'construtec:notificacoes:lidas:v1';
+
+export function getStorageKeyNotificacoes(usuarioId?: string) {
+  return usuarioId ? `construtec:notificacoes:lidas:${usuarioId}:v1` : STORAGE_KEY_NOTIFICACOES_LIDAS;
+}
+
+export function getNotificacoesLidas(usuarioId?: string): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const key = getStorageKeyNotificacoes(usuarioId);
+    const raw = localStorage.getItem(key);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+export function saveNotificacoesLidas(set: Set<string>, usuarioId?: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    const list = Array.from(set);
+    const json = JSON.stringify(list);
+    const key = getStorageKeyNotificacoes(usuarioId);
+    localStorage.setItem(key, json);
+    window.dispatchEvent(
+      new CustomEvent('construtec:notificacoes:lidas', { detail: { usuarioId } })
+    );
+  } catch {}
+}
+
+export function marcarNotificacoesComoLidas(idsParaMarcar: string[], usuarioId?: string): Set<string> {
+  const lidas = getNotificacoesLidas(usuarioId);
+  let alterou = false;
+  idsParaMarcar.forEach((id) => {
+    if (!lidas.has(id)) {
+      lidas.add(id);
+      alterou = true;
+    }
+  });
+  if (alterou) {
+    saveNotificacoesLidas(lidas, usuarioId);
+  }
+  return lidas;
+}
 
 export const isNotificationSupported = () => typeof window !== 'undefined' && 'Notification' in window;
 
@@ -136,10 +182,41 @@ export const verificarLembretesTarefas = () => {
 };
 
 /**
+ * Verifica se há uma nova versão do sistema ainda não notificada para o usuário atual
+ * e dispara notificação push e toast informativo automaticamente
+ */
+export const verificarNotificacaoNovaVersao = (usuarioIdParam?: string) => {
+  if (typeof window === 'undefined') return;
+  const versaoRecente = ATUALIZACOES_SISTEMA[0];
+  if (!versaoRecente) return;
+
+  const usuarioAtual = useAuth.getState().usuarioAtual;
+  const usuarioId = usuarioIdParam || usuarioAtual?.id;
+  const userKey = usuarioId || 'anon';
+  const storageKey = `construtec:notificacoes:versao_notificada:${userKey}`;
+
+  const versaoNotificada = localStorage.getItem(storageKey);
+  if (versaoNotificada !== versaoRecente.versao) {
+    localStorage.setItem(storageKey, versaoRecente.versao);
+
+    sendNotification(`Atualização CONSTRUTEC ${versaoRecente.versao}`, {
+      body: `${versaoRecente.titulo} - Toque para conferir as novidades.`,
+      tag: `versao-${versaoRecente.versao}`,
+    });
+
+    toast(`Nova versão ${versaoRecente.versao} disponível: ${versaoRecente.titulo}`, 'info');
+  }
+};
+
+/**
  * Inicia o verificador em background a cada 60 segundos
  */
 export const iniciarVerificadorTarefas = (intervaloMs = 60000) => {
   verificarLembretesTarefas();
-  const timer = setInterval(verificarLembretesTarefas, intervaloMs);
+  verificarNotificacaoNovaVersao();
+  const timer = setInterval(() => {
+    verificarLembretesTarefas();
+    verificarNotificacaoNovaVersao();
+  }, intervaloMs);
   return () => clearInterval(timer);
 };

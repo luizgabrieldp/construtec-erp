@@ -28,6 +28,85 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v1.8.2',
+    dataPublicacao: '27 de Outubro de 2026 às 23:10',
+    dataIso: '2026-10-27T23:10:00Z',
+    titulo: 'Notificação Automática de Novas Versões & Leitura Inteligente sem Cliques Extras',
+    descricao:
+      'Disparo automático de notificação nativa (push web e toast in-app) sempre que uma nova versão do CONSTRUTEC for publicada; leitura inteligente de notificações ao visualizar a Central no sino ou ao navegar pela página de tarefas e aba de atualizações, zerando badges sem exigir cliques manuais em botões; e correção no isolamento de leitura com armazenamento individual per-user no dispositivo.',
+    tags: ['Novo', 'Melhoria', 'Correção'],
+    mudancas: [
+      {
+        tag: 'Novo',
+        texto:
+          'Disparo automático de notificação nativa (push web / toast) aos usuários quando uma nova atualização do aplicativo for publicada',
+        detalhe:
+          'O sistema agora verifica a versão do sistema automaticamente no boot e dispara push notification no navegador e toast in-app avisando os colaboradores sobre as novidades publicadas.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Leitura inteligente ao visualizar: ao abrir a Central de Notificações no topo ou acessar a página de Tarefas e a aba de Atualizações, as notificações correspondentes já são consideradas lidas automaticamente, limpando o badge vermelho sem exigir que o usuário clique em "Marcar como lida"',
+        detalhe:
+          'Fluxo mais ágil e natural: basta abrir o popover do sino ou entrar nas telas de tarefas e novidades para que o contador de pendências seja zerado na hora.',
+      },
+      {
+        tag: 'Correção',
+        texto:
+          'Varredura geral de ciclo de vida das notificações: sincronização de leitura com o localStorage per-user, evitando contaminação entre contas no mesmo dispositivo',
+        detalhe:
+          'Chaves de leitura no armazenamento local agora são estritamente isoladas por ID do usuário conectado, impedindo que acessos compartilhados no mesmo aparelho herdem o estado de leitura de outro colaborador.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Notificação Automática de Novas Atualizações',
+        descricao:
+          'Sempre que uma nova atualização for ao ar, você receberá instantaneamente uma notificação nativa e um aviso toast no rodapé da aplicação.',
+        icone: 'Bell',
+        ondeEncontrar: 'Ao carregar a plataforma ou após novas publicações',
+        dica: 'O aviso traz o resumo das novidades para manter toda a equipe alinhada com as melhorias.',
+      },
+      {
+        passo: 2,
+        titulo: 'Leitura Inteligente ao Abrir a Central de Notificações',
+        descricao:
+          'Ao clicar no ícone de sino no cabeçalho superior, todas as notificações visíveis são marcadas como lidas na hora, limpando o badge vermelho imediatamente.',
+        icone: 'MousePointerClick',
+        ondeEncontrar: 'Cabeçalho Superior > Ícone de Sino (Central de Notificações)',
+        dica: 'Você não precisa mais clicar em "Marcar todas como lidas" para apagar o indicador.',
+      },
+      {
+        passo: 3,
+        titulo: 'Marcação Automática em Tarefas e Atualizações',
+        descricao:
+          'Ao navegar até a tela de Tarefas ou a aba de Atualizações em Configurações, as notificações relacionadas são marcadas como visualizadas automaticamente.',
+        icone: 'CheckSquare',
+        ondeEncontrar: 'Menu Lateral > Tarefas e Configurações > Atualizações',
+        dica: 'A sincronização em tempo real atualiza o sino no topo sem precisar recarregar a página.',
+      },
+      {
+        passo: 4,
+        titulo: 'Isolamento de Leitura por Conta de Usuário',
+        descricao:
+          'O histórico de itens lidos é armazenado de forma individualizada para cada conta de administrador ou encarregado no mesmo aparelho.',
+        icone: 'Users',
+        ondeEncontrar: 'Central de Notificações em ambientes multiusuário',
+        dica: 'Cada profissional no canteiro mantém suas notificações intactas e personalizadas.',
+      },
+      {
+        passo: 5,
+        titulo: 'Exportação do Guia v1.8.2 em PDF',
+        descricao:
+          'Na aba de Atualizações, clique em "Exportar Passo a Passo" para gerar o documento formatado para impressão ou envio por PDF aos mestres e encarregados.',
+        icone: 'Printer',
+        ondeEncontrar: 'Configurações > Aba Atualizações > Versão v1.8.2 > Exportar',
+        dica: 'Ideal para imprimir ou enviar via WhatsApp para a equipe de campo.',
+      },
+    ],
+  },
+  {
     versao: 'v1.8.1',
     dataPublicacao: '27 de Outubro de 2026 às 22:20',
     dataIso: '2026-10-27T22:20:00Z',
