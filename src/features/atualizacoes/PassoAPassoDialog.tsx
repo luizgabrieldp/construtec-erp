@@ -67,6 +67,8 @@ export function PassoAPassoDialog({ versao, open, onClose, autoPrint = false }: 
         return <CloudCheck className="size-5 text-sky-500" />;
       case 'Bell':
         return <Bell className="size-5 text-amber-500" />;
+      case 'CheckCircle2':
+        return <CheckCircle2 className="size-5 text-emerald-500" />;
       case 'Touchpad':
       case 'MousePointerClick':
         return <MousePointerClick className="size-5 text-violet-500" />;

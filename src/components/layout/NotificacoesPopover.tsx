@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell,
   Check,
@@ -23,6 +23,7 @@ import { useErp, useData } from '@/data/store';
 import { useAuth } from '@/data/auth';
 import { useHoje } from '@/hooks';
 import { ATUALIZACOES_SISTEMA, type ReleaseVersao } from '@/data/atualizacoes';
+import { isTarefaRelevanteParaUsuario } from '@/lib/notifications';
 import { toast } from '@/components/ui/Toast';
 import { Badge, Button } from '@/components/ui';
 import { cn } from '@/lib/utils';
@@ -30,35 +31,64 @@ import type { Tarefa } from '@/domain/types';
 
 const STORAGE_KEY = 'construtec:notificacoes:lidas:v1';
 
-function getNotificacoesLidas(): Set<string> {
+function getStorageKey(usuarioId?: string) {
+  return usuarioId ? `construtec:notificacoes:lidas:${usuarioId}:v1` : STORAGE_KEY;
+}
+
+function getNotificacoesLidas(usuarioId?: string): Set<string> {
   if (typeof window === 'undefined') return new Set();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const key = getStorageKey(usuarioId);
+    let raw = localStorage.getItem(key);
+    if (!raw && usuarioId) {
+      raw = localStorage.getItem(STORAGE_KEY);
+    }
     return raw ? new Set(JSON.parse(raw)) : new Set();
   } catch {
     return new Set();
   }
 }
 
-function saveNotificacoesLidas(set: Set<string>) {
+function saveNotificacoesLidas(set: Set<string>, usuarioId?: string) {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(set)));
+    const list = Array.from(set);
+    const json = JSON.stringify(list);
+    if (usuarioId) {
+      localStorage.setItem(getStorageKey(usuarioId), json);
+    }
+    localStorage.setItem(STORAGE_KEY, json);
   } catch {}
 }
 
 export function NotificacoesPopover() {
   const [aberto, setAberto] = useState(false);
   const [abaAtiva, setAbaAtiva] = useState<'tarefas' | 'sistema'>('tarefas');
-  const [notificacoesLidas, setNotificacoesLidas] = useState<Set<string>>(() => getNotificacoesLidas());
 
   const data = useData();
   const mutate = useErp((s) => s.mutate);
   const usuarioAtual = useAuth((s) => s.usuarioAtual);
+  const usuarioId = usuarioAtual?.id;
+
+  const [notificacoesLidas, setNotificacoesLidas] = useState<Set<string>>(() =>
+    getNotificacoesLidas(usuarioId),
+  );
+
   const hoje = useHoje();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
 
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Recarrega lista de lidas se o usuário conectado mudar
+  useEffect(() => {
+    setNotificacoesLidas(getNotificacoesLidas(usuarioId));
+  }, [usuarioId]);
+
+  // Fecha o popover automaticamente se houver navegação de rota
+  useEffect(() => {
+    setAberto(false);
+  }, [pathname]);
 
   // Fecha ao clicar fora ou pressionar ESC
   useEffect(() => {
@@ -87,18 +117,7 @@ export function NotificacoesPopover() {
       if (t.concluida) return false;
       // Notificar tarefas de hoje ou pendentes que venceram antes
       if (t.data > hoje) return false;
-
-      // Filtrar por relevância para o usuário logado
-      if (usuarioAtual) {
-        const isParaTodos = !t.destinatarioTipo || t.destinatarioTipo === 'todos';
-        const isParaMim =
-          t.destinatarioTipo === 'eu' &&
-          (!t.destinatarioId || t.destinatarioId === usuarioAtual.id || t.criadoPorId === usuarioAtual.id);
-        const isAtribuidaAEle = t.destinatarioId === usuarioAtual.id;
-        const isCriadaPorEle = t.criadoPorId === usuarioAtual.id;
-        return isParaTodos || isParaMim || isAtribuidaAEle || isCriadaPorEle;
-      }
-      return true;
+      return isTarefaRelevanteParaUsuario(t, usuarioAtual);
     });
   }, [data?.tarefas, hoje, usuarioAtual]);
 
@@ -123,7 +142,7 @@ export function NotificacoesPopover() {
       novasLidas.add(`versao-${versaoRecente.versao}`);
     }
     setNotificacoesLidas(novasLidas);
-    saveNotificacoesLidas(novasLidas);
+    saveNotificacoesLidas(novasLidas, usuarioId);
     toast('Todas as notificações foram marcadas como lidas!', 'success');
   };
 
@@ -147,7 +166,7 @@ export function NotificacoesPopover() {
     const novasLidas = new Set(notificacoesLidas);
     novasLidas.add(`tarefa-${t.id}`);
     setNotificacoesLidas(novasLidas);
-    saveNotificacoesLidas(novasLidas);
+    saveNotificacoesLidas(novasLidas, usuarioId);
     toast(`Tarefa "${t.titulo}" marcada como concluída!`, 'success');
   };
 
@@ -156,7 +175,7 @@ export function NotificacoesPopover() {
       const novasLidas = new Set(notificacoesLidas);
       novasLidas.add(`tarefa-${t.id}`);
       setNotificacoesLidas(novasLidas);
-      saveNotificacoesLidas(novasLidas);
+      saveNotificacoesLidas(novasLidas, usuarioId);
     }
     setAberto(false);
     navigate('/tarefas');
@@ -167,7 +186,7 @@ export function NotificacoesPopover() {
       const novasLidas = new Set(notificacoesLidas);
       novasLidas.add(`versao-${versaoRecente.versao}`);
       setNotificacoesLidas(novasLidas);
-      saveNotificacoesLidas(novasLidas);
+      saveNotificacoesLidas(novasLidas, usuarioId);
     }
     setAberto(false);
     navigate('/configuracoes', { state: { tab: 'atualizacoes' } });
@@ -260,7 +279,7 @@ export function NotificacoesPopover() {
               <span>Lembretes & Tarefas</span>
               <span
                 className={cn(
-                  'rounded-full px-1.5 py-0.2 text-[10px]',
+                  'rounded-full px-1.5 py-0.5 text-[10px]',
                   abaAtiva === 'tarefas'
                     ? 'bg-brand/15 text-brand font-bold'
                     : 'bg-surface-2 text-muted',
@@ -320,7 +339,7 @@ export function NotificacoesPopover() {
                           title="Marcar como concluída"
                           className="mt-0.5 text-muted hover:text-emerald-500 transition-colors shrink-0 cursor-pointer"
                         >
-                          <Circle className="size-4.5 group-hover:text-brand" />
+                          <Circle className="size-4.5 text-muted group-hover:text-emerald-500 transition-colors" />
                         </button>
 
                         <div className="flex-1 min-w-0">
@@ -366,10 +385,10 @@ export function NotificacoesPopover() {
                                 <Users className="size-3" />
                                 <span>Para todos</span>
                               </span>
-                            ) : t.destinatarioNome ? (
+                            ) : t.destinatarioNome || t.destinatarioTipo === 'eu' ? (
                               <span className="inline-flex items-center gap-1 text-fg truncate max-w-[120px]">
                                 <User className="size-3 text-brand" />
-                                <span className="truncate">{t.destinatarioNome}</span>
+                                <span className="truncate">{t.destinatarioNome || 'Apenas para mim'}</span>
                               </span>
                             ) : null}
                           </div>

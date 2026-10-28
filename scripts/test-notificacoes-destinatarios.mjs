@@ -31,7 +31,7 @@ try {
   console.log('1. Carregando módulos via SSR do Vite...');
   const { useErp } = await server.ssrLoadModule('/src/data/store.ts');
   const { useAuth } = await server.ssrLoadModule('/src/data/auth.ts');
-  const { verificarLembretesTarefas } = await server.ssrLoadModule('/src/lib/notifications.ts');
+  const { verificarLembretesTarefas, isTarefaRelevanteParaUsuario } = await server.ssrLoadModule('/src/lib/notifications.ts');
   const { ATUALIZACOES_SISTEMA } = await server.ssrLoadModule('/src/data/atualizacoes.ts');
 
   console.log('   ✅ Módulos carregados com sucesso!');
@@ -77,17 +77,8 @@ try {
 
   const hoje = new Date().toISOString().slice(0, 10);
 
-  // Função auxiliar reproduzindo a regra de relevância implementada
-  const isRelevante = (t, usuarioAtual) => {
-    if (!usuarioAtual) return true;
-    const isParaTodos = !t.destinatarioTipo || t.destinatarioTipo === 'todos';
-    const isParaMim =
-      t.destinatarioTipo === 'eu' &&
-      (!t.destinatarioId || t.destinatarioId === usuarioAtual.id || t.criadoPorId === usuarioAtual.id);
-    const isAtribuidaAEle = t.destinatarioId === usuarioAtual.id;
-    const isCriadaPorEle = t.criadoPorId === usuarioAtual.id;
-    return isParaTodos || isParaMim || isAtribuidaAEle || isCriadaPorEle;
-  };
+  // Usar função oficial exportada de notifications.ts
+  const isRelevante = isTarefaRelevanteParaUsuario;
 
   // Caso A: Tarefa para todos
   const tTodos = { id: 't1', titulo: 'Reunião Geral', data: hoje, destinatarioTipo: 'todos' };
@@ -150,6 +141,19 @@ try {
   assert.ok(notificacoesLidas.has(`versao-${v181.versao}`), 'Versão deve estar marcada como lida');
 
   console.log('   ✅ Contadores de notificações e marcar todas como lidas validados!');
+
+  // Teste 5: Validar suporte ao ícone CheckCircle2 e isolamento de notificações
+  console.log('5. Validando mapeamento de ícones e isolamento per-user...');
+  const dialogSrc = readFileSync(resolve('src/features/atualizacoes/PassoAPassoDialog.tsx'), 'utf-8');
+  assert.ok(dialogSrc.includes("case 'CheckCircle2':"), 'PassoAPassoDialog deve tratar case CheckCircle2');
+
+  const popoverSrc = readFileSync(resolve('src/components/layout/NotificacoesPopover.tsx'), 'utf-8');
+  assert.ok(popoverSrc.includes('getStorageKey(usuarioId)'), 'NotificacoesPopover deve isolar storage por usuário');
+  assert.ok(popoverSrc.includes('isTarefaRelevanteParaUsuario'), 'NotificacoesPopover deve usar isTarefaRelevanteParaUsuario');
+
+  const widgetSrc = readFileSync(resolve('src/features/dashboard/TarefasWidget.tsx'), 'utf-8');
+  assert.ok(widgetSrc.includes("destinatarioTipo === 'todos'"), 'TarefasWidget deve exibir badge Para todos');
+  console.log('   ✅ Ícone CheckCircle2, isolamento per-user e widget validados com sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DE EDGE CASES PASSARAM COM SUCESSO!\n');
 } catch (err) {

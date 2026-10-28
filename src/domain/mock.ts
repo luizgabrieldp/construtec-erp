@@ -656,6 +656,8 @@ export function gerarDadosDemo(hoje: ISODate = today()): ErpData {
       obraId: 'o_jardins',
       concluida: false,
       criadoEm: agora,
+      destinatarioTipo: 'todos',
+      destinatarioNome: 'Todos os usuários',
     },
     {
       id: 'tar_2',
@@ -669,6 +671,9 @@ export function gerarDadosDemo(hoje: ISODate = today()): ErpData {
       obraId: 'o_jardins',
       concluida: false,
       criadoEm: agora,
+      destinatarioTipo: 'usuario',
+      destinatarioId: 'usr-encarregado',
+      destinatarioNome: 'Encarregado da Obra',
     },
     {
       id: 'tar_3',
@@ -682,6 +687,9 @@ export function gerarDadosDemo(hoje: ISODate = today()): ErpData {
       obraId: 'o_galeria',
       concluida: false,
       criadoEm: agora,
+      destinatarioTipo: 'eu',
+      destinatarioId: 'usr-admin',
+      destinatarioNome: 'Administrador Construtec',
     },
     {
       id: 'tar_4',
@@ -695,6 +703,8 @@ export function gerarDadosDemo(hoje: ISODate = today()): ErpData {
       obraId: 'o_galeria',
       concluida: false,
       criadoEm: agora,
+      destinatarioTipo: 'todos',
+      destinatarioNome: 'Todos os usuários',
     },
     {
       id: 'tar_5',
@@ -709,6 +719,9 @@ export function gerarDadosDemo(hoje: ISODate = today()): ErpData {
       concluida: true,
       concluidaEm: d(-1),
       criadoEm: agora,
+      destinatarioTipo: 'usuario',
+      destinatarioId: 'usr-encarregado',
+      destinatarioNome: 'Encarregado da Obra',
     },
   ];
 

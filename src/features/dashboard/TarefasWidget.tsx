@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   Circle,
   Calendar,
+  User,
+  Users,
 } from 'lucide-react';
 import { Card, CardHeader, Badge, Button } from '@/components/ui';
 import { useErp, useData } from '@/data/store';
@@ -353,6 +355,19 @@ export function TarefasWidget() {
                             <span className="truncate max-w-[100px]">{obra.nome}</span>
                           </span>
                         )}
+
+                        {/* Destinatário */}
+                        {t.destinatarioTipo === 'todos' ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 border border-sky-500/20 px-1.5 py-0.5 text-sky-600 dark:text-sky-400 font-medium">
+                            <Users className="size-2.5" />
+                            <span>Para todos</span>
+                          </span>
+                        ) : t.destinatarioNome || t.destinatarioTipo === 'eu' ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 border border-line px-1.5 py-0.5 text-fg">
+                            <User className="size-2.5 text-brand" />
+                            <span className="truncate max-w-[90px]">{t.destinatarioNome || 'Apenas para mim'}</span>
+                          </span>
+                        ) : null}
                       </div>
                     </div>
                   </div>

@@ -72,6 +72,29 @@ export const sendNotification = async (title: string, options?: NotificationOpti
 // Evita disparos duplicados para a mesma tarefa na mesma sessão
 const tarefasNotificadas = new Set<string>();
 
+/**
+ * Valida se uma tarefa é relevante para ser notificada ou exibida para o usuário logado
+ * (se foi atribuída a ele, a todos ou criada por ele)
+ */
+export function isTarefaRelevanteParaUsuario(
+  t: {
+    destinatarioTipo?: 'eu' | 'todos' | 'usuario';
+    destinatarioId?: string;
+    criadoPorId?: string;
+  },
+  usuarioAtual?: { id: string } | null,
+): boolean {
+  if (!usuarioAtual) return true;
+  const isParaTodos = !t.destinatarioTipo || t.destinatarioTipo === 'todos';
+  const isParaMim =
+    t.destinatarioTipo === 'eu' &&
+    (!t.destinatarioId || t.destinatarioId === usuarioAtual.id || t.criadoPorId === usuarioAtual.id);
+  const isAtribuidaAEle = t.destinatarioId === usuarioAtual.id;
+  const isCriadaPorEle = t.criadoPorId === usuarioAtual.id;
+
+  return isParaTodos || isParaMim || isAtribuidaAEle || isCriadaPorEle;
+}
+
 export const verificarLembretesTarefas = () => {
   const data = useErp.getState().data;
   if (!data || !data.tarefas) return;
@@ -82,28 +105,23 @@ export const verificarLembretesTarefas = () => {
   const agora = new Date();
   const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
 
+  const userKey = usuarioAtual ? usuarioAtual.id : 'anon';
+
   data.tarefas.forEach((t) => {
     if (t.concluida) return;
     if (t.data !== hoje) return;
-    if (tarefasNotificadas.has(t.id)) return;
+
+    const notifKey = `${userKey}:${t.id}`;
+    if (tarefasNotificadas.has(notifKey)) return;
 
     // Filtrar se a tarefa é relevante para o usuário conectado no momento
     // (se foi atribuída a ele, a todos ou criada por ele)
-    if (usuarioAtual) {
-      const isParaTodos = !t.destinatarioTipo || t.destinatarioTipo === 'todos';
-      const isParaMim =
-        t.destinatarioTipo === 'eu' &&
-        (!t.destinatarioId || t.destinatarioId === usuarioAtual.id || t.criadoPorId === usuarioAtual.id);
-      const isAtribuidaAEle = t.destinatarioId === usuarioAtual.id;
-      const isCriadaPorEle = t.criadoPorId === usuarioAtual.id;
-
-      const relevante = isParaTodos || isParaMim || isAtribuidaAEle || isCriadaPorEle;
-      if (!relevante) return;
-    }
+    if (!isTarefaRelevanteParaUsuario(t, usuarioAtual)) return;
 
     const horarioAlvo = t.diaInteiro ? '08:00' : (t.horario || '08:00');
 
     if (horaAtual >= horarioAlvo) {
+      tarefasNotificadas.add(notifKey);
       tarefasNotificadas.add(t.id);
       const mensagem = t.observacoes ? `${t.titulo} - ${t.observacoes}` : t.titulo;
 

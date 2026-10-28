@@ -305,7 +305,7 @@ export function AppShell() {
   useEffect(() => {
     const cancelar = iniciarVerificadorTarefas(60000);
     return cancelar;
-  }, []);
+  }, [usuarioAtual?.id]);
 
   if (!usuarioAtual) {
     return <Navigate to="/login" replace />;

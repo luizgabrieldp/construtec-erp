@@ -130,7 +130,7 @@ export function TarefasPage() {
           const matchObs = t.observacoes?.toLowerCase().includes(q);
           const obra = t.obraId ? obrasMap.get(t.obraId) : null;
           const matchObra = obra?.nome.toLowerCase().includes(q);
-          const matchDest = t.destinatarioNome?.toLowerCase().includes(q);
+          const matchDest = (t.destinatarioNome || (t.destinatarioTipo === 'todos' ? 'todos para todos' : ''))?.toLowerCase().includes(q);
           if (!matchTitulo && !matchObs && !matchObra && !matchDest) return false;
         }
 
@@ -261,7 +261,7 @@ export function TarefasPage() {
                 <span>{tab.label}</span>
                 <span
                   className={cn(
-                    'rounded-full px-1.5 py-0.2 text-[10px]',
+                    'rounded-full px-1.5 py-0.5 text-[10px]',
                     abaAtiva === tab.id ? 'bg-white/20 text-white' : 'bg-surface text-muted',
                   )}
                 >
@@ -276,7 +276,7 @@ export function TarefasPage() {
             <div className="relative md:col-span-2">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted pointer-events-none" />
               <Input
-                placeholder="Buscar por título, observações ou obra..."
+                placeholder="Buscar por título, observações, obra ou responsável..."
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="pl-9"

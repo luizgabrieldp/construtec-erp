@@ -395,7 +395,7 @@ export function ConfiguracoesPage() {
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-fg truncate">{u.nome}</span>
                         {isProprio && (
-                          <span className="rounded-md bg-brand/10 text-brand px-1.5 py-0.2 text-[10px] font-bold">
+                          <span className="rounded-md bg-brand/10 text-brand px-1.5 py-0.5 text-[10px] font-bold">
                             Você
                           </span>
                         )}

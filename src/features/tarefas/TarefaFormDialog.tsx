@@ -4,7 +4,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Button, Field, Input, Select, Badge } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
-import { useAuth } from '@/data/auth';
+import { useAuth, USUARIOS_PADRAO } from '@/data/auth';
 import type { Tarefa, RecorrenciaTarefa, PrioridadeTarefa } from '@/domain/types';
 import { LABEL_RECORRENCIA_TAREFA, LABEL_PRIORIDADE_TAREFA } from '@/domain/labels';
 import { today } from '@/lib/dates';
@@ -30,9 +30,19 @@ export function TarefaFormDialog({
   const usuarios = useAuth((s) => s.usuarios);
 
   const usuariosDisponiveis = useMemo(() => {
-    const list = usuarios && usuarios.length > 0 ? usuarios : [];
-    return list.filter((u) => u.ativo);
-  }, [usuarios]);
+    const list = usuarios && usuarios.length > 0 ? usuarios : USUARIOS_PADRAO;
+    const ativos = list.filter((u) => u.ativo);
+    if (
+      tarefaParaEditar?.destinatarioId &&
+      !ativos.some((u) => u.id === tarefaParaEditar.destinatarioId)
+    ) {
+      const uInativo = list.find((u) => u.id === tarefaParaEditar.destinatarioId);
+      if (uInativo) {
+        ativos.push(uInativo);
+      }
+    }
+    return ativos;
+  }, [usuarios, tarefaParaEditar?.destinatarioId]);
 
   const [titulo, setTitulo] = useState('');
   const [observacoes, setObservacoes] = useState('');
@@ -89,7 +99,7 @@ export function TarefaFormDialog({
     let finalDestinatarioNome: string | undefined = undefined;
 
     if (destinatarioTipo === 'eu') {
-      finalDestinatarioId = usuarioAtual?.id;
+      finalDestinatarioId = usuarioAtual?.id || 'usr-admin';
       finalDestinatarioNome = usuarioAtual?.nome || 'Eu mesmo';
     } else if (destinatarioTipo === 'todos') {
       finalDestinatarioId = undefined;
@@ -97,7 +107,7 @@ export function TarefaFormDialog({
     } else if (destinatarioTipo === 'usuario') {
       finalDestinatarioId = destinatarioId;
       const uSel = usuariosDisponiveis.find((u) => u.id === destinatarioId);
-      finalDestinatarioNome = uSel ? `${uSel.nome} (${uSel.perfil === 'admin' ? 'Administrador' : 'Encarregado'})` : 'Usuário específico';
+      finalDestinatarioNome = uSel ? uSel.nome : 'Usuário específico';
     }
 
     if (tarefaParaEditar) {
@@ -119,8 +129,8 @@ export function TarefaFormDialog({
               destinatarioTipo,
               destinatarioId: finalDestinatarioId,
               destinatarioNome: finalDestinatarioNome,
-              criadoPorId: d.tarefas[idx].criadoPorId || usuarioAtual?.id,
-              criadoPorNome: d.tarefas[idx].criadoPorNome || usuarioAtual?.nome,
+              criadoPorId: d.tarefas[idx].criadoPorId || usuarioAtual?.id || 'usr-admin',
+              criadoPorNome: d.tarefas[idx].criadoPorNome || usuarioAtual?.nome || 'Administrador Construtec',
             };
           }
         },
@@ -143,7 +153,7 @@ export function TarefaFormDialog({
         destinatarioTipo,
         destinatarioId: finalDestinatarioId,
         destinatarioNome: finalDestinatarioNome,
-        criadoPorId: usuarioAtual?.id,
+        criadoPorId: usuarioAtual?.id || 'usr-admin',
         criadoPorNome: usuarioAtual?.nome || 'Administrador Construtec',
       };
 

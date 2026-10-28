@@ -28,7 +28,7 @@ export interface ConviteAcesso {
   atualizadoEm?: number;
 }
 
-const USUARIOS_PADRAO: Usuario[] = [
+export const USUARIOS_PADRAO: Usuario[] = [
   {
     id: 'usr-admin',
     nome: 'Administrador Construtec',
