@@ -139,7 +139,7 @@ export function ObrasPage() {
     <>
       <PageHeader
         title="Gestão de Obras & Empreendimentos"
-        subtitle="Acompanhamento simultâneo de custos, prazos, equipes e máquinas por obra"
+        subtitle="Acompanhamento simultâneo de custos, prazos e equipes por obra"
         actions={
           isAdmin && (
             <Button icon={<Plus className="size-4" />} onClick={abrirNovo}>
@@ -353,15 +353,9 @@ export function ObrasPage() {
                     </div>
 
                     {/* Resumo do canteiro */}
-                    <div className="mt-4 grid grid-cols-2 gap-2 rounded-xl bg-surface-2 p-2.5 text-center text-xs">
-                      <div>
-                        <span className="text-muted block text-[10px] uppercase font-bold">Equipe Hoje</span>
-                        <span className="font-bold text-fg">{ro?.equipeHoje || 0} operários</span>
-                      </div>
-                      <div>
-                        <span className="text-muted block text-[10px] uppercase font-bold">Máquinas</span>
-                        <span className="font-bold text-violet-400">{ro?.maquinasAtivas || 0} ativas</span>
-                      </div>
+                    <div className="mt-4 rounded-xl bg-surface-2 p-2.5 text-center text-xs">
+                      <span className="text-muted block text-[10px] uppercase font-bold">Equipe Hoje</span>
+                      <span className="font-bold text-fg">{ro?.equipeHoje || 0} operários</span>
                     </div>
                   </div>
                 </div>

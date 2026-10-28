@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Trash2, Building2, HardHat, DollarSign, Package } from 'lucide-react';
+import { AlertTriangle, Trash2, Building2, HardHat, DollarSign } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
@@ -39,7 +39,6 @@ export function ConfirmarExclusaoObraDialog({
     (cp) => cp.status !== 'cancelado' && cp.distribuicao?.some((d) => d.centroId === obra.id),
   ).length;
   const servicosVinculados = (data.servicos || []).filter((s) => s.obraId === obra.id).length;
-  const locacoesVinculadas = data.locacoes.filter((l) => l.obraId === obra.id).length;
   const tarefasVinculadas = (data.tarefas || []).filter((t) => t.obraId === obra.id).length;
   const apontamentosVinculados = Object.values(data.apontamentos).filter(
     (ap) => ap.centroId === obra.id || (ap.centroIds && ap.centroIds.includes(obra.id)),
@@ -50,7 +49,6 @@ export function ConfirmarExclusaoObraDialog({
     comprasVinculadas +
     despesasVinculadas +
     servicosVinculados +
-    locacoesVinculadas +
     tarefasVinculadas +
     apontamentosVinculados;
 
@@ -121,7 +119,7 @@ export function ConfirmarExclusaoObraDialog({
         {/* Resumo de impactos / vínculos */}
         <div className="rounded-xl border border-line bg-surface-2/50 p-3 space-y-2">
           <p className="text-xs font-semibold text-fg">Impacto da exclusão:</p>
-          <div className="grid grid-cols-2 gap-2 text-xs text-muted">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs text-muted">
             <div className="flex items-center gap-1.5">
               <DollarSign className="size-3.5 text-amber-500 shrink-0" />
               <span>{comprasVinculadas + despesasVinculadas} compras/despesas</span>
@@ -129,10 +127,6 @@ export function ConfirmarExclusaoObraDialog({
             <div className="flex items-center gap-1.5">
               <HardHat className="size-3.5 text-brand shrink-0" />
               <span>{colaboradoresVinculados} colab. alocados</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Package className="size-3.5 text-sky-500 shrink-0" />
-              <span>{locacoesVinculadas} locações</span>
             </div>
             <div className="flex items-center gap-1.5">
               <Building2 className="size-3.5 text-emerald-500 shrink-0" />

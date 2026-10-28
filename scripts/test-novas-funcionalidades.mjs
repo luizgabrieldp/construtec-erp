@@ -21,7 +21,7 @@ try {
   const { ATUALIZACOES_SISTEMA } = atualizacoesMod;
 
   assert.ok(Array.isArray(ATUALIZACOES_SISTEMA), 'ATUALIZACOES_SISTEMA deve ser um array');
-  assert.ok(ATUALIZACOES_SISTEMA.length >= 4, 'Deve conter ao menos 4 versões no histórico');
+  assert.ok(ATUALIZACOES_SISTEMA.length >= 3, 'Deve conter ao menos 3 versões no histórico (a partir da v1.7.0)');
 
   const v180 = ATUALIZACOES_SISTEMA[0];
   assert.equal(v180.versao, 'v1.8.0', 'A versão mais recente deve ser v1.8.0');

@@ -201,38 +201,7 @@ export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
       },
     ],
   },
-  {
-    versao: 'v1.6.0',
-    dataPublicacao: '18 de Outubro de 2026 às 10:00',
-    dataIso: '2026-10-18T10:00:00Z',
-    titulo: 'Gestão Completa de Máquinas e Locação de Equipamentos',
-    descricao:
-      'Módulo integrado para cadastro de retroescavadeiras, tratores, caminhões e geradores com apropriação automática de custos por centro de custo.',
-    tags: ['Novo'],
-    mudancas: [
-      {
-        tag: 'Novo',
-        texto: 'Controle de Maquinário Pesado',
-        detalhe:
-          'Acompanhe contratos de locação, valor por hora/diária e alocação de equipamentos nos canteiros.',
-      },
-      {
-        tag: 'Melhoria',
-        texto: 'Rateio de custos com fornecedores de locação',
-        detalhe:
-          'Integração direta com o contas a pagar e custos consolidados por obra.',
-      },
-    ],
-    passosVisuais: [
-      {
-        passo: 1,
-        titulo: 'Alocar Máquina em uma Obra',
-        descricao:
-          "No módulo de Máquinas, vincule qualquer equipamento à obra desejada para registro automático no centro de custos.",
-        icone: 'Truck',
-        ondeEncontrar: "Menu Principal > Máquinas & Equipamentos",
-        dica: 'O custo é consolidado automaticamente na barra de orçamento da respectiva obra.',
-      },
-    ],
-  },
 ];
+
+export const HISTORICO_ATUALIZACOES = ATUALIZACOES_SISTEMA;
+

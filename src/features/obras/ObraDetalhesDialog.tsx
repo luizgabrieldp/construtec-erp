@@ -7,7 +7,7 @@ import type { Obra, ServicoEmpreitada } from '@/domain/types';
 import { LABEL_OBRA_STATUS, LABEL_UNIDADE, LABEL_STATUS_SERVICO } from '@/domain/labels';
 import { fmtBRL, fmtDate, fmtPct } from '@/lib/format';
 import { diffDays } from '@/lib/dates';
-import { HardHat, Construction, Package, Calendar, Briefcase, Plus, Trash2, Edit2 } from 'lucide-react';
+import { HardHat, Package, Calendar, Briefcase, Plus, Trash2, Edit2 } from 'lucide-react';
 import { processarEstoque } from '@/domain/selectors';
 import { ServicoFormDialog } from '@/features/servicos/ServicoFormDialog';
 import { DetalhesServicoDialog } from '@/features/servicos/DetalhesServicoDialog';
@@ -47,9 +47,6 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
       };
     })
     .filter((item) => item.quantidade > 0);
-
-  // Máquinas alocadas
-  const locacoesObra = data.locacoes.filter((l) => l.obraId === obraAtual.id && l.status !== 'cancelada');
 
   // Serviços e empreitadas vinculados a esta obra
   const servicosObra = (data.servicos || []).filter((s) => s.obraId === obraAtual.id);
@@ -128,7 +125,7 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
             </div>
             <Progress value={ro?.consumoPct || 0} className="mb-4" />
 
-            <div className="grid grid-cols-2 gap-2 border-t border-line pt-3 text-center text-xs sm:grid-cols-4">
+            <div className="grid grid-cols-3 gap-2 border-t border-line pt-3 text-center text-xs">
               <div>
                 <span className="text-muted">Materiais</span>
                 <div className="font-semibold text-brand">{fmtBRL(ro?.porGrupo?.materiais || 0)}</div>
@@ -138,72 +135,38 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
                 <div className="font-semibold text-sky-500">{fmtBRL(ro?.porGrupo?.mao_de_obra || 0)}</div>
               </div>
               <div>
-                <span className="text-muted">Locações</span>
-                <div className="font-semibold text-violet-400">{fmtBRL(ro?.porGrupo?.locacao || 0)}</div>
-              </div>
-              <div>
                 <span className="text-muted">Empreitadas</span>
                 <div className="font-semibold text-emerald-500">{fmtBRL(ro?.porGrupo?.servicos || 0)}</div>
               </div>
             </div>
           </Card>
 
-          {/* Abas / Blocos de Controle Específico por Obra */}
-          <div className="grid gap-4 md:grid-cols-2">
-            {/* Materiais em Estoque na Obra */}
-            <div className="rounded-xl border border-line p-4">
-              <div className="flex items-center gap-2 mb-3 font-semibold text-sm">
-                <Package className="size-4 text-brand" />
-                Materiais Alocados / Saldo Atual
-              </div>
-              {materiaisComSaldo.length === 0 ? (
-                <p className="text-xs text-muted italic">Nenhum material com saldo remanescente nesta obra.</p>
-              ) : (
-                <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {materiaisComSaldo.map(({ material, quantidade, valor }) => (
-                    <li key={material.id} className="flex justify-between items-center text-xs border-b border-line/60 pb-1.5">
-                      <div>
-                        <span className="font-medium text-fg">{material.nome}</span>
-                        <span className="text-muted ml-1.5">({LABEL_UNIDADE[material.unidade]})</span>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-bold">{quantidade}</span>
-                        <div className="text-[10px] text-muted">{fmtBRL(valor)}</div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+          {/* Materiais em Estoque na Obra */}
+          <div className="rounded-xl border border-line p-4">
+            <div className="flex items-center gap-2 mb-3 font-semibold text-sm">
+              <Package className="size-4 text-brand" />
+              Materiais Alocados / Saldo Atual
             </div>
-
-            {/* Máquinas e Equipamentos */}
-            <div className="rounded-xl border border-line p-4">
-              <div className="flex items-center gap-2 mb-3 font-semibold text-sm">
-                <Construction className="size-4 text-violet-400" />
-                Máquinas e Equipamentos Locados
-              </div>
-              {locacoesObra.length === 0 ? (
-                <p className="text-xs text-muted italic">Nenhum equipamento alugado para esta obra.</p>
-              ) : (
-                <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {locacoesObra.map((l) => (
-                    <li key={l.id} className="flex justify-between items-center text-xs border-b border-line/60 pb-1.5">
-                      <div>
-                        <span className="font-medium text-fg">{l.equipamento}</span>
-                        <div className="text-[10px] text-muted">
-                          Qtd: {l.quantidade} • {l.status === 'ativa' ? 'Em operação' : 'Devolvida'}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <span className="font-semibold">{fmtBRL(l.valor)}</span>
-                        <div className="text-[10px] text-muted">{l.tarifa}</div>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            {materiaisComSaldo.length === 0 ? (
+              <p className="text-xs text-muted italic">Nenhum material com saldo remanescente nesta obra.</p>
+            ) : (
+              <ul className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                {materiaisComSaldo.map(({ material, quantidade, valor }) => (
+                  <li key={material.id} className="flex justify-between items-center text-xs border-b border-line/60 pb-1.5">
+                    <div>
+                      <span className="font-medium text-fg">{material.nome}</span>
+                      <span className="text-muted ml-1.5">({LABEL_UNIDADE[material.unidade]})</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold">{quantidade}</span>
+                      <div className="text-[10px] text-muted">{fmtBRL(valor)}</div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
+
 
           {/* Serviços e Empreitadas Contratados */}
           <div className="rounded-xl border border-line p-4">
