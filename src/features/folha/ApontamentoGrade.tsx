@@ -266,6 +266,11 @@ export function ApontamentoGrade() {
         return matchNome || matchApelido || matchTelefone || matchCpf;
       }
       return true;
+    })
+    .sort((a, b) => {
+      const nomeA = (a.apelido?.trim() || a.nome).trim();
+      const nomeB = (b.apelido?.trim() || b.nome).trim();
+      return nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
     });
 
   return (

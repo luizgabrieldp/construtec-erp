@@ -55,6 +55,23 @@ export function EquipePage() {
     }
   });
 
+  const [colunaOrdenacao, setColunaOrdenacao] = useState<'colaborador' | 'funcao' | 'remuneracao' | 'obra' | 'status'>('colaborador');
+  const [direcaoOrdenacao, setDirecaoOrdenacao] = useState<'asc' | 'desc'>('asc');
+
+  const alternarOrdenacao = (coluna: 'colaborador' | 'funcao' | 'remuneracao' | 'obra' | 'status') => {
+    if (colunaOrdenacao === coluna) {
+      setDirecaoOrdenacao((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setColunaOrdenacao(coluna);
+      // Remuneração inicia com maior valor no topo (desc); as demais A-Z / ativos primeiro (asc)
+      if (coluna === 'remuneracao') {
+        setDirecaoOrdenacao('desc');
+      } else {
+        setDirecaoOrdenacao('asc');
+      }
+    }
+  };
+
   const funcionariosFiltrados = data.funcionarios.filter((f) => {
     if (filtroStatus === 'ativos' && !f.ativo) return false;
     if (filtroStatus === 'inativos' && f.ativo) return false;
@@ -75,6 +92,66 @@ export function EquipePage() {
       return matchNome || matchApelido || matchTelefone || matchCpf || matchPix;
     }
     return true;
+  });
+
+  const funcionariosOrdenados = [...funcionariosFiltrados].sort((a, b) => {
+    let diff = 0;
+    if (colunaOrdenacao === 'colaborador') {
+      const nomeA = (a.apelido?.trim() || a.nome).trim();
+      const nomeB = (b.apelido?.trim() || b.nome).trim();
+      diff = nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+      return direcaoOrdenacao === 'asc' ? diff : -diff;
+    }
+
+    if (colunaOrdenacao === 'funcao') {
+      const funcA = getLabelFuncao(a.funcao);
+      const funcB = getLabelFuncao(b.funcao);
+      diff = funcA.localeCompare(funcB, 'pt-BR', { sensitivity: 'base' });
+      if (diff === 0) {
+        const nomeA = (a.apelido?.trim() || a.nome).trim();
+        const nomeB = (b.apelido?.trim() || b.nome).trim();
+        diff = nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+      }
+      return direcaoOrdenacao === 'asc' ? diff : -diff;
+    }
+
+    if (colunaOrdenacao === 'remuneracao') {
+      const valA = a.regime === 'mensalista' ? (a.salario || 0) : (a.diaria || 0);
+      const valB = b.regime === 'mensalista' ? (b.salario || 0) : (b.diaria || 0);
+      diff = valA - valB;
+      if (diff === 0) {
+        const nomeA = (a.apelido?.trim() || a.nome).trim();
+        const nomeB = (b.apelido?.trim() || b.nome).trim();
+        return nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+      }
+      return direcaoOrdenacao === 'desc' ? -diff : diff;
+    }
+
+    if (colunaOrdenacao === 'obra') {
+      const obraA = data.obras.find((o) => o.id === a.obraPadraoId)?.nome || '';
+      const obraB = data.obras.find((o) => o.id === b.obraPadraoId)?.nome || '';
+      diff = obraA.localeCompare(obraB, 'pt-BR', { sensitivity: 'base' });
+      if (diff === 0) {
+        const nomeA = (a.apelido?.trim() || a.nome).trim();
+        const nomeB = (b.apelido?.trim() || b.nome).trim();
+        diff = nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+      }
+      return direcaoOrdenacao === 'asc' ? diff : -diff;
+    }
+
+    if (colunaOrdenacao === 'status') {
+      const scoreA = a.ativo ? 1 : 0;
+      const scoreB = b.ativo ? 1 : 0;
+      diff = scoreA - scoreB;
+      if (diff === 0) {
+        const nomeA = (a.apelido?.trim() || a.nome).trim();
+        const nomeB = (b.apelido?.trim() || b.nome).trim();
+        diff = nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
+      }
+      return direcaoOrdenacao === 'asc' ? -diff : diff;
+    }
+
+    return 0;
   });
 
   const alternarStatusFuncionario = (f: Funcionario) => {
@@ -226,16 +303,141 @@ export function EquipePage() {
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-line text-xs font-semibold uppercase tracking-wider text-muted">
-                  <th className="pb-3">Colaborador</th>
-                  <th className="pb-3">Função</th>
-                  <th className="pb-3">Regime & Remuneração</th>
-                  <th className="pb-3">Obra Padrão</th>
-                  <th className="pb-3">Status</th>
+                  <th className="pb-3 select-none">
+                    <button
+                      type="button"
+                      onClick={() => alternarOrdenacao('colaborador')}
+                      className={`group inline-flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer ${
+                        colunaOrdenacao === 'colaborador' ? 'text-brand font-bold' : 'text-muted hover:text-fg'
+                      }`}
+                      title={
+                        colunaOrdenacao === 'colaborador'
+                          ? direcaoOrdenacao === 'asc'
+                            ? 'Colaborador: A-Z (clique para Z-A)'
+                            : 'Colaborador: Z-A (clique para A-Z)'
+                          : 'Ordenar por Colaborador (A-Z)'
+                      }
+                    >
+                      <span>Colaborador</span>
+                      <span className="inline-flex items-center text-[10px] leading-none">
+                        {colunaOrdenacao === 'colaborador' ? (
+                          <span className="font-bold text-brand">{direcaoOrdenacao === 'asc' ? '▼' : '▲'}</span>
+                        ) : (
+                          <span className="opacity-0 group-hover:opacity-40 transition-opacity">↕</span>
+                        )}
+                      </span>
+                    </button>
+                  </th>
+
+                  <th className="pb-3 select-none">
+                    <button
+                      type="button"
+                      onClick={() => alternarOrdenacao('funcao')}
+                      className={`group inline-flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer ${
+                        colunaOrdenacao === 'funcao' ? 'text-brand font-bold' : 'text-muted hover:text-fg'
+                      }`}
+                      title={
+                        colunaOrdenacao === 'funcao'
+                          ? direcaoOrdenacao === 'asc'
+                            ? 'Função: A-Z (clique para Z-A)'
+                            : 'Função: Z-A (clique para A-Z)'
+                          : 'Ordenar por Função (A-Z)'
+                      }
+                    >
+                      <span>Função</span>
+                      <span className="inline-flex items-center text-[10px] leading-none">
+                        {colunaOrdenacao === 'funcao' ? (
+                          <span className="font-bold text-brand">{direcaoOrdenacao === 'asc' ? '▼' : '▲'}</span>
+                        ) : (
+                          <span className="opacity-0 group-hover:opacity-40 transition-opacity">↕</span>
+                        )}
+                      </span>
+                    </button>
+                  </th>
+
+                  <th className="pb-3 select-none">
+                    <button
+                      type="button"
+                      onClick={() => alternarOrdenacao('remuneracao')}
+                      className={`group inline-flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer ${
+                        colunaOrdenacao === 'remuneracao' ? 'text-brand font-bold' : 'text-muted hover:text-fg'
+                      }`}
+                      title={
+                        colunaOrdenacao === 'remuneracao'
+                          ? direcaoOrdenacao === 'desc'
+                            ? 'Remuneração: Maior para menor valor (clique para menor para maior)'
+                            : 'Remuneração: Menor para maior valor (clique para maior para menor)'
+                          : 'Ordenar por Remuneração (Maior valor primeiro)'
+                      }
+                    >
+                      <span>Regime & Remuneração</span>
+                      <span className="inline-flex items-center text-[10px] leading-none">
+                        {colunaOrdenacao === 'remuneracao' ? (
+                          <span className="font-bold text-brand">{direcaoOrdenacao === 'desc' ? '▼' : '▲'}</span>
+                        ) : (
+                          <span className="opacity-0 group-hover:opacity-40 transition-opacity">↕</span>
+                        )}
+                      </span>
+                    </button>
+                  </th>
+
+                  <th className="pb-3 select-none">
+                    <button
+                      type="button"
+                      onClick={() => alternarOrdenacao('obra')}
+                      className={`group inline-flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer ${
+                        colunaOrdenacao === 'obra' ? 'text-brand font-bold' : 'text-muted hover:text-fg'
+                      }`}
+                      title={
+                        colunaOrdenacao === 'obra'
+                          ? direcaoOrdenacao === 'asc'
+                            ? 'Obra Padrão: A-Z (clique para Z-A)'
+                            : 'Obra Padrão: Z-A (clique para A-Z)'
+                          : 'Ordenar por Obra Padrão (A-Z)'
+                      }
+                    >
+                      <span>Obra Padrão</span>
+                      <span className="inline-flex items-center text-[10px] leading-none">
+                        {colunaOrdenacao === 'obra' ? (
+                          <span className="font-bold text-brand">{direcaoOrdenacao === 'asc' ? '▼' : '▲'}</span>
+                        ) : (
+                          <span className="opacity-0 group-hover:opacity-40 transition-opacity">↕</span>
+                        )}
+                      </span>
+                    </button>
+                  </th>
+
+                  <th className="pb-3 select-none">
+                    <button
+                      type="button"
+                      onClick={() => alternarOrdenacao('status')}
+                      className={`group inline-flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer ${
+                        colunaOrdenacao === 'status' ? 'text-brand font-bold' : 'text-muted hover:text-fg'
+                      }`}
+                      title={
+                        colunaOrdenacao === 'status'
+                          ? direcaoOrdenacao === 'asc'
+                            ? 'Status: Ativos primeiro (clique para inativos primeiro)'
+                            : 'Status: Inativos primeiro (clique para ativos primeiro)'
+                          : 'Ordenar por Status (Ativos primeiro)'
+                      }
+                    >
+                      <span>Status</span>
+                      <span className="inline-flex items-center text-[10px] leading-none">
+                        {colunaOrdenacao === 'status' ? (
+                          <span className="font-bold text-brand">{direcaoOrdenacao === 'asc' ? '▼' : '▲'}</span>
+                        ) : (
+                          <span className="opacity-0 group-hover:opacity-40 transition-opacity">↕</span>
+                        )}
+                      </span>
+                    </button>
+                  </th>
+
                   <th className="pb-3 text-right">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
-                {funcionariosFiltrados.map((f) => {
+                {funcionariosOrdenados.map((f) => {
                   const obraPadrao = data.obras.find((o) => o.id === f.obraPadraoId);
                   const empreiteiroResp = f.empreiteiroId ? data.funcionarios.find((x) => x.id === f.empreiteiroId) : null;
                   return (

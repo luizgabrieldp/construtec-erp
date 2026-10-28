@@ -183,8 +183,38 @@ dialog.cx-dialog::backdrop {
     margin: 8mm 10mm;
   }
 
-  .no-print, header, aside, nav, dialog.cx-dialog {
+  body.cx-dialog-open {
+    position: static !important;
+    overflow: visible !important;
+  }
+
+  body.cx-dialog-open #root {
+    pointer-events: auto !important;
+    user-select: auto !important;
+  }
+
+  .no-print, header, aside, nav, dialog.cx-dialog:not(.cx-printable-dialog) {
     display: none !important;
+  }
+
+  dialog.cx-dialog.cx-printable-dialog {
+    position: static !important;
+    display: block !important;
+    border: none !important;
+    box-shadow: none !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    max-height: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  .cx-printable-dialog .cx-dialog-scroll {
+    overflow: visible !important;
+    max-height: none !important;
+    padding: 0 !important;
   }
 
   body {

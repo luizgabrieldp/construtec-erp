@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   ShieldCheck,
   HardHat,
+  Sparkles,
 } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Field, Input, Select, PageHeader } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
@@ -28,19 +29,21 @@ import {
 import { cn } from '@/lib/utils';
 import type { Perfil } from '@/domain/types';
 
-type TabConfig = 'perfil' | 'usuarios' | 'notificacoes';
+import { AtualizacoesTab } from '@/features/atualizacoes/AtualizacoesTab';
+
+type TabConfig = 'atualizacoes' | 'perfil' | 'usuarios' | 'notificacoes';
 
 export function ConfiguracoesPage() {
   const navigate = useNavigate();
   const { usuarioAtual, usuarios, convites, atualizarPerfil, criarConvite, alternarStatusUsuario, logout } = useAuth();
   const isAdmin = useIsAdmin();
 
-  const [abaAtiva, setAbaAtiva] = useState<TabConfig>('perfil');
+  const [abaAtiva, setAbaAtiva] = useState<TabConfig>('atualizacoes');
 
   // Garante que o encarregado nunca caia na aba de usuários
   useEffect(() => {
     if (!isAdmin && abaAtiva === 'usuarios') {
-      setAbaAtiva('perfil');
+      setAbaAtiva('atualizacoes');
     }
   }, [isAdmin, abaAtiva]);
 
@@ -126,6 +129,20 @@ export function ConfiguracoesPage() {
       <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3 mb-6">
         <button
           type="button"
+          onClick={() => setAbaAtiva('atualizacoes')}
+          className={cn(
+            'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors cursor-pointer',
+            abaAtiva === 'atualizacoes'
+              ? 'bg-brand text-white shadow-sm shadow-brand/20'
+              : 'bg-surface-2 text-muted hover:text-fg'
+          )}
+        >
+          <Sparkles className="size-4" />
+          <span>Atualizações</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => setAbaAtiva('perfil')}
           className={cn(
             'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors cursor-pointer',
@@ -170,6 +187,9 @@ export function ConfiguracoesPage() {
       </div>
 
       {/* CONTEÚDO DAS ABAS */}
+
+      {/* ABA 0: ATUALIZAÇÕES DO SISTEMA */}
+      {abaAtiva === 'atualizacoes' && <AtualizacoesTab />}
 
       {/* ABA 1: MEU PERFIL */}
       {abaAtiva === 'perfil' && (
