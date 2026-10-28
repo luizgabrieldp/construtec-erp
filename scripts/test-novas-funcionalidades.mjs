@@ -18,10 +18,19 @@ try {
   // Teste 1: Validar histórico de atualizações (src/data/atualizacoes.ts)
   console.log('1. Validando estrutura de releases em src/data/atualizacoes.ts...');
   const atualizacoesMod = await server.ssrLoadModule('/src/data/atualizacoes.ts');
-  const { ATUALIZACOES_SISTEMA } = atualizacoesMod;
+  const { ATUALIZACOES_SISTEMA, HISTORICO_ATUALIZACOES } = atualizacoesMod;
 
   assert.ok(Array.isArray(ATUALIZACOES_SISTEMA), 'ATUALIZACOES_SISTEMA deve ser um array');
   assert.ok(ATUALIZACOES_SISTEMA.length >= 3, 'Deve conter ao menos 3 versões no histórico (a partir da v1.7.0)');
+  assert.equal(HISTORICO_ATUALIZACOES, ATUALIZACOES_SISTEMA, 'HISTORICO_ATUALIZACOES deve estar exportado e igual a ATUALIZACOES_SISTEMA');
+  assert.ok(!ATUALIZACOES_SISTEMA.some((r) => r.versao === 'v1.6.0'), 'Versão legada v1.6.0 deve ter sido removida');
+  assert.ok(
+    ATUALIZACOES_SISTEMA.every((r) => {
+      const parts = r.versao.replace('v', '').split('.').map(Number);
+      return parts[0] > 1 || (parts[0] === 1 && parts[1] >= 7);
+    }),
+    'Todas as versões no histórico devem ser a partir da v1.7.0'
+  );
 
   const v180 = ATUALIZACOES_SISTEMA[0];
   assert.equal(v180.versao, 'v1.8.0', 'A versão mais recente deve ser v1.8.0');
@@ -36,7 +45,7 @@ try {
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
   });
 
-  console.log('   ✅ Histórico de versões estruturado e validado com sucesso!');
+  console.log('   ✅ Histórico de versões estruturado e validado com sucesso (a partir de v1.7.0)!');
 
   // Teste 2: Validar aba Atualizações em ConfiguracoesPage.tsx
   console.log('2. Validando posicionamento da aba "Atualizações" em ConfiguracoesPage.tsx...');
@@ -196,7 +205,25 @@ try {
 
   const tabCode = readFileSync(resolve('src/features/atualizacoes/AtualizacoesTab.tsx'), 'utf-8');
   assert.ok(tabCode.includes('autoPrint={autoPrint}'), 'AtualizacoesTab deve repassar autoPrint ao modal');
-  console.log('   ✅ Suporte à exportação e regras de impressão validados com sucesso!');
+  // Teste 8: Validar remoção de máquinas e locações do módulo de Obras
+  console.log('8. Validando remoção completa de máquinas e locações de Obras...');
+  const obrasPageCode = readFileSync(resolve('src/pages/ObrasPage.tsx'), 'utf-8');
+  assert.ok(!obrasPageCode.includes('maquinasAtivas'), 'ObrasPage não deve referenciar maquinasAtivas');
+  assert.ok(!obrasPageCode.includes('Máquinas'), 'ObrasPage não deve conter texto de Máquinas');
+  assert.ok(obrasPageCode.includes('Equipe Hoje'), 'ObrasPage deve exibir Equipe Hoje no resumo');
+
+  const obraDetalhesCode = readFileSync(resolve('src/features/obras/ObraDetalhesDialog.tsx'), 'utf-8');
+  assert.ok(!obraDetalhesCode.includes('locacoesObra'), 'ObraDetalhesDialog não deve ter locacoesObra');
+  assert.ok(!obraDetalhesCode.includes('Máquinas e Equipamentos Locados'), 'ObraDetalhesDialog não deve ter bloco de máquinas');
+  assert.ok(!obraDetalhesCode.includes('porGrupo?.locacao'), 'ObraDetalhesDialog não deve exibir coluna de locações');
+  assert.ok(!obraDetalhesCode.includes('Construction'), 'ObraDetalhesDialog não deve importar Construction');
+  assert.ok(obraDetalhesCode.includes('grid-cols-3'), 'ObraDetalhesDialog deve usar grid-cols-3 no orçamento');
+
+  const confirmarExclusaoCode = readFileSync(resolve('src/features/obras/ConfirmarExclusaoObraDialog.tsx'), 'utf-8');
+  assert.ok(!confirmarExclusaoCode.includes('locacoesVinculadas'), 'ConfirmarExclusaoObraDialog não deve ter locacoesVinculadas');
+  assert.ok(!confirmarExclusaoCode.includes('locações'), 'ConfirmarExclusaoObraDialog não deve exibir texto de locações');
+  assert.ok(!confirmarExclusaoCode.includes('Package'), 'ConfirmarExclusaoObraDialog não deve importar Package');
+  console.log('   ✅ Remoção de máquinas e locações do módulo de Obras validada com sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');
 } catch (err) {
@@ -204,4 +231,5 @@ try {
   process.exit(1);
 } finally {
   await server.close();
+  process.exit(0);
 }

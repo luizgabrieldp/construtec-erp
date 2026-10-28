@@ -606,8 +606,6 @@ class FirestoreRepository implements ErpRepository {
         atualizarSyncStatus({ pendingCount: d.count });
       }
     };
-    window.addEventListener('storage', handleStorage);
-
     // 4. Re-sincronizar automaticamente quando o celular/navegador reconectar à internet ou voltar ao foco (iOS/iPadOS Safari e PWA)
     const handleOnlineOrVisible = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
@@ -624,11 +622,16 @@ class FirestoreRepository implements ErpRepository {
       atualizarSyncStatus({ online: false, syncing: false });
     };
 
-    window.addEventListener('online', handleOnlineOrVisible);
-    window.addEventListener('offline', handleOffline);
-    window.addEventListener('focus', handleOnlineOrVisible);
-    window.addEventListener('pageshow', handleOnlineOrVisible);
-    document.addEventListener('visibilitychange', handleOnlineOrVisible);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', handleStorage);
+      window.addEventListener('online', handleOnlineOrVisible);
+      window.addEventListener('offline', handleOffline);
+      window.addEventListener('focus', handleOnlineOrVisible);
+      window.addEventListener('pageshow', handleOnlineOrVisible);
+    }
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleOnlineOrVisible);
+    }
 
     // 5. Heartbeat leve periódico (~25s) enquanto a aba estiver visível para medir latência real e garantir sincronia
     const heartbeatId =
@@ -646,12 +649,16 @@ class FirestoreRepository implements ErpRepository {
     return () => {
       this.listeners.delete(onExternalChange);
       unsubscribeFirestore();
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('online', handleOnlineOrVisible);
-      window.removeEventListener('offline', handleOffline);
-      window.removeEventListener('focus', handleOnlineOrVisible);
-      window.removeEventListener('pageshow', handleOnlineOrVisible);
-      document.removeEventListener('visibilitychange', handleOnlineOrVisible);
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorage);
+        window.removeEventListener('online', handleOnlineOrVisible);
+        window.removeEventListener('offline', handleOffline);
+        window.removeEventListener('focus', handleOnlineOrVisible);
+        window.removeEventListener('pageshow', handleOnlineOrVisible);
+      }
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', handleOnlineOrVisible);
+      }
       if (heartbeatId !== null && typeof window !== 'undefined' && typeof window.clearInterval === 'function') {
         window.clearInterval(heartbeatId);
       }

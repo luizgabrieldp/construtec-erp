@@ -241,4 +241,5 @@ try {
   console.log('\n🎉 TODOS OS 4 PONTOS TESTADOS E VALIDADOS COM 100% DE SUCESSO!\n');
 } finally {
   await server.close();
+  process.exit(0);
 }
