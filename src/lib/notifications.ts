@@ -79,9 +79,11 @@ export const sendNotification = async (title: string, options?: NotificationOpti
   if (Notification.permission !== 'granted') return;
 
   const { icon, badge } = getNotificationAssets();
-  const notificationOptions: NotificationOptions = {
+  const notificationOptions: NotificationOptions & { vibrate?: number[]; renotify?: boolean } = {
     icon,
     badge,
+    vibrate: [200, 100, 200],
+    renotify: true,
     ...options,
   };
 
@@ -219,9 +221,56 @@ export const verificarNotificacaoNovaVersao = (usuarioIdParam?: string) => {
 export const iniciarVerificadorTarefas = (intervaloMs = 60000, usuarioIdParam?: string) => {
   verificarLembretesTarefas();
   verificarNotificacaoNovaVersao(usuarioIdParam);
+  registrarBackgroundSync();
   const timer = setInterval(() => {
     verificarLembretesTarefas();
     verificarNotificacaoNovaVersao(usuarioIdParam);
   }, intervaloMs);
   return () => clearInterval(timer);
 };
+
+/**
+ * Registra sincronização periódica em background se suportada pelo PWA instalado
+ */
+export async function registrarBackgroundSync() {
+  if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if ('periodicSync' in reg) {
+      const periodicSync = (reg as unknown as { periodicSync: { register: (tag: string, opt: { minInterval: number }) => Promise<void> } }).periodicSync;
+      await periodicSync.register('construtec-tarefas-sync', {
+        minInterval: 15 * 60 * 1000, // 15 minutos
+      });
+    }
+  } catch {}
+}
+
+/**
+ * Dispara um teste agendado de notificação em segundo plano
+ */
+export const testarNotificacaoSegundoPlano = async (delayMs = 3000) => {
+  if (!isNotificationSupported()) {
+    toast('Notificações não são suportadas neste navegador.', 'error');
+    return;
+  }
+  if (Notification.permission !== 'granted') {
+    const p = await requestNotificationPermission();
+    if (p !== 'granted') {
+      toast('Permissão de notificações recusada.', 'error');
+      return;
+    }
+  }
+
+  toast(
+    `Aviso agendado para daqui a ${Math.round(delayMs / 1000)}s! Bloqueie a tela ou coloque o app em segundo plano.`,
+    'info',
+  );
+
+  setTimeout(() => {
+    sendNotification('CONSTRUTEC ERP • Notificação em Segundo Plano', {
+      body: 'Alerta recebido com sucesso com o app em segundo plano! O sistema está pronto para emitir avisos de tarefas e obras.',
+      tag: 'teste-segundo-plano',
+    });
+  }, delayMs);
+};
+

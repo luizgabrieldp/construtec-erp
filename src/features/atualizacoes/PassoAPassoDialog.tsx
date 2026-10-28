@@ -15,6 +15,8 @@ import {
   CloudCheck,
   MousePointerClick,
   Bell,
+  AlertCircle,
+  Trash2,
 } from 'lucide-react';
 import { Badge, Button } from '@/components/ui';
 import { Dialog } from '@/components/ui/Dialog';
@@ -72,6 +74,10 @@ export function PassoAPassoDialog({ versao, open, onClose, autoPrint = false }: 
       case 'Touchpad':
       case 'MousePointerClick':
         return <MousePointerClick className="size-5 text-violet-500" />;
+      case 'AlertCircle':
+        return <AlertCircle className="size-5 text-red-500" />;
+      case 'Trash2':
+        return <Trash2 className="size-5 text-red-500" />;
       default:
         return <Sparkles className="size-5 text-brand" />;
     }

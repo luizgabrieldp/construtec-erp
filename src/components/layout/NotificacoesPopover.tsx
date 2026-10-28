@@ -18,6 +18,7 @@ import {
   Users,
   Sun,
   ShieldAlert,
+  Trash2,
 } from 'lucide-react';
 import { useErp, useData } from '@/data/store';
 import { useAuth } from '@/data/auth';
@@ -26,6 +27,8 @@ import { ATUALIZACOES_SISTEMA, type ReleaseVersao } from '@/data/atualizacoes';
 import { isTarefaRelevanteParaUsuario } from '@/lib/notifications';
 import { toast } from '@/components/ui/Toast';
 import { Badge, Button } from '@/components/ui';
+import { diffDays } from '@/lib/dates';
+import { fmtDateShort } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { Tarefa } from '@/domain/types';
 
@@ -117,15 +120,26 @@ export function NotificacoesPopover() {
     };
   }, [aberto]);
 
-  // Tarefas relevantes para hoje ou atrasadas
+  // Tarefas relevantes para hoje ou atrasadas (atrasadas no topo acumulativas)
   const tarefasPendentes = useMemo(() => {
     const lista = data?.tarefas || [];
-    return lista.filter((t) => {
-      if (t.concluida) return false;
-      // Notificar tarefas de hoje ou pendentes que venceram antes
-      if (t.data > hoje) return false;
-      return isTarefaRelevanteParaUsuario(t, usuarioAtual);
-    });
+    return lista
+      .filter((t) => {
+        if (t.concluida) return false;
+        // Notificar tarefas de hoje ou pendentes que venceram antes
+        if (t.data > hoje) return false;
+        return isTarefaRelevanteParaUsuario(t, usuarioAtual);
+      })
+      .sort((a, b) => {
+        const atrasadaA = a.data < hoje;
+        const atrasadaB = b.data < hoje;
+        if (atrasadaA !== atrasadaB) return atrasadaA ? -1 : 1;
+        if (a.data !== b.data) return a.data.localeCompare(b.data);
+        const pesoPrio = { alta: 3, media: 2, baixa: 1 };
+        const pA = pesoPrio[a.prioridade || 'media'];
+        const pB = pesoPrio[b.prioridade || 'media'];
+        return pB - pA;
+      });
   }, [data?.tarefas, hoje, usuarioAtual]);
 
   const versaoRecente: ReleaseVersao | undefined = ATUALIZACOES_SISTEMA[0];
@@ -210,6 +224,28 @@ export function NotificacoesPopover() {
     setNotificacoesLidas(novasLidas);
     saveNotificacoesLidas(novasLidas, usuarioId);
     toast(`Tarefa "${t.titulo}" marcada como concluída!`, 'success');
+  };
+
+  const excluirTarefa = (t: Tarefa, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm(`Deseja realmente excluir a tarefa "${t.titulo}"?`)) return;
+
+    mutate(
+      (d) => {
+        d.tarefas = (d.tarefas || []).filter((x) => x.id !== t.id);
+      },
+      {
+        acao: 'Tarefas',
+        descricao: `Excluiu tarefa "${t.titulo}" via Notificações In-App`,
+      },
+    );
+
+    const novasLidas = new Set(notificacoesLidas);
+    novasLidas.delete(`tarefa-${t.id}`);
+    setNotificacoesLidas(novasLidas);
+    saveNotificacoesLidas(novasLidas, usuarioId);
+
+    toast(`Tarefa "${t.titulo}" excluída com sucesso.`, 'success');
   };
 
   const irParaTarefas = (t?: Tarefa) => {
@@ -363,6 +399,7 @@ export function NotificacoesPopover() {
                 ) : (
                   tarefasPendentes.map((t) => {
                     const atrasada = t.data < hoje;
+                    const diasAtraso = atrasada ? Math.max(1, diffDays(t.data, hoje)) : 0;
                     const lida = notificacoesLidas.has(`tarefa-${t.id}`);
 
                     return (
@@ -370,19 +407,30 @@ export function NotificacoesPopover() {
                         key={t.id}
                         onClick={() => irParaTarefas(t)}
                         className={cn(
-                          'group relative flex items-start gap-2.5 rounded-xl border p-2.5 transition-all cursor-pointer hover:border-brand/40',
+                          'group relative flex items-start gap-2 rounded-xl border p-2.5 transition-all cursor-pointer hover:border-brand/40',
                           lida ? 'border-line bg-surface/60 opacity-80' : 'border-line/80 bg-surface shadow-xs',
+                          atrasada && 'border-red-500/30 bg-red-500/5',
                         )}
                       >
-                        {/* Botão de Concluir Tarefa Rápido */}
-                        <button
-                          type="button"
-                          onClick={(e) => concluirTarefa(t, e)}
-                          title="Marcar como concluída"
-                          className="mt-0.5 text-muted hover:text-emerald-500 transition-colors shrink-0 cursor-pointer"
-                        >
-                          <Circle className="size-4.5 text-muted group-hover:text-emerald-500 transition-colors" />
-                        </button>
+                        {/* Ações Rápidas: Concluir e Excluir lado a lado */}
+                        <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                          <button
+                            type="button"
+                            onClick={(e) => concluirTarefa(t, e)}
+                            title="Marcar como concluída"
+                            className="p-1 rounded-md text-muted hover:text-emerald-500 hover:bg-emerald-500/10 transition-colors shrink-0 cursor-pointer"
+                          >
+                            <Circle className="size-4.5 text-muted hover:text-emerald-500 transition-colors" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => excluirTarefa(t, e)}
+                            title="Excluir tarefa"
+                            className="p-1 rounded-md text-muted/60 hover:text-red-500 hover:bg-red-500/10 transition-colors shrink-0 cursor-pointer"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </button>
+                        </div>
 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
@@ -390,8 +438,9 @@ export function NotificacoesPopover() {
                               {t.titulo}
                             </span>
                             {atrasada && (
-                              <Badge tone="red" className="text-[9px] py-0 px-1.5">
-                                Atrasada
+                              <Badge tone="red" className="text-[9px] py-0 px-1.5 font-bold flex items-center gap-1">
+                                <AlertCircle className="size-2.5" />
+                                <span>Atrasada ({diasAtraso} {diasAtraso === 1 ? 'dia' : 'dias'})</span>
                               </Badge>
                             )}
                             {t.prioridade === 'alta' && (
@@ -408,6 +457,12 @@ export function NotificacoesPopover() {
                           )}
 
                           <div className="flex items-center gap-2 text-[10px] text-muted mt-1.5 flex-wrap">
+                            {atrasada && (
+                              <span className="inline-flex items-center gap-1 font-semibold text-red-600 dark:text-red-400">
+                                <Calendar className="size-3" />
+                                <span>{fmtDateShort(t.data)} ({diasAtraso}d atrás)</span>
+                              </span>
+                            )}
                             <span className="inline-flex items-center gap-1 font-medium">
                               {t.diaInteiro ? (
                                 <>

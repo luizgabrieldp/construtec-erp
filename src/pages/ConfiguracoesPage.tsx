@@ -25,6 +25,7 @@ import {
   getNotificationPermission,
   requestNotificationPermission,
   sendNotification,
+  testarNotificacaoSegundoPlano,
 } from '@/lib/notifications';
 import { cn } from '@/lib/utils';
 import type { Perfil } from '@/domain/types';
@@ -120,6 +121,19 @@ export function ConfiguracoesPage() {
       body: 'O serviço de alertas e lembretes de canteiro está operando normalmente!',
     });
     toast('Notificação de teste disparada!', 'success');
+  };
+
+  const handleTestarSegundoPlano = async () => {
+    let p = notifPermissao;
+    if (p !== 'granted') {
+      p = await requestNotificationPermission();
+      setNotifPermissao(p);
+      if (p !== 'granted') {
+        toast('Permissão de notificações necessária para testar o recebimento.', 'error');
+        return;
+      }
+    }
+    await testarNotificacaoSegundoPlano(3000);
   };
 
   return (
@@ -491,13 +505,94 @@ export function ConfiguracoesPage() {
               </div>
 
               <div className="rounded-xl border border-line bg-surface-2/40 p-3 text-xs text-muted">
-                O verificador de tarefas roda em background emitindo alertas sonoros e notificações de tarefas agendadas e lembretes no horário programado.
+                <p className="font-medium text-fg">Como o CONSTRUTEC entrega seus alertas:</p>
+                <p className="mt-1">
+                  O verificador de tarefas roda em segundo plano emitindo alertas sonoros e notificações de tarefas agendadas e lembretes no horário programado.
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Card Explicativo: Notificações no Celular e Segundo Plano (iOS & Android) */}
+          <Card className="lg:col-span-2 border-brand/30 bg-surface">
+            <CardHeader
+              title="Notificações no Celular e Segundo Plano (iOS & Android)"
+              subtitle="Instruções para receber alertas nativos e lembretes com a tela bloqueada ou app em segundo plano"
+              action={<Bell className="size-5 text-brand" />}
+            />
+            <div className="p-5 space-y-4 text-xs">
+              <div className="grid gap-4 md:grid-cols-2">
+                {/* iPhone / iOS */}
+                <div className="rounded-xl border border-line bg-surface-2/60 p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-fg">
+                      <Smartphone className="size-4 text-brand" />
+                      <span>No iPhone e iPad (Apple iOS)</span>
+                    </div>
+                    <Badge tone="amber" className="text-[10px]">Requisito Apple</Badge>
+                  </div>
+                  <p className="text-muted leading-relaxed">
+                    A Apple exige que o aplicativo seja <strong>adicionado à Tela de Início (PWA)</strong> para receber notificações com a tela bloqueada ou app em segundo plano.
+                  </p>
+                  <div className="rounded-lg bg-surface border border-line p-2.5 text-[11px] text-muted space-y-1">
+                    <p className="font-semibold text-fg">Como habilitar no iOS:</p>
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      <li>Abra o CONSTRUTEC no <strong>Safari</strong> (requer iOS 16.4 ou superior).</li>
+                      <li>Toque no botão <strong>Compartilhar</strong> (quadrado com seta para cima).</li>
+                      <li>Role para baixo e selecione <strong>"Adicionar à Tela de Início"</strong>.</li>
+                      <li>Abra o aplicativo pelo ícone criado na tela inicial e autorize as notificações.</li>
+                    </ol>
+                  </div>
+                </div>
+
+                {/* Android / Chrome */}
+                <div className="rounded-xl border border-line bg-surface-2/60 p-4 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-fg">
+                      <Smartphone className="size-4 text-emerald-500" />
+                      <span>No Android (Google Chrome & Edge)</span>
+                    </div>
+                    <Badge tone="green" className="text-[10px]">Suporte Nativo</Badge>
+                  </div>
+                  <p className="text-muted leading-relaxed">
+                    No Android, o sistema entrega notificações em segundo plano através do Service Worker, tanto no navegador quanto no aplicativo instalado.
+                  </p>
+                  <div className="rounded-lg bg-surface border border-line p-2.5 text-[11px] text-muted space-y-1">
+                    <p className="font-semibold text-fg">Como habilitar no Android:</p>
+                    <ol className="list-decimal list-inside space-y-0.5">
+                      <li>Clique em <strong>"Solicitar Permissão"</strong> acima e autorize os avisos.</li>
+                      <li>Para melhor estabilidade, toque nos 3 pontos e escolha <strong>"Instalar aplicativo"</strong>.</li>
+                      <li>Garanta que as notificações do navegador não estejam em modo de economia restrita de bateria.</li>
+                    </ol>
+                  </div>
+                </div>
+              </div>
+
+              {/* Botão Testar Notificação Agora */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-brand/20 bg-brand/5 p-4">
+                <div className="space-y-0.5">
+                  <div className="font-semibold text-fg flex items-center gap-1.5">
+                    <Sparkles className="size-4 text-brand" />
+                    <span>Testar Notificação em Segundo Plano</span>
+                  </div>
+                  <p className="text-[11px] text-muted">
+                    Clique no botão para agendar um alerta em 3 segundos. Em seguida, bloqueie a tela do celular ou alterne para outro aplicativo para ver o alerta chegar.
+                  </p>
+                </div>
+
+                <Button
+                  onClick={handleTestarSegundoPlano}
+                  icon={<Bell className="size-4" />}
+                  className="w-full sm:w-auto shrink-0"
+                >
+                  Testar Notificação Agora
+                </Button>
               </div>
             </div>
           </Card>
 
           {/* Guia de Instalação PWA */}
-          <Card>
+          <Card className="lg:col-span-2">
             <CardHeader
               title="Instalação como Aplicativo (PWA)"
               subtitle="Instale o CONSTRUTEC direto na tela inicial do celular ou no desktop sem precisar de loja"

@@ -32,14 +32,26 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v182 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v182.versao, 'v1.8.2', 'A versão mais recente deve ser v1.8.2');
+  const v183 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v183.versao, 'v1.8.3', 'A versão mais recente deve ser v1.8.3');
+  assert.ok(v183.titulo.includes('Gestão Contínua de Tarefas Atrasadas'), 'Título da v1.8.3 deve mencionar Gestão Contínua');
+  assert.ok(v183.descricao.length > 50, 'Descrição da v1.8.3 deve ser rica e no estilo App Store');
+  assert.ok(v183.mudancas.length >= 3, 'v1.8.3 deve listar as mudanças detalhadas');
+  assert.ok(v183.passosVisuais.length >= 5, 'v1.8.3 deve conter passos ilustrados');
+
+  const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
+  v183.mudancas.forEach((m) => {
+    assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
+    assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
+  });
+
+  const v182 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.2');
+  assert.ok(v182, 'v1.8.2 deve estar presente no histórico');
   assert.ok(v182.titulo.includes('Notificação Automática'), 'Título da v1.8.2 deve mencionar Notificação Automática');
   assert.ok(v182.descricao.length > 50, 'Descrição da v1.8.2 deve ser rica e no estilo App Store');
   assert.ok(v182.mudancas.length >= 3, 'v1.8.2 deve listar as mudanças detalhadas');
   assert.ok(v182.passosVisuais.length >= 5, 'v1.8.2 deve conter passos ilustrados');
 
-  const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
   v182.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
@@ -292,6 +304,22 @@ try {
   const atualizacoesTabCode = readFileSync(resolve('src/features/atualizacoes/AtualizacoesTab.tsx'), 'utf-8');
   assert.ok(atualizacoesTabCode.includes('getNotificacoesLidas'), 'AtualizacoesTab deve verificar leitura da versão recente');
   console.log('   ✅ Notificação automática e leitura inteligente validadas com 100% de sucesso!');
+
+  // Teste 11: Validar Tarefas Atrasadas Contínuas, Exclusão Ágil & PWA em Segundo Plano (v1.8.3)
+  console.log('11. Validando Tarefas Atrasadas Contínuas, Exclusão Ágil & PWA em Segundo Plano (v1.8.3)...');
+  const widgetCode = readFileSync(resolve('src/features/dashboard/TarefasWidget.tsx'), 'utf-8');
+  assert.ok(widgetCode.includes('Trash2'), 'TarefasWidget deve incluir botão Trash2 para exclusão ágil');
+  assert.ok(widgetCode.includes('diffDays'), 'TarefasWidget deve calcular dias de atraso via diffDays');
+  assert.ok(widgetCode.includes('excluirTarefa'), 'TarefasWidget deve implementar excluirTarefa');
+  assert.ok(popoverCode.includes('Trash2'), 'NotificacoesPopover deve incluir botão Trash2 ao lado de concluir');
+  assert.ok(popoverCode.includes('excluirTarefa'), 'NotificacoesPopover deve implementar excluirTarefa');
+  assert.ok(tarefasPageCode.includes('diasAtraso'), 'TarefasPage deve calcular e exibir diasAtraso');
+  assert.ok(configCode.includes('Testar Notificação Agora'), 'ConfiguracoesPage deve conter botão Testar Notificação Agora');
+  assert.ok(configCode.includes('adicionado à Tela de Início'), 'ConfiguracoesPage deve explicar exigência do iOS');
+  const swCode = readFileSync(resolve('public/sw.js'), 'utf-8');
+  assert.ok(swCode.includes('periodicsync'), 'Service Worker deve suportar periodicsync');
+  assert.ok(swCode.includes('vibrate'), 'Service Worker deve incluir vibração nas notificações');
+  console.log('   ✅ Gestão Contínua, Exclusão Ágil e Notificações em Segundo Plano validadas com 100% de sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');
 } catch (err) {

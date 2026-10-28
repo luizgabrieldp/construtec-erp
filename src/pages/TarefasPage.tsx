@@ -27,7 +27,7 @@ import { marcarNotificacoesComoLidas, isTarefaRelevanteParaUsuario } from '@/lib
 import { useHoje } from '@/hooks';
 import type { Tarefa, PrioridadeTarefa } from '@/domain/types';
 import { LABEL_RECORRENCIA_TAREFA, LABEL_PRIORIDADE_TAREFA } from '@/domain/labels';
-import { startOfWeek, addDays } from '@/lib/dates';
+import { startOfWeek, addDays, diffDays } from '@/lib/dates';
 import { fmtDate, fmtDateShort } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { TarefaFormDialog } from '@/features/tarefas/TarefaFormDialog';
@@ -157,7 +157,11 @@ export function TarefasPage() {
       .sort((a, b) => {
         // Pendentes primeiro
         if (a.concluida !== b.concluida) return a.concluida ? 1 : -1;
-        // Data mais próxima primeiro
+        // Se ambos pendentes, tarefas atrasadas vêm primeiro no topo
+        const atrasadaA = !a.concluida && a.data < hoje;
+        const atrasadaB = !b.concluida && b.data < hoje;
+        if (atrasadaA !== atrasadaB) return atrasadaA ? -1 : 1;
+        // Data mais antiga primeiro (atrasadas mais antigas primeiro)
         if (a.data !== b.data) return a.data.localeCompare(b.data);
         // Prioridade maior primeiro
         const pesoPrio = { alta: 3, media: 2, baixa: 1 };
@@ -320,6 +324,26 @@ export function TarefasPage() {
         </div>
       </Card>
 
+      {/* Banner de Tarefas Atrasadas na aba Hoje */}
+      {abaAtiva === 'hoje' && metricas.atrasadas > 0 && (
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs text-red-600 dark:text-red-400 font-semibold shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="size-4.5 shrink-0 text-red-500" />
+            <div>
+              <span className="font-bold">
+                {metricas.atrasadas} {metricas.atrasadas === 1 ? 'tarefa atrasada pendente' : 'tarefas atrasadas pendentes'}
+              </span>
+              <span className="hidden sm:inline font-normal text-muted ml-1.5">
+                • Permanecem no topo até serem concluídas ou excluídas.
+              </span>
+            </div>
+          </div>
+          <span className="rounded-full bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 shrink-0">
+            Ação Imediata
+          </span>
+        </div>
+      )}
+
       {/* Lista de Tarefas */}
       <div className="mt-4 space-y-3">
         {tarefasFiltradas.length === 0 ? (
@@ -339,6 +363,7 @@ export function TarefasPage() {
           tarefasFiltradas.map((t) => {
             const obra = t.obraId ? obrasMap.get(t.obraId) : null;
             const atrasada = !t.concluida && t.data < hoje;
+            const diasAtraso = atrasada ? Math.max(1, diffDays(t.data, hoje)) : 0;
             const isHoje = t.data === hoje;
 
             return (
@@ -382,8 +407,9 @@ export function TarefasPage() {
                         </span>
 
                         {atrasada && (
-                          <Badge tone="red" className="text-[10px]">
-                            Atrasada
+                          <Badge tone="red" className="text-[10px] font-bold flex items-center gap-1">
+                            <AlertCircle className="size-3" />
+                            <span>Atrasada ({diasAtraso} {diasAtraso === 1 ? 'dia' : 'dias'})</span>
                           </Badge>
                         )}
 
@@ -419,11 +445,19 @@ export function TarefasPage() {
                             'inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-medium border text-[11px]',
                             isHoje
                               ? 'bg-brand/10 text-brand border-brand/20 font-bold'
+                              : atrasada
+                              ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30 font-semibold'
                               : 'bg-surface-2 text-muted border-line',
                           )}
                         >
                           <Calendar className="size-3" />
-                          <span>{isHoje ? 'Hoje' : fmtDate(t.data)}</span>
+                          <span>
+                            {isHoje
+                              ? 'Hoje'
+                              : atrasada
+                              ? `${fmtDate(t.data)} (${diasAtraso}d de atraso)`
+                              : fmtDate(t.data)}
+                          </span>
                         </span>
 
                         {/* Horário */}

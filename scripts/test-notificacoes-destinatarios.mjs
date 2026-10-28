@@ -36,9 +36,25 @@ try {
 
   console.log('   ✅ Módulos carregados com sucesso!');
 
-  // Teste 2: Validar versões v1.8.2 e v1.8.1 e passos visuais
-  console.log('2. Validando integridade das releases v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
-  const v182 = ATUALIZACOES_SISTEMA[0];
+  // Teste 2: Validar versões v1.8.3, v1.8.2 e v1.8.1 e passos visuais
+  console.log('2. Validando integridade das releases v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
+  const v183 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v183.versao, 'v1.8.3');
+  assert.equal(v183.dataPublicacao, '27 de Outubro de 2026 às 23:45');
+  assert.equal(v183.titulo, 'Gestão Contínua de Tarefas Atrasadas, Exclusão Ágil & Notificações em Segundo Plano');
+  assert.deepEqual(v183.tags, ['Novo', 'Melhoria', 'Correção']);
+  assert.equal(v183.mudancas.length, 3);
+  assert.equal(v183.passosVisuais.length, 5);
+
+  const titulosPassos183 = v183.passosVisuais.map((p) => p.titulo);
+  assert.ok(titulosPassos183.some((t) => t.includes('Tarefas Atrasadas')));
+  assert.ok(titulosPassos183.some((t) => t.includes('Exclusão Ágil')));
+  assert.ok(titulosPassos183.some((t) => t.includes('Exclusão e Conclusão Direto')));
+  assert.ok(titulosPassos183.some((t) => t.includes('Notificações em Segundo Plano')));
+  assert.ok(titulosPassos183.some((t) => t.includes('Exportação do Guia v1.8.3')));
+
+  const v182 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.2');
+  assert.ok(v182, 'v1.8.2 deve existir no histórico');
   assert.equal(v182.versao, 'v1.8.2');
   assert.equal(v182.dataPublicacao, '27 de Outubro de 2026 às 23:10');
   assert.equal(v182.titulo, 'Notificação Automática de Novas Versões & Leitura Inteligente sem Cliques Extras');
@@ -160,17 +176,21 @@ try {
 
   console.log('   ✅ Contadores de notificações e marcar todas como lidas validados!');
 
-  // Teste 5: Validar suporte ao ícone CheckCircle2 e isolamento de notificações
+  // Teste 5: Validar suporte ao ícone CheckCircle2, AlertCircle, Trash2 e isolamento de notificações
   console.log('5. Validando mapeamento de ícones e isolamento per-user...');
   const dialogSrc = readFileSync(resolve('src/features/atualizacoes/PassoAPassoDialog.tsx'), 'utf-8');
   assert.ok(dialogSrc.includes("case 'CheckCircle2':"), 'PassoAPassoDialog deve tratar case CheckCircle2');
+  assert.ok(dialogSrc.includes("case 'AlertCircle':"), 'PassoAPassoDialog deve tratar case AlertCircle');
+  assert.ok(dialogSrc.includes("case 'Trash2':"), 'PassoAPassoDialog deve tratar case Trash2');
 
   const popoverSrc = readFileSync(resolve('src/components/layout/NotificacoesPopover.tsx'), 'utf-8');
   assert.ok(popoverSrc.includes('getStorageKey(usuarioId)'), 'NotificacoesPopover deve isolar storage por usuário');
   assert.ok(popoverSrc.includes('isTarefaRelevanteParaUsuario'), 'NotificacoesPopover deve usar isTarefaRelevanteParaUsuario');
+  assert.ok(popoverSrc.includes('Trash2'), 'NotificacoesPopover deve incluir botão Trash2');
 
   const widgetSrc = readFileSync(resolve('src/features/dashboard/TarefasWidget.tsx'), 'utf-8');
   assert.ok(widgetSrc.includes("destinatarioTipo === 'todos'"), 'TarefasWidget deve exibir badge Para todos');
+  assert.ok(widgetSrc.includes('Trash2'), 'TarefasWidget deve incluir botão Trash2');
   console.log('   ✅ Ícone CheckCircle2, isolamento per-user e widget validados com sucesso!');
 
   // Teste 6: Validar verificarNotificacaoNovaVersao e isolamento de storage sem contaminação
@@ -182,15 +202,15 @@ try {
     marcarNotificacoesComoLidas,
   } = await server.ssrLoadModule('/src/lib/notifications.ts');
 
-  // Testar disparo de versão para userAdmin
+  // Testar disparo de versão para userAdmin (versão mais recente v1.8.3)
   globalThis.localStorage.clear();
   verificarNotificacaoNovaVersao(userAdmin.id);
   const versaoNotificadaAdmin = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`);
-  assert.equal(versaoNotificadaAdmin, 'v1.8.2', 'Deve ter gravado a versão notificada para o admin');
+  assert.equal(versaoNotificadaAdmin, 'v1.8.3', 'Deve ter gravado a versão mais recente v1.8.3 para o admin');
 
   // Segunda chamada não deve alterar ou re-notificar
   verificarNotificacaoNovaVersao(userAdmin.id);
-  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.2');
+  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.3');
 
   // Outro usuário ainda não foi notificado
   const versaoNotificadaOutro = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userEncarregado.id}`);
@@ -200,15 +220,15 @@ try {
   const lidasAdmin = getNotificacoesLidas(userAdmin.id);
   assert.equal(lidasAdmin.size, 0);
 
-  marcarNotificacoesComoLidas(['tarefa-t1', 'versao-v1.8.2'], userAdmin.id);
+  marcarNotificacoesComoLidas(['tarefa-t1', 'versao-v1.8.3'], userAdmin.id);
   const lidasAdminApos = getNotificacoesLidas(userAdmin.id);
   assert.equal(lidasAdminApos.has('tarefa-t1'), true);
-  assert.equal(lidasAdminApos.has('versao-v1.8.2'), true);
+  assert.equal(lidasAdminApos.has('versao-v1.8.3'), true);
 
   // Encarregado NÃO deve ter herdado as notificações lidas pelo admin
   const lidasEncarregado = getNotificacoesLidas(userEncarregado.id);
   assert.equal(lidasEncarregado.has('tarefa-t1'), false, 'Encarregado não deve herdar notificações lidas do admin');
-  assert.equal(lidasEncarregado.has('versao-v1.8.2'), false, 'Encarregado não deve herdar versão lida do admin');
+  assert.equal(lidasEncarregado.has('versao-v1.8.3'), false, 'Encarregado não deve herdar versão lida do admin');
 
   console.log('   ✅ Notificação automática de versão e isolamento per-user testados e aprovados!');
 

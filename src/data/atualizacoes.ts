@@ -28,6 +28,85 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v1.8.3',
+    dataPublicacao: '27 de Outubro de 2026 às 23:45',
+    dataIso: '2026-10-27T23:45:00Z',
+    titulo: 'Gestão Contínua de Tarefas Atrasadas, Exclusão Ágil & Notificações em Segundo Plano',
+    descricao:
+      'Aprimoramento abrangente no ciclo de vida de tarefas operacionais com persistência e destaque contínuo de tarefas atrasadas no Dashboard, Central de Notificações e Lista Geral; exclusão ágil de tarefas diretamente pelo widget da tela inicial e popover de notificações; e aprimoramento do Service Worker com suporte estendido para PWA na tela de início (iOS/Android) para recebimento de alertas com o app fechado ou em segundo plano.',
+    tags: ['Novo', 'Melhoria', 'Correção'],
+    mudancas: [
+      {
+        tag: 'Melhoria',
+        texto:
+          'Tarefas e Lembretes contínuos: qualquer tarefa não realizada na data prevista passa automaticamente para o status \'Atrasada\' e permanece em destaque no topo das listas dia após dia, nunca sumindo até que seja marcada como feita ou excluída',
+        detalhe:
+          'Tarefas atrasadas agora são acumulativas e continuam visíveis na aba "Hoje / Urgentes", no widget da tela inicial e no popover de notificações, calculando os dias de atraso e exigindo resolução ativa da equipe.',
+      },
+      {
+        tag: 'Novo',
+        texto:
+          'Botão de exclusão rápida de tarefas no widget do Dashboard e na Central de Notificações com confirmação ágil',
+        detalhe:
+          'Agora é possível excluir tarefas diretamente a partir do widget na tela inicial ou pelo popover do sino no cabeçalho com confirmação ágil, sem necessidade de navegar até a tela completa de edição.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Notificações nativas em segundo plano: aprimoramento no Service Worker com suporte a PWA instalado na tela de início (iOS/Android), garantindo recebimento de alertas com o app fechado ou em segundo plano',
+        detalhe:
+          'O Service Worker agora conta com canais de push e suporte a background sync em PWAs instalados, além de card explicativo com orientações claras para dispositivos Apple iOS e botão de teste de notificação.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Tarefas Atrasadas Sempre Visíveis e Acumulativas',
+        descricao:
+          'Se uma tarefa não foi concluída na data estipulada, ela não se perde: continua em destaque vermelho no topo da lista do dia e do Dashboard com contagem de dias de atraso.',
+        icone: 'AlertCircle',
+        ondeEncontrar: 'Menu Lateral > Tarefas (aba Hoje / Urgentes) e Dashboard',
+        dica: 'A tarefa só sai da listagem ativa se você marcá-la como concluída ou se optar por excluí-la.',
+      },
+      {
+        passo: 2,
+        titulo: 'Exclusão Ágil no Widget do Dashboard',
+        descricao:
+          'No painel inicial, visualize a tarefa e clique no ícone da lixeira para remover tarefas desnecessárias na hora com confirmação ágil.',
+        icone: 'Trash2',
+        ondeEncontrar: 'Tela Inicial (Dashboard) > Widget Tarefas & Lembretes',
+        dica: 'Ideal para limpar rapidamente pendências canceladas sem abrir formulários modais.',
+      },
+      {
+        passo: 3,
+        titulo: 'Exclusão e Conclusão Direto pelo Sino',
+        descricao:
+          'Abra a Central de Notificações no topo para visualizar todas as pendências e tarefas atrasadas, podendo concluir ou excluir com um clique.',
+        icone: 'Bell',
+        ondeEncontrar: 'Cabeçalho Superior > Ícone de Sino > Lembretes & Tarefas',
+        dica: 'O contador de notificações reflete as pendências em tempo real.',
+      },
+      {
+        passo: 4,
+        titulo: 'Notificações em Segundo Plano com PWA',
+        descricao:
+          'Em Configurações > Notificações & PWA, confira instruções para adicionar o app à Tela de Início no iPhone/iPad e Android para receber alertas com a tela bloqueada.',
+        icone: 'Smartphone',
+        ondeEncontrar: 'Menu Lateral > Configurações > Notificações & PWA',
+        dica: 'Utilize o botão "Disparar Notificação de Teste" para validar as notificações no seu aparelho.',
+      },
+      {
+        passo: 5,
+        titulo: 'Exportação do Guia v1.8.3 em PDF',
+        descricao:
+          'Imprima ou exporte este guia completo em PDF para distribuir o treinamento de uso e procedimentos com toda a equipe do canteiro.',
+        icone: 'Printer',
+        ondeEncontrar: 'Rodapé deste modal > Exportar em PDF',
+        dica: 'A formatação A4 limpa oculta cabeçalhos e menus, gerando um documento pronto para impressão.',
+      },
+    ],
+  },
+  {
     versao: 'v1.8.2',
     dataPublicacao: '27 de Outubro de 2026 às 23:10',
     dataIso: '2026-10-27T23:10:00Z',

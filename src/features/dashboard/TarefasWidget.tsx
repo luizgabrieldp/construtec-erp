@@ -13,13 +13,15 @@ import {
   Calendar,
   User,
   Users,
+  Trash2,
 } from 'lucide-react';
 import { Card, CardHeader, Badge, Button } from '@/components/ui';
+import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
 import { useHoje } from '@/hooks';
 import type { Tarefa } from '@/domain/types';
 import { LABEL_RECORRENCIA_TAREFA } from '@/domain/labels';
-import { startOfWeek, addDays } from '@/lib/dates';
+import { startOfWeek, addDays, diffDays } from '@/lib/dates';
 import { fmtDateShort } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { TarefaFormDialog } from '@/features/tarefas/TarefaFormDialog';
@@ -50,9 +52,19 @@ export function TarefasWidget() {
       .sort((a, b) => a.data.localeCompare(b.data));
   }, [data.tarefas, hoje]);
 
-  // Tarefas do dia
+  // Tarefas do dia (inclui tarefas atrasadas pendentes no topo)
   const tarefasDoDia = useMemo(() => {
-    return data.tarefas
+    const atrasadas = data.tarefas
+      .filter((t) => !t.concluida && t.data < hoje)
+      .sort((a, b) => {
+        if (a.data !== b.data) return a.data.localeCompare(b.data);
+        const pesoPrio = { alta: 3, media: 2, baixa: 1 };
+        const pA = pesoPrio[a.prioridade || 'media'];
+        const pB = pesoPrio[b.prioridade || 'media'];
+        return pB - pA;
+      });
+
+    const hojeTarefas = data.tarefas
       .filter((t) => t.data === hoje)
       .sort((a, b) => {
         // Pendentes primeiro
@@ -64,6 +76,8 @@ export function TarefasWidget() {
         if (pA !== pB) return pB - pA;
         return a.titulo.localeCompare(b.titulo);
       });
+
+    return [...atrasadas, ...hojeTarefas];
   }, [data.tarefas, hoje]);
 
   // Tarefas da semana
@@ -100,6 +114,21 @@ export function TarefasWidget() {
         descricao: `${novoStatus ? 'Concluiu' : 'Reabriu'} tarefa: ${t.titulo}`,
       },
     );
+  };
+
+  const excluirTarefa = (t: Tarefa, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!window.confirm(`Deseja realmente excluir a tarefa "${t.titulo}"?`)) return;
+    mutate(
+      (d) => {
+        d.tarefas = (d.tarefas || []).filter((x) => x.id !== t.id);
+      },
+      {
+        acao: 'Tarefas',
+        descricao: `Excluiu tarefa "${t.titulo}" no Dashboard`,
+      },
+    );
+    toast('Tarefa removida com sucesso.', 'success');
   };
 
   const abrirEdicao = (t: Tarefa) => {
@@ -146,36 +175,49 @@ export function TarefasWidget() {
               <div className="flex items-center gap-2">
                 <AlertCircle className="size-4 text-red-500 shrink-0" />
                 <span className="text-xs font-bold text-red-600 dark:text-red-400">
-                  Tarefas Atrasadas
+                  Tarefas Atrasadas ({tarefasAtrasadas.length})
                 </span>
               </div>
               <span className="rounded-full bg-red-500 text-white text-[10px] font-bold px-2 py-0.5">
-                {tarefasAtrasadas.length} {tarefasAtrasadas.length === 1 ? 'pendência' : 'pendências'}
+                {tarefasAtrasadas.length === 1 ? '1 pendência' : `${tarefasAtrasadas.length} pendências`}
               </span>
             </div>
             <div className="space-y-1.5 max-h-36 overflow-y-auto">
-              {tarefasAtrasadas.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => abrirEdicao(t)}
-                  className="group flex items-center justify-between gap-2 rounded-lg bg-surface/90 px-2.5 py-1.5 text-xs border border-red-500/20 hover:border-red-500/40 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <button
-                      type="button"
-                      onClick={(e) => toggleConcluida(t, e)}
-                      className="text-muted hover:text-emerald-500 shrink-0 cursor-pointer"
-                      title="Concluir rapidamente"
-                    >
-                      <Circle className="size-3.5" />
-                    </button>
-                    <span className="truncate font-medium text-fg">{t.titulo}</span>
+              {tarefasAtrasadas.map((t) => {
+                const diasAtraso = Math.max(1, diffDays(t.data, hoje));
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => abrirEdicao(t)}
+                    className="group flex items-center justify-between gap-2 rounded-lg bg-surface/90 px-2.5 py-1.5 text-xs border border-red-500/20 hover:border-red-500/40 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={(e) => toggleConcluida(t, e)}
+                        className="text-muted hover:text-emerald-500 shrink-0 cursor-pointer"
+                        title="Concluir rapidamente"
+                      >
+                        <Circle className="size-3.5" />
+                      </button>
+                      <span className="truncate font-medium text-fg">{t.titulo}</span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] font-semibold text-red-600 dark:text-red-400">
+                        {fmtDateShort(t.data)} ({diasAtraso}d atrás)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => excluirTarefa(t, e)}
+                        title="Excluir tarefa"
+                        className="text-muted/60 hover:text-red-500 p-0.5 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="size-3 text-red-500" />
+                      </button>
+                    </div>
                   </div>
-                  <span className="text-[10px] font-semibold text-red-600 dark:text-red-400 shrink-0">
-                    {fmtDateShort(t.data)}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -242,9 +284,10 @@ export function TarefasWidget() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {tarefasExibidas.slice(0, 5).map((t) => {
+              {tarefasExibidas.slice(0, 8).map((t) => {
                 const obra = t.obraId ? obrasMap.get(t.obraId) : null;
                 const atrasada = !t.concluida && t.data < hoje;
+                const diasAtraso = atrasada ? Math.max(1, diffDays(t.data, hoje)) : 0;
                 const isHoje = t.data === hoje;
 
                 return (
@@ -287,8 +330,9 @@ export function TarefasWidget() {
                         </span>
 
                         {atrasada && (
-                          <Badge tone="red" className="text-[10px] py-0 px-1.5">
-                            Atrasada
+                          <Badge tone="red" className="text-[10px] py-0 px-1.5 font-bold flex items-center gap-1">
+                            <AlertCircle className="size-2.5" />
+                            <span>Atrasada ({diasAtraso} {diasAtraso === 1 ? 'dia' : 'dias'})</span>
                           </Badge>
                         )}
 
@@ -308,19 +352,24 @@ export function TarefasWidget() {
                       {/* Metadados / Badges */}
                       <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-muted">
                         {/* Data / Dia */}
-                        {tab === 'semana' && (
+                        {atrasada ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 text-red-600 dark:text-red-400 font-semibold">
+                            <Calendar className="size-2.5" />
+                            <span>{fmtDateShort(t.data)} ({diasAtraso}d de atraso)</span>
+                          </span>
+                        ) : tab === 'semana' ? (
                           <span
                             className={cn(
                               'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-medium border',
                               isHoje
-                                ? 'bg-brand/10 text-brand border-brand/20'
+                                ? 'bg-brand/10 text-brand border-brand/20 font-bold'
                                 : 'bg-surface-2 text-muted border-line',
                             )}
                           >
                             <Calendar className="size-2.5" />
                             {isHoje ? 'Hoje' : fmtDateShort(t.data)}
                           </span>
-                        )}
+                        ) : null}
 
                         {/* Horário */}
                         <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 border border-line px-1.5 py-0.5">
@@ -370,17 +419,27 @@ export function TarefasWidget() {
                         ) : null}
                       </div>
                     </div>
+
+                    {/* Botão de Excluir */}
+                    <button
+                      type="button"
+                      onClick={(e) => excluirTarefa(t, e)}
+                      title="Excluir tarefa"
+                      className="p-1 rounded-lg text-muted/60 hover:text-red-500 hover:bg-red-500/10 opacity-70 group-hover:opacity-100 transition-all cursor-pointer shrink-0 self-center"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
                   </div>
                 );
               })}
 
-              {tarefasExibidas.length > 5 && (
+              {tarefasExibidas.length > 8 && (
                 <div className="pt-1 text-center">
                   <Link
                     to="/tarefas"
                     className="text-xs font-semibold text-brand hover:underline inline-flex items-center gap-1"
                   >
-                    <span>+ {tarefasExibidas.length - 5} outras tarefas em aberto</span>
+                    <span>+ {tarefasExibidas.length - 8} outras tarefas em aberto</span>
                     <ArrowRight className="size-3" />
                   </Link>
                 </div>
