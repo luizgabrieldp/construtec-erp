@@ -17,9 +17,11 @@ import { PassoAPassoDialog } from './PassoAPassoDialog';
 export function AtualizacoesTab() {
   const [versaoSelecionada, setVersaoSelecionada] = useState<ReleaseVersao | null>(null);
   const [modalAberto, setModalAberto] = useState(false);
+  const [autoPrint, setAutoPrint] = useState(false);
 
-  const abrirPassoAPasso = (versao: ReleaseVersao) => {
+  const abrirPassoAPasso = (versao: ReleaseVersao, imprimir = false) => {
     setVersaoSelecionada(versao);
+    setAutoPrint(imprimir);
     setModalAberto(true);
   };
 
@@ -52,14 +54,14 @@ export function AtualizacoesTab() {
             <Button
               variant="primary"
               icon={<BookOpen className="size-4" />}
-              onClick={() => abrirPassoAPasso(ultimaVersao)}
+              onClick={() => abrirPassoAPasso(ultimaVersao, false)}
             >
               Ver Passo a Passo Visual
             </Button>
             <Button
               variant="secondary"
               icon={<Printer className="size-4" />}
-              onClick={() => abrirPassoAPasso(ultimaVersao)}
+              onClick={() => abrirPassoAPasso(ultimaVersao, true)}
               title="Exportar guia ilustrado para impressão ou envio por PDF"
             >
               Exportar Passo a Passo
@@ -124,7 +126,7 @@ export function AtualizacoesTab() {
                     size="sm"
                     variant="secondary"
                     icon={<Eye className="size-3.5" />}
-                    onClick={() => abrirPassoAPasso(rel)}
+                    onClick={() => abrirPassoAPasso(rel, false)}
                   >
                     Ver Passo a Passo
                   </Button>
@@ -132,7 +134,7 @@ export function AtualizacoesTab() {
                     size="sm"
                     variant="ghost"
                     icon={<Printer className="size-3.5" />}
-                    onClick={() => abrirPassoAPasso(rel)}
+                    onClick={() => abrirPassoAPasso(rel, true)}
                     title="Exportar versão em PDF"
                   >
                     Exportar PDF
@@ -178,7 +180,7 @@ export function AtualizacoesTab() {
                 </span>
                 <button
                   type="button"
-                  onClick={() => abrirPassoAPasso(rel)}
+                  onClick={() => abrirPassoAPasso(rel, false)}
                   className="font-semibold text-brand hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
                   <span>Abrir guia</span>
@@ -195,6 +197,7 @@ export function AtualizacoesTab() {
         versao={versaoSelecionada}
         open={modalAberto}
         onClose={() => setModalAberto(false)}
+        autoPrint={autoPrint}
       />
     </div>
   );

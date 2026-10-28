@@ -197,6 +197,11 @@ dialog.cx-dialog::backdrop {
     display: none !important;
   }
 
+  dialog::backdrop {
+    display: none !important;
+    background: transparent !important;
+  }
+
   dialog.cx-dialog.cx-printable-dialog {
     position: static !important;
     display: block !important;
@@ -209,6 +214,12 @@ dialog.cx-dialog::backdrop {
     margin: 0 !important;
     background: white !important;
     color: black !important;
+  }
+
+  /* Oculta o cabeçalho padrão com o botão 'X' e o rodapé padrão do modal ao imprimir */
+  .cx-printable-dialog > div > div:first-child,
+  .cx-printable-dialog > div > div:last-child {
+    display: none !important;
   }
 
   .cx-printable-dialog .cx-dialog-scroll {

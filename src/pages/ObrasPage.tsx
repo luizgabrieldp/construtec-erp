@@ -5,7 +5,7 @@ import { StatCard } from '@/components/ui/StatCard';
 import { useData } from '@/data/store';
 import { useIsAdmin, useResumo } from '@/hooks';
 import type { Obra } from '@/domain/types';
-import { LABEL_OBRA_STATUS, LABEL_OBRA_FASE } from '@/domain/labels';
+import { LABEL_OBRA_STATUS, getLabelFase } from '@/domain/labels';
 import { fmtBRL, fmtPct } from '@/lib/format';
 import { diffDays } from '@/lib/dates';
 import { ObraFormDialog } from '@/features/obras/ObraFormDialog';
@@ -28,6 +28,7 @@ export function ObrasPage() {
     | 'nome-desc'
     | 'status'
     | 'prazo-conclusao'
+    | 'prazo-inicio'
     | 'prazo-decorrido'
     | 'entrega-asc'
     | 'entrega-desc'
@@ -72,9 +73,23 @@ export function ObrasPage() {
       return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
     }
     if (criterioOrdenacao === 'prazo-conclusao') {
+      // Obras concluídas já foram finalizadas e devem ser posicionadas no final
+      if (a.status === 'concluida' && b.status !== 'concluida') return 1;
+      if (a.status !== 'concluida' && b.status === 'concluida') return -1;
+
       const diasA = diffDays(r.hoje, a.previsaoEntrega);
       const diasB = diffDays(r.hoje, b.previsaoEntrega);
       const diff = diasA - diasB;
+      if (diff !== 0) return diff;
+      return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
+    }
+    if (criterioOrdenacao === 'prazo-inicio') {
+      // Obras em planejamento ou recém iniciadas primeiro (menor percentual decorrido)
+      const prazoTotalA = Math.max(1, diffDays(a.dataInicio, a.previsaoEntrega));
+      const decorridoA = Math.max(0, Math.min(1, diffDays(a.dataInicio, r.hoje) / prazoTotalA));
+      const prazoTotalB = Math.max(1, diffDays(b.dataInicio, b.previsaoEntrega));
+      const decorridoB = Math.max(0, Math.min(1, diffDays(b.dataInicio, r.hoje) / prazoTotalB));
+      const diff = decorridoA - decorridoB;
       if (diff !== 0) return diff;
       return a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' });
     }
@@ -219,6 +234,7 @@ export function ObrasPage() {
                 <option value="nome-desc">Nome (Z-A)</option>
                 <option value="status">Status (Andamento → Concluída)</option>
                 <option value="prazo-conclusao">Mais Próxima de Finalizar</option>
+                <option value="prazo-inicio">Em Início (Menor Prazo Decorrido)</option>
                 <option value="prazo-decorrido">Prazo Decorrido (% maior)</option>
                 <option value="entrega-asc">Previsão de Entrega (Mais próximas)</option>
                 <option value="entrega-desc">Previsão de Entrega (Mais distantes)</option>
@@ -385,7 +401,7 @@ export function ObrasPage() {
               {obrasOrdenadas.map((obra) => {
                 const prazoTotal = Math.max(1, diffDays(obra.dataInicio, obra.previsaoEntrega));
                 const decorrido = Math.max(0, Math.min(1, diffDays(obra.dataInicio, r.hoje) / prazoTotal));
-                const faseLabel = LABEL_OBRA_FASE[obra.fase as keyof typeof LABEL_OBRA_FASE] || obra.fase || 'Fundação';
+                const faseLabel = getLabelFase(obra.fase, obra);
 
                 return (
                   <tr key={obra.id} className="hover:bg-surface-2/40 transition-colors">
@@ -457,7 +473,7 @@ export function ObrasPage() {
                         </div>
                         <Progress value={decorrido} />
                         <div className="text-[10px] text-muted truncate">
-                          Entrega: {obra.previsaoEntrega.split('-').reverse().join('/')}
+                          Entrega: {obra.previsaoEntrega ? obra.previsaoEntrega.split('-').reverse().join('/') : '—'}
                         </div>
                       </div>
                     </td>

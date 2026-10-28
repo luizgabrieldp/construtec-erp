@@ -133,33 +133,70 @@ try {
   assert.ok(obrasCode.includes('<th className="px-4 py-3">Status</th>'), 'Deve ter coluna Status');
   assert.ok(obrasCode.includes('<th className="px-4 py-3">Progresso / Prazo</th>'), 'Deve ter coluna Progresso / Prazo');
   assert.ok(obrasCode.includes('Detalhes da Obra'), 'Deve ter botão Detalhes da Obra');
+  assert.ok(obrasCode.includes('prazo-inicio'), 'Deve conter opção de ordenação em início');
+  assert.ok(obrasCode.includes('getLabelFase(obra.fase, obra)'), 'Deve resolver fases padrão e customizadas');
   console.log('   ✅ Modos Cards/Lista e ordenação de obras validados com sucesso!');
 
-  // Teste 6: Testar lógica de ordenação pura com mock de dados
-  console.log('6. Testando comportamento da ordenação multifatorial de obras...');
+  // Teste 6: Testar lógica de ordenação pura com mock de dados incluindo edge cases
+  console.log('6. Testando comportamento da ordenação multifatorial de obras e edge cases...');
   const mockObras = [
-    { id: '1', nome: 'Residencial Zênite', status: 'concluida', dataInicio: '2026-01-01', previsaoEntrega: '2026-12-01' },
+    { id: '1', nome: 'Residencial Zênite', status: 'concluida', dataInicio: '2025-01-01', previsaoEntrega: '2025-12-01' },
     { id: '2', nome: 'Edifício Aurora', status: 'andamento', dataInicio: '2026-06-01', previsaoEntrega: '2026-10-30' },
     { id: '3', nome: 'Condomínio Bela Vista', status: 'planejamento', dataInicio: '2026-09-01', previsaoEntrega: '2027-03-01' },
+    { id: '4', nome: 'Torre Horizonte', status: 'andamento', dataInicio: '2026-01-01', previsaoEntrega: '2026-11-15' },
   ];
 
   // Ordenação A-Z
   const sortAZ = [...mockObras].sort((a, b) => a.nome.localeCompare(b.nome));
   assert.equal(sortAZ[0].nome, 'Condomínio Bela Vista');
-  assert.equal(sortAZ[2].nome, 'Residencial Zênite');
+  assert.equal(sortAZ[3].nome, 'Torre Horizonte');
 
   // Ordenação Z-A
   const sortZA = [...mockObras].sort((a, b) => b.nome.localeCompare(a.nome));
-  assert.equal(sortZA[0].nome, 'Residencial Zênite');
-  assert.equal(sortZA[2].nome, 'Condomínio Bela Vista');
+  assert.equal(sortZA[0].nome, 'Torre Horizonte');
+  assert.equal(sortZA[3].nome, 'Condomínio Bela Vista');
 
   // Ordenação por Status (andamento -> planejamento -> pausada -> concluida)
   const pesoStatus = { andamento: 1, planejamento: 2, pausada: 3, concluida: 4 };
   const sortStatus = [...mockObras].sort((a, b) => pesoStatus[a.status] - pesoStatus[b.status]);
-  assert.equal(sortStatus[0].nome, 'Edifício Aurora'); // andamento
-  assert.equal(sortStatus[1].nome, 'Condomínio Bela Vista'); // planejamento
-  assert.equal(sortStatus[2].nome, 'Residencial Zênite'); // concluida
-  console.log('   ✅ Algoritmo de ordenação testado em múltiplos cenários operacionais!');
+  assert.equal(sortStatus[0].status, 'andamento');
+  assert.equal(sortStatus[1].status, 'andamento');
+  assert.equal(sortStatus[2].status, 'planejamento');
+  assert.equal(sortStatus[3].status, 'concluida');
+
+  // Ordenação por Prazo de Conclusão: obras concluídas NUNCA devem ultrapassar obras em andamento
+  const hoje = '2026-10-27';
+  const diffDaysMock = (d1, d2) => Math.round((new Date(d2) - new Date(d1)) / 86400000);
+  const sortPrazoConclusao = [...mockObras].sort((a, b) => {
+    if (a.status === 'concluida' && b.status !== 'concluida') return 1;
+    if (a.status !== 'concluida' && b.status === 'concluida') return -1;
+    const diasA = diffDaysMock(hoje, a.previsaoEntrega);
+    const diasB = diffDaysMock(hoje, b.previsaoEntrega);
+    return diasA - diasB;
+  });
+
+  // Edifício Aurora (entrega 2026-10-30 = 3 dias) deve vir antes de Torre Horizonte (15/11)
+  assert.equal(sortPrazoConclusao[0].nome, 'Edifício Aurora');
+  assert.equal(sortPrazoConclusao[1].nome, 'Torre Horizonte');
+  // Residencial Zênite (já concluída) deve ficar no final!
+  assert.equal(sortPrazoConclusao[3].nome, 'Residencial Zênite');
+  console.log('   ✅ Algoritmo de ordenação testado com garantia de posicionamento para obras concluídas!');
+
+  // Teste 7: Validar regras de impressão e suporte a autoPrint
+  console.log('7. Validando estilização e suporte para impressão/PDF do modal de atualizações...');
+  const indexCss = readFileSync(resolve('src/index.css'), 'utf-8');
+  assert.ok(indexCss.includes('.cx-printable-dialog > div > div:first-child'), 'Deve ocultar header do modal no print');
+  assert.ok(indexCss.includes('.cx-printable-dialog > div > div:last-child'), 'Deve ocultar footer do modal no print');
+  assert.ok(indexCss.includes('dialog::backdrop'), 'Deve limpar backdrop no print');
+
+  const dialogCode = readFileSync(resolve('src/features/atualizacoes/PassoAPassoDialog.tsx'), 'utf-8');
+  assert.ok(dialogCode.includes('autoPrint'), 'PassoAPassoDialog deve aceitar prop autoPrint');
+  assert.ok(dialogCode.includes('CloudCheck'), 'PassoAPassoDialog deve suportar ícone CloudCheck');
+  assert.ok(dialogCode.includes('MousePointerClick'), 'PassoAPassoDialog deve suportar ícone Touchpad/MousePointerClick');
+
+  const tabCode = readFileSync(resolve('src/features/atualizacoes/AtualizacoesTab.tsx'), 'utf-8');
+  assert.ok(tabCode.includes('autoPrint={autoPrint}'), 'AtualizacoesTab deve repassar autoPrint ao modal');
+  console.log('   ✅ Suporte à exportação e regras de impressão validados com sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');
 } catch (err) {

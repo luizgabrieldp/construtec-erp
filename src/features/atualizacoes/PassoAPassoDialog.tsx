@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Printer,
   Sparkles,
@@ -12,6 +12,8 @@ import {
   Smartphone,
   Truck,
   Building2,
+  CloudCheck,
+  MousePointerClick,
 } from 'lucide-react';
 import { Badge, Button } from '@/components/ui';
 import { Dialog } from '@/components/ui/Dialog';
@@ -21,10 +23,20 @@ interface PassoAPassoDialogProps {
   versao: ReleaseVersao | null;
   open: boolean;
   onClose: () => void;
+  autoPrint?: boolean;
 }
 
-export function PassoAPassoDialog({ versao, open, onClose }: PassoAPassoDialogProps) {
+export function PassoAPassoDialog({ versao, open, onClose, autoPrint = false }: PassoAPassoDialogProps) {
   const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open && autoPrint && versao) {
+      const timer = setTimeout(() => {
+        window.print();
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [open, autoPrint, versao]);
 
   if (!versao) return null;
 
@@ -50,6 +62,11 @@ export function PassoAPassoDialog({ versao, open, onClose }: PassoAPassoDialogPr
         return <Truck className="size-5 text-amber-500" />;
       case 'Building2':
         return <Building2 className="size-5 text-brand" />;
+      case 'CloudCheck':
+        return <CloudCheck className="size-5 text-sky-500" />;
+      case 'Touchpad':
+      case 'MousePointerClick':
+        return <MousePointerClick className="size-5 text-violet-500" />;
       default:
         return <Sparkles className="size-5 text-brand" />;
     }
