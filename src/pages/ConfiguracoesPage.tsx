@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   User,
   Users,
@@ -35,10 +35,19 @@ type TabConfig = 'atualizacoes' | 'perfil' | 'usuarios' | 'notificacoes';
 
 export function ConfiguracoesPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { usuarioAtual, usuarios, convites, atualizarPerfil, criarConvite, alternarStatusUsuario, logout } = useAuth();
   const isAdmin = useIsAdmin();
 
   const [abaAtiva, setAbaAtiva] = useState<TabConfig>('atualizacoes');
+
+  // Suporte a redirecionamento direto para abas (ex: via popover de notificações)
+  useEffect(() => {
+    const stateTab = (location.state as { tab?: TabConfig })?.tab;
+    if (stateTab) {
+      setAbaAtiva(stateTab);
+    }
+  }, [location.state]);
 
   // Garante que o encarregado nunca caia na aba de usuários
   useEffect(() => {

@@ -15,6 +15,8 @@ import {
   Building2,
   Filter,
   Check,
+  User,
+  Users,
 } from 'lucide-react';
 import { PageHeader, Card, Badge, Button, Input, Select } from '@/components/ui';
 import { StatCard } from '@/components/ui/StatCard';
@@ -128,7 +130,8 @@ export function TarefasPage() {
           const matchObs = t.observacoes?.toLowerCase().includes(q);
           const obra = t.obraId ? obrasMap.get(t.obraId) : null;
           const matchObra = obra?.nome.toLowerCase().includes(q);
-          if (!matchTitulo && !matchObs && !matchObra) return false;
+          const matchDest = t.destinatarioNome?.toLowerCase().includes(q);
+          if (!matchTitulo && !matchObs && !matchObra && !matchDest) return false;
         }
 
         return true;
@@ -438,6 +441,19 @@ export function TarefasPage() {
                             <span className="font-medium text-fg">{obra.nome}</span>
                           </span>
                         )}
+
+                        {/* Destinatário */}
+                        {t.destinatarioTipo === 'todos' ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 text-[11px] text-sky-600 dark:text-sky-400 font-medium">
+                            <Users className="size-3" />
+                            <span>Para todos</span>
+                          </span>
+                        ) : t.destinatarioNome || t.destinatarioTipo === 'usuario' || t.destinatarioTipo === 'eu' ? (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-surface-2 border border-line px-2 py-0.5 text-[11px] text-fg">
+                            <User className="size-3 text-brand" />
+                            <span>{t.destinatarioNome || (t.destinatarioTipo === 'eu' ? 'Apenas para mim' : 'Usuário')}</span>
+                          </span>
+                        ) : null}
 
                         {t.concluida && t.concluidaEm && (
                           <span className="text-[11px] text-muted italic ml-auto">

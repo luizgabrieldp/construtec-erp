@@ -14,6 +14,7 @@ import {
   Building2,
   CloudCheck,
   MousePointerClick,
+  Bell,
 } from 'lucide-react';
 import { Badge, Button } from '@/components/ui';
 import { Dialog } from '@/components/ui/Dialog';
@@ -64,6 +65,8 @@ export function PassoAPassoDialog({ versao, open, onClose, autoPrint = false }: 
         return <Building2 className="size-5 text-brand" />;
       case 'CloudCheck':
         return <CloudCheck className="size-5 text-sky-500" />;
+      case 'Bell':
+        return <Bell className="size-5 text-amber-500" />;
       case 'Touchpad':
       case 'MousePointerClick':
         return <MousePointerClick className="size-5 text-violet-500" />;

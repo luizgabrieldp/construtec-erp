@@ -28,6 +28,90 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v1.8.1',
+    dataPublicacao: '27 de Outubro de 2026 às 22:20',
+    dataIso: '2026-10-27T22:20:00Z',
+    titulo: 'Notificações In-App no Topo, Destinatários de Lembretes & Ajustes em Obras',
+    descricao:
+      'Nova Central de Notificações In-App com ícone de sino no topo do sistema para acesso instantâneo a lembretes do dia e novidades da plataforma sem depender de autorização do navegador; sistema completo de atribuição de tarefas e lembretes para destinatários específicos (eu mesmo, todos os usuários ou administradores/encarregados selecionados); remoção total de máquinas e locações de Obras; e histórico de atualizações padronizado.',
+    tags: ['Novo', 'Melhoria', 'Correção'],
+    mudancas: [
+      {
+        tag: 'Novo',
+        texto:
+          'Central de Notificações In-App com ícone de sino no topo do sistema, mostrando lembretes pendentes, tarefas atribuídas e avisos de novas versões sem depender de permissões do navegador',
+        detalhe:
+          'Acesse rapidamente no topo direito da tela todas as pendências de hoje e avisos de atualizações com badges visuais e atalhos rápidos para conclusão.',
+      },
+      {
+        tag: 'Novo',
+        texto:
+          'Atribuição de Lembretes e Tarefas por Usuário (Eu mesmo / Todos os usuários / Usuário específico com conta de Administrador ou Encarregado)',
+        detalhe:
+          'Direcione cada tarefa para quem realmente precisa executá-la, garantindo que o alerta seja disparado para a pessoa certa no canteiro ou escritório.',
+      },
+      {
+        tag: 'Correção',
+        texto: 'Remoção completa de máquinas e locações do módulo de Obras',
+        detalhe:
+          'Interface e orçamentos de obras despoluídos, mantendo o foco exclusivo em materiais, mão de obra e serviços essenciais.',
+      },
+      {
+        tag: 'Melhoria',
+        texto: 'Histórico de Atualizações padronizado a partir da v1.7.0',
+        detalhe:
+          'Visualização limpa e documentada no formato de aplicativo profissional, pronta para exportação ilustrada em PDF.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Acessar a Central de Notificações In-App no Topo',
+        descricao:
+          'Clique no ícone de sino no canto superior direito (ao lado do status de conexão) para abrir o painel de lembretes pendentes de hoje e avisos de novas versões.',
+        icone: 'Bell',
+        ondeEncontrar: 'Cabeçalho Superior > Ícone de Sino (ao lado do indicador de conexão)',
+        dica: 'O badge vermelho indica a quantidade de notificações não lidas ou pendências atribuídas a você.',
+      },
+      {
+        passo: 2,
+        titulo: 'Atribuir Destinatário ao Criar ou Editar Tarefas',
+        descricao:
+          "No formulário de Tarefas, selecione o 'Destinatário do Lembrete': apenas para você, para todos os usuários com conta ou para um profissional específico.",
+        icone: 'Users',
+        ondeEncontrar: "Menu Principal > Tarefas > 'Nova Tarefa' > Campo 'Destinatário do Lembrete'",
+        dica: 'Ao atribuir a um encarregado ou administrador específico, o lembrete programado alertará diretamente aquele usuário.',
+      },
+      {
+        passo: 3,
+        titulo: 'Identificar Responsáveis na Lista de Tarefas',
+        descricao:
+          "Cada tarefa na listagem agora exibe uma tag sutil indicando se foi designada 'Para todos' ou para um responsável específico com ícone de usuário.",
+        icone: 'CheckSquare',
+        ondeEncontrar: 'Menu Principal > Tarefas > Lista de Atividades',
+        dica: 'Utilize o filtro de busca para encontrar rapidamente tarefas atribuídas a determinados colaboradores.',
+      },
+      {
+        passo: 4,
+        titulo: 'Concluir Tarefas Diretamente pelo Sino de Notificações',
+        descricao:
+          'No popover do sino, clique no botão de marcar como concluída para dar baixa na pendência imediatamente, sem precisar sair da tela atual.',
+        icone: 'CheckCircle2',
+        ondeEncontrar: 'Central de Notificações (Sino) > Aba de Lembretes > Botão de Concluir',
+        dica: 'Ao concluir ou clicar em "Marcar todas como lidas", o contador vermelho é zerado automaticamente.',
+      },
+      {
+        passo: 5,
+        titulo: 'Exportar o Guia de Novidades v1.8.1 em PDF',
+        descricao:
+          "Na aba 'Configurações > Atualizações', clique em 'Passo a Passo Visual' da versão v1.8.1 e depois em 'Imprimir / Salvar em PDF' para compartilhar as novidades.",
+        icone: 'Printer',
+        ondeEncontrar: "Configurações > Aba 'Atualizações' > Versão v1.8.1",
+        dica: 'A formatação é otimizada para impressão física ou envio por WhatsApp.',
+      },
+    ],
+  },
+  {
     versao: 'v1.8.0',
     dataPublicacao: '27 de Outubro de 2026 às 21:00',
     dataIso: '2026-10-27T21:00:00Z',

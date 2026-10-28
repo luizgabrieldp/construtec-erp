@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { Menu, ShieldAlert, LogOut, X } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
 import { UserInfoCard, ThemeSwitcher } from './Switchers';
+import { NotificacoesPopover } from './NotificacoesPopover';
 import { useQuick } from './quick';
 import { Logo } from '@/components/brand/Logo';
 import { Button } from '@/components/ui';
@@ -141,8 +142,9 @@ function Topbar() {
           {atual?.label}
         </div>
 
-        <div className="ml-auto flex items-center shrink-0">
+        <div className="ml-auto flex items-center gap-2 sm:gap-2.5 shrink-0">
           <SyncStatusBadge />
+          <NotificacoesPopover />
         </div>
       </div>
     </header>

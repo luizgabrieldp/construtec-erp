@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
-import { Calendar, Clock, Repeat, AlertCircle, Building2 } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Calendar, Clock, Repeat, AlertCircle, Building2, User, Users } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button, Field, Input, Select, Badge } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
+import { useAuth } from '@/data/auth';
 import type { Tarefa, RecorrenciaTarefa, PrioridadeTarefa } from '@/domain/types';
 import { LABEL_RECORRENCIA_TAREFA, LABEL_PRIORIDADE_TAREFA } from '@/domain/labels';
 import { today } from '@/lib/dates';
@@ -25,6 +26,14 @@ export function TarefaFormDialog({
   const data = useData();
   const mutate = useErp((s) => s.mutate);
 
+  const usuarioAtual = useAuth((s) => s.usuarioAtual);
+  const usuarios = useAuth((s) => s.usuarios);
+
+  const usuariosDisponiveis = useMemo(() => {
+    const list = usuarios && usuarios.length > 0 ? usuarios : [];
+    return list.filter((u) => u.ativo);
+  }, [usuarios]);
+
   const [titulo, setTitulo] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [dataTarefa, setDataTarefa] = useState(dataPadrao || today());
@@ -33,6 +42,8 @@ export function TarefaFormDialog({
   const [recorrencia, setRecorrencia] = useState<RecorrenciaTarefa>('nenhuma');
   const [prioridade, setPrioridade] = useState<PrioridadeTarefa>('media');
   const [obraId, setObraId] = useState('');
+  const [destinatarioTipo, setDestinatarioTipo] = useState<'eu' | 'todos' | 'usuario'>('eu');
+  const [destinatarioId, setDestinatarioId] = useState('');
 
   useEffect(() => {
     if (tarefaParaEditar) {
@@ -44,6 +55,8 @@ export function TarefaFormDialog({
       setRecorrencia(tarefaParaEditar.recorrencia || 'nenhuma');
       setPrioridade(tarefaParaEditar.prioridade || 'media');
       setObraId(tarefaParaEditar.obraId || '');
+      setDestinatarioTipo(tarefaParaEditar.destinatarioTipo || 'eu');
+      setDestinatarioId(tarefaParaEditar.destinatarioId || '');
     } else {
       setTitulo('');
       setObservacoes('');
@@ -53,8 +66,10 @@ export function TarefaFormDialog({
       setRecorrencia('nenhuma');
       setPrioridade('media');
       setObraId('');
+      setDestinatarioTipo('eu');
+      setDestinatarioId(usuarioAtual?.id || '');
     }
-  }, [tarefaParaEditar, open, dataPadrao]);
+  }, [tarefaParaEditar, open, dataPadrao, usuarioAtual?.id]);
 
   const salvar = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +78,27 @@ export function TarefaFormDialog({
       return;
     }
 
+    if (destinatarioTipo === 'usuario' && !destinatarioId) {
+      toast('Selecione o usuário destinatário da tarefa.', 'error');
+      return;
+    }
+
     const agora = new Date().toISOString();
+
+    let finalDestinatarioId: string | undefined = undefined;
+    let finalDestinatarioNome: string | undefined = undefined;
+
+    if (destinatarioTipo === 'eu') {
+      finalDestinatarioId = usuarioAtual?.id;
+      finalDestinatarioNome = usuarioAtual?.nome || 'Eu mesmo';
+    } else if (destinatarioTipo === 'todos') {
+      finalDestinatarioId = undefined;
+      finalDestinatarioNome = 'Todos os usuários';
+    } else if (destinatarioTipo === 'usuario') {
+      finalDestinatarioId = destinatarioId;
+      const uSel = usuariosDisponiveis.find((u) => u.id === destinatarioId);
+      finalDestinatarioNome = uSel ? `${uSel.nome} (${uSel.perfil === 'admin' ? 'Administrador' : 'Encarregado'})` : 'Usuário específico';
+    }
 
     if (tarefaParaEditar) {
       mutate(
@@ -81,6 +116,11 @@ export function TarefaFormDialog({
               recorrencia,
               prioridade,
               obraId: obraId || undefined,
+              destinatarioTipo,
+              destinatarioId: finalDestinatarioId,
+              destinatarioNome: finalDestinatarioNome,
+              criadoPorId: d.tarefas[idx].criadoPorId || usuarioAtual?.id,
+              criadoPorNome: d.tarefas[idx].criadoPorNome || usuarioAtual?.nome,
             };
           }
         },
@@ -100,6 +140,11 @@ export function TarefaFormDialog({
         obraId: obraId || undefined,
         concluida: false,
         criadoEm: agora,
+        destinatarioTipo,
+        destinatarioId: finalDestinatarioId,
+        destinatarioNome: finalDestinatarioNome,
+        criadoPorId: usuarioAtual?.id,
+        criadoPorNome: usuarioAtual?.nome || 'Administrador Construtec',
       };
 
       mutate(
@@ -205,6 +250,46 @@ export function TarefaFormDialog({
               <option value="alta">Alta (Urgente)</option>
             </Select>
           </Field>
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-line bg-surface-2/30 p-3.5">
+          <Field label="Destinatário do Lembrete">
+            <Select
+              value={destinatarioTipo}
+              onChange={(e) => {
+                const tipo = e.target.value as 'eu' | 'todos' | 'usuario';
+                setDestinatarioTipo(tipo);
+                if (tipo === 'usuario' && !destinatarioId && usuariosDisponiveis.length > 0) {
+                  setDestinatarioId(usuariosDisponiveis[0].id);
+                }
+              }}
+            >
+              <option value="eu">
+                Apenas para mim {usuarioAtual ? `(${usuarioAtual.nome})` : ''}
+              </option>
+              <option value="todos">
+                Todos os usuários com conta (Administradores e Mestres/Encarregados)
+              </option>
+              <option value="usuario">Usuário específico...</option>
+            </Select>
+          </Field>
+
+          {destinatarioTipo === 'usuario' && (
+            <Field label="Selecione o Usuário Responsável">
+              <Select
+                value={destinatarioId}
+                onChange={(e) => setDestinatarioId(e.target.value)}
+                required
+              >
+                <option value="">Selecione um usuário cadastrado...</option>
+                {usuariosDisponiveis.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.nome} ({u.perfil === 'admin' ? 'Administrador' : 'Encarregado'})
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
         </div>
 
         <Field label="Vincular à Obra (Opcional)">

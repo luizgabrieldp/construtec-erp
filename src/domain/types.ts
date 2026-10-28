@@ -338,6 +338,11 @@ export interface Tarefa {
   concluida: boolean;
   concluidaEm?: string;
   criadoEm: string;
+  destinatarioTipo?: 'eu' | 'todos' | 'usuario';
+  destinatarioId?: string;
+  destinatarioNome?: string;
+  criadoPorId?: string;
+  criadoPorNome?: string;
 }
 
 // ---------------------------------------------------------------- Sistema

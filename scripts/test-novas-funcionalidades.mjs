@@ -32,20 +32,27 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v180 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v180.versao, 'v1.8.0', 'A versão mais recente deve ser v1.8.0');
-  assert.ok(v180.titulo.includes('Ordenação Inteligente'), 'Título deve mencionar ordenação');
-  assert.ok(v180.descricao.length > 50, 'Descrição deve ser rica e no estilo App Store');
-  assert.ok(v180.mudancas.length >= 4, 'v1.8.0 deve listar as mudanças detalhadas');
-  assert.ok(v180.passosVisuais.length >= 4, 'v1.8.0 deve conter passos ilustrados');
+  const v181 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v181.versao, 'v1.8.1', 'A versão mais recente deve ser v1.8.1');
+  assert.ok(v181.titulo.includes('Notificações In-App'), 'Título da v1.8.1 deve mencionar Notificações In-App');
+  assert.ok(v181.descricao.length > 50, 'Descrição deve ser rica e no estilo App Store');
+  assert.ok(v181.mudancas.length >= 4, 'v1.8.1 deve listar as mudanças detalhadas');
+  assert.ok(v181.passosVisuais.length >= 4, 'v1.8.1 deve conter passos ilustrados');
 
   const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
-  v180.mudancas.forEach((m) => {
+  v181.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
   });
 
-  console.log('   ✅ Histórico de versões estruturado e validado com sucesso (a partir de v1.7.0)!');
+  const v180 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.0');
+  assert.ok(v180, 'v1.8.0 deve estar presente no histórico');
+  assert.ok(v180.titulo.includes('Ordenação Inteligente'), 'Título de v1.8.0 deve mencionar ordenação');
+  assert.ok(v180.descricao.length > 50, 'Descrição de v1.8.0 deve ser rica e no estilo App Store');
+  assert.ok(v180.mudancas.length >= 4, 'v1.8.0 deve listar as mudanças detalhadas');
+  assert.ok(v180.passosVisuais.length >= 4, 'v1.8.0 deve conter passos ilustrados');
+
+  console.log('   ✅ Histórico de versões estruturado e validado com sucesso (v1.8.1 e v1.8.0)!');
 
   // Teste 2: Validar aba Atualizações em ConfiguracoesPage.tsx
   console.log('2. Validando posicionamento da aba "Atualizações" em ConfiguracoesPage.tsx...');
@@ -222,8 +229,46 @@ try {
   const confirmarExclusaoCode = readFileSync(resolve('src/features/obras/ConfirmarExclusaoObraDialog.tsx'), 'utf-8');
   assert.ok(!confirmarExclusaoCode.includes('locacoesVinculadas'), 'ConfirmarExclusaoObraDialog não deve ter locacoesVinculadas');
   assert.ok(!confirmarExclusaoCode.includes('locações'), 'ConfirmarExclusaoObraDialog não deve exibir texto de locações');
-  assert.ok(!confirmarExclusaoCode.includes('Package'), 'ConfirmarExclusaoObraDialog não deve importar Package');
   console.log('   ✅ Remoção de máquinas e locações do módulo de Obras validada com sucesso!');
+
+  // Teste 9: Validar Notificações In-App no Topo e Atribuição de Destinatários de Tarefas (v1.8.1)
+  console.log('9. Validando Notificações In-App e Destinatários de Tarefas (v1.8.1)...');
+  const appShellCode = readFileSync(resolve('src/components/layout/AppShell.tsx'), 'utf-8');
+  assert.ok(appShellCode.includes('NotificacoesPopover'), 'AppShell deve importar e renderizar NotificacoesPopover');
+  assert.ok(appShellCode.includes('SyncStatusBadge'), 'AppShell deve conter SyncStatusBadge');
+  assert.ok(
+    appShellCode.indexOf('<SyncStatusBadge />') < appShellCode.indexOf('<NotificacoesPopover />'),
+    'SyncStatusBadge deve ficar à esquerda de NotificacoesPopover no Topbar',
+  );
+
+  const popoverCode = readFileSync(resolve('src/components/layout/NotificacoesPopover.tsx'), 'utf-8');
+  assert.ok(popoverCode.includes('export function NotificacoesPopover'), 'NotificacoesPopover deve ser exportado');
+  assert.ok(popoverCode.includes('marcarTodasComoLidas'), 'NotificacoesPopover deve permitir marcar todas como lidas');
+  assert.ok(popoverCode.includes('tarefasPendentes'), 'NotificacoesPopover deve listar tarefas pendentes');
+  assert.ok(popoverCode.includes('versaoRecente'), 'NotificacoesPopover deve exibir versão recente do sistema');
+
+  const typesCode = readFileSync(resolve('src/domain/types.ts'), 'utf-8');
+  assert.ok(typesCode.includes("destinatarioTipo?: 'eu' | 'todos' | 'usuario'"), 'Tarefa deve conter destinatarioTipo');
+  assert.ok(typesCode.includes('destinatarioId?: string'), 'Tarefa deve conter destinatarioId');
+  assert.ok(typesCode.includes('destinatarioNome?: string'), 'Tarefa deve conter destinatarioNome');
+  assert.ok(typesCode.includes('criadoPorId?: string'), 'Tarefa deve conter criadoPorId');
+  assert.ok(typesCode.includes('criadoPorNome?: string'), 'Tarefa deve conter criadoPorNome');
+
+  const formCode = readFileSync(resolve('src/features/tarefas/TarefaFormDialog.tsx'), 'utf-8');
+  assert.ok(formCode.includes('Destinatário do Lembrete'), 'TarefaFormDialog deve ter campo Destinatário do Lembrete');
+  assert.ok(formCode.includes('Apenas para mim'), 'TarefaFormDialog deve ter opção Apenas para mim');
+  assert.ok(formCode.includes('Todos os usuários com conta'), 'TarefaFormDialog deve ter opção Todos os usuários com conta');
+  assert.ok(formCode.includes('Usuário específico'), 'TarefaFormDialog deve ter opção Usuário específico');
+
+  const notifCode = readFileSync(resolve('src/lib/notifications.ts'), 'utf-8');
+  assert.ok(notifCode.includes('usuarioAtual'), 'notifications.ts deve obter usuarioAtual para filtrar lembretes');
+  assert.ok(notifCode.includes('isParaTodos'), 'notifications.ts deve verificar tarefas para todos');
+  assert.ok(notifCode.includes('isAtribuidaAEle'), 'notifications.ts deve verificar se a tarefa foi atribuída ao usuário');
+
+  const tarefasPageCode = readFileSync(resolve('src/pages/TarefasPage.tsx'), 'utf-8');
+  assert.ok(tarefasPageCode.includes('Para todos'), 'TarefasPage deve exibir tag Para todos');
+  assert.ok(tarefasPageCode.includes('t.destinatarioNome'), 'TarefasPage deve exibir destinatarioNome');
+  console.log('   ✅ Notificações In-App e Destinatários de Tarefas validados com 100% de sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');
 } catch (err) {

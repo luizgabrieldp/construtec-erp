@@ -1,4 +1,5 @@
 import { useErp } from '@/data/store';
+import { useAuth } from '@/data/auth';
 import { toast } from '@/components/ui/Toast';
 import { today } from '@/lib/dates';
 
@@ -75,6 +76,8 @@ export const verificarLembretesTarefas = () => {
   const data = useErp.getState().data;
   if (!data || !data.tarefas) return;
 
+  const usuarioAtual = useAuth.getState().usuarioAtual;
+
   const hoje = today();
   const agora = new Date();
   const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
@@ -83,6 +86,20 @@ export const verificarLembretesTarefas = () => {
     if (t.concluida) return;
     if (t.data !== hoje) return;
     if (tarefasNotificadas.has(t.id)) return;
+
+    // Filtrar se a tarefa é relevante para o usuário conectado no momento
+    // (se foi atribuída a ele, a todos ou criada por ele)
+    if (usuarioAtual) {
+      const isParaTodos = !t.destinatarioTipo || t.destinatarioTipo === 'todos';
+      const isParaMim =
+        t.destinatarioTipo === 'eu' &&
+        (!t.destinatarioId || t.destinatarioId === usuarioAtual.id || t.criadoPorId === usuarioAtual.id);
+      const isAtribuidaAEle = t.destinatarioId === usuarioAtual.id;
+      const isCriadaPorEle = t.criadoPorId === usuarioAtual.id;
+
+      const relevante = isParaTodos || isParaMim || isAtribuidaAEle || isCriadaPorEle;
+      if (!relevante) return;
+    }
 
     const horarioAlvo = t.diaInteiro ? '08:00' : (t.horario || '08:00');
 
