@@ -101,6 +101,14 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
       -webkit-user-select: none;
       user-select: none;
     }
+    .header-box,
+    .info-grid,
+    table.data-table,
+    .termo-quitacao,
+    .signatures-grid {
+      position: relative;
+      z-index: 1;
+    }
     .header-box {
       display: flex;
       justify-content: space-between;
@@ -157,7 +165,7 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 6px 12px;
-      background: #f9fafb;
+      background: rgba(249, 250, 251, 0.85);
       border: 1px solid #9ca3af;
       border-radius: 4px;
       padding: 8px;
@@ -187,19 +195,19 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
       padding: 5px 8px;
     }
     table.data-table th {
-      background: #f3f4f6;
+      background: rgba(243, 244, 246, 0.85);
       font-weight: bold;
       text-align: left;
     }
     table.data-table tfoot td {
-      background: #f3f4f6;
+      background: rgba(243, 244, 246, 0.85);
       font-weight: bold;
       border-top: 1.5px solid #000;
       font-size: 11px;
     }
     .termo-quitacao {
       border: 1px solid #d1d5db;
-      background: #f9fafb;
+      background: rgba(249, 250, 251, 0.85);
       padding: 8px;
       border-radius: 4px;
       font-size: 9.5px;

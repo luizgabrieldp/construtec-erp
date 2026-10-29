@@ -343,6 +343,7 @@ try {
   assert.ok(appShellAtual.includes('logo-emblema-trim.png'), 'AppShell deve carregar o emblema oficial CONSTRUTEC');
   assert.ok(appShellAtual.includes('opacity-[0.035]'), 'AppShell deve conter marca d\'água calibrada com opacity-[0.035]');
   assert.ok(appShellAtual.includes('pointer-events-none'), 'Marca d\'água deve ter pointer-events-none');
+  assert.ok(appShellAtual.includes('print:hidden'), 'Marca d\'água de tela no AppShell deve ter print:hidden');
   assert.ok(appShellAtual.includes('CONSTRUTEC CONSTRUTORA'), 'MobileDrawer deve exibir selo CONSTRUTEC CONSTRUTORA');
   assert.ok(appShellAtual.includes('Petrolina - PE'), 'MobileDrawer deve exibir localização Petrolina - PE');
 
@@ -350,12 +351,21 @@ try {
   assert.ok(sidebarCode.includes('CONSTRUTEC CONSTRUTORA'), 'Sidebar deve exibir selo institucional expandido');
   assert.ok(sidebarCode.includes('Petrolina - PE'), 'Sidebar deve exibir localização Petrolina - PE');
   assert.ok(sidebarCode.includes('logo-emblema-trim.png'), 'Sidebar deve usar emblema oficial');
+  assert.ok(sidebarCode.includes('role="img"'), 'Sidebar recolhida deve ter role="img" para acessibilidade');
+  assert.ok(sidebarCode.includes('role="region"'), 'Sidebar expandida deve ter role="region" para acessibilidade');
 
   const printCode = readFileSync(resolve('src/lib/print.ts'), 'utf-8');
   assert.ok(printCode.includes('watermark-emblem'), 'print.ts deve definir estilo para watermark-emblem');
   assert.ok(printCode.includes('opacity: 0.06'), 'print.ts deve aplicar opacidade 0.06 na marca d\'água de impressão');
   assert.ok(printCode.includes('position: absolute'), 'print.ts deve posicionar marca d\'água de forma absoluta');
   assert.ok(printCode.includes('logo-emblema-trim.png'), 'print.ts deve carregar emblema oficial nos recibos');
+  assert.ok(printCode.includes('z-index: 1'), 'print.ts deve elevar o conteúdo textual e tabelas com z-index: 1');
+
+  const reciboIndCode = readFileSync(resolve('src/features/folha/RecibosFolhaDialog.tsx'), 'utf-8');
+  assert.ok(reciboIndCode.includes('relative z-1 space-y-4'), 'RecibosFolhaDialog deve encapsular o conteúdo do recibo com relative z-1');
+
+  const reciboEmpCode = readFileSync(resolve('src/features/folha/ReciboEmpreiteiroDialog.tsx'), 'utf-8');
+  assert.ok(reciboEmpCode.includes('relative z-1 space-y-4'), 'ReciboEmpreiteiroDialog deve encapsular o conteúdo do recibo com relative z-1');
   console.log('   ✅ Presença da marca CONSTRUTEC, marcas d\'água e selos institucionais validados com 100% de sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');

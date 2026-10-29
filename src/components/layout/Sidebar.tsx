@@ -89,7 +89,8 @@ export function Sidebar() {
         {/* Selo Institucional Oficial CONSTRUTEC */}
         {collapsed ? (
           <div
-            className="flex items-center justify-center rounded-xl border border-line/60 bg-surface-2/40 p-2 text-muted hover:text-fg hover:border-brand/40 transition-colors"
+            role="img"
+            className="flex items-center justify-center rounded-xl border border-line/60 bg-surface-2/40 p-2 text-muted hover:text-fg hover:border-brand/40 transition-colors cursor-default"
             title="CONSTRUTEC CONSTRUTORA • Petrolina - PE"
             aria-label="CONSTRUTEC CONSTRUTORA • Petrolina - PE"
           >
@@ -100,7 +101,11 @@ export function Sidebar() {
             />
           </div>
         ) : (
-          <div className="flex items-center gap-2.5 rounded-xl border border-line/60 bg-surface-2/40 p-2.5 shadow-2xs">
+          <div
+            role="region"
+            aria-label="Identidade Institucional da CONSTRUTEC"
+            className="flex items-center gap-2.5 rounded-xl border border-line/60 bg-surface-2/40 p-2.5 shadow-2xs"
+          >
             <img
               src="/logo-emblema-trim.png"
               alt="CONSTRUTEC"

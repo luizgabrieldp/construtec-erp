@@ -205,7 +205,7 @@ export function ReciboEmpreiteiroDialog({
         </div>
 
         {/* Pré-visualização do Recibo Consolidado na Tela */}
-        <div className="relative overflow-hidden rounded-xl border border-line bg-surface p-5 text-fg space-y-4 shadow-sm">
+        <div className="relative overflow-hidden rounded-xl border border-line bg-surface p-5 text-fg shadow-sm">
           {/* Marca d'água oficial translúcida CONSTRUTEC */}
           <div
             aria-hidden="true"
@@ -218,136 +218,139 @@ export function ReciboEmpreiteiroDialog({
             />
           </div>
 
-          {/* Topo do Recibo */}
-          <div className="relative z-1 flex flex-wrap items-start justify-between border-b border-line pb-3 gap-3">
-            <div className="flex items-center gap-3">
-              <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
-              <div>
-                <h3 className="text-lg font-black text-brand tracking-tight">CONSTRUTEC</h3>
-                <p className="text-[11px] text-muted">Construção Civil & Reformas • CNPJ: 35.477.198/0001-83 • Petrolina/PE</p>
-                <div className="mt-1 flex items-center gap-2">
-                  <Badge tone="orange">RECIBO CONSOLIDADO DO EMPREITEIRO ({tipo.toUpperCase()})</Badge>
-                  <span className="text-xs font-semibold text-fg">
-                    Período: {fmtDate(inicio)} a {fmtDate(fim)}
-                  </span>
+          {/* Conteúdo textual e financeiro do Recibo elevado sobre a marca d'água */}
+          <div className="relative z-1 space-y-4">
+            {/* Topo do Recibo */}
+            <div className="flex flex-wrap items-start justify-between border-b border-line pb-3 gap-3">
+              <div className="flex items-center gap-3">
+                <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
+                <div>
+                  <h3 className="text-lg font-black text-brand tracking-tight">CONSTRUTEC</h3>
+                  <p className="text-[11px] text-muted">Construção Civil & Reformas • CNPJ: 35.477.198/0001-83 • Petrolina/PE</p>
+                  <div className="mt-1 flex items-center gap-2">
+                    <Badge tone="orange">RECIBO CONSOLIDADO DO EMPREITEIRO ({tipo.toUpperCase()})</Badge>
+                    <span className="text-xs font-semibold text-fg">
+                      Período: {fmtDate(inicio)} a {fmtDate(fim)}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <div className="text-right text-xs">
+                <span className="text-[10px] text-muted block uppercase font-bold">Valor Total Consolidado</span>
+                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  {fmtBRL(totalGeralConsolidado)}
+                </span>
+                <span className="text-[11px] text-muted block mt-0.5">
+                  {apuracaoEquipe.length} colaboradores ({totalDiasEquipe} diárias)
+                </span>
+              </div>
             </div>
 
-            <div className="text-right text-xs">
-              <span className="text-[10px] text-muted block uppercase font-bold">Valor Total Consolidado</span>
-              <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
-                {fmtBRL(totalGeralConsolidado)}
-              </span>
-              <span className="text-[11px] text-muted block mt-0.5">
-                {apuracaoEquipe.length} colaboradores ({totalDiasEquipe} diárias)
-              </span>
-            </div>
-          </div>
+            {/* Dados do Empreiteiro */}
+            {empreiteiro ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-lg bg-surface-2/60 p-3 text-xs">
+                <div>
+                  <span className="text-[10px] text-muted block uppercase font-bold">Empreiteiro</span>
+                  <strong className="text-fg">{empreiteiro.nome}</strong>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted block uppercase font-bold">Telefone / WhatsApp</span>
+                  {empreiteiro.telefone ? (
+                    <WhatsAppBadge telefone={empreiteiro.telefone} />
+                  ) : (
+                    <span>Não informado</span>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted block uppercase font-bold">CPF</span>
+                  <span>{empreiteiro.cpf || 'Não informado'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-muted block uppercase font-bold">Chave Pix</span>
+                  <span className="font-mono">{empreiteiro.chavePix || 'Não informada'}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="p-4 text-center text-xs text-muted">
+                Cadastre um colaborador com a função <strong>Empreiteiro</strong> na aba Equipe.
+              </div>
+            )}
 
-          {/* Dados do Empreiteiro */}
-          {empreiteiro ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 rounded-lg bg-surface-2/60 p-3 text-xs">
-              <div>
-                <span className="text-[10px] text-muted block uppercase font-bold">Empreiteiro</span>
-                <strong className="text-fg">{empreiteiro.nome}</strong>
-              </div>
-              <div>
-                <span className="text-[10px] text-muted block uppercase font-bold">Telefone / WhatsApp</span>
-                {empreiteiro.telefone ? (
-                  <WhatsAppBadge telefone={empreiteiro.telefone} />
-                ) : (
-                  <span>Não informado</span>
-                )}
-              </div>
-              <div>
-                <span className="text-[10px] text-muted block uppercase font-bold">CPF</span>
-                <span>{empreiteiro.cpf || 'Não informado'}</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-muted block uppercase font-bold">Chave Pix</span>
-                <span className="font-mono">{empreiteiro.chavePix || 'Não informada'}</span>
-              </div>
-            </div>
-          ) : (
-            <div className="p-4 text-center text-xs text-muted">
-              Cadastre um colaborador com a função <strong>Empreiteiro</strong> na aba Equipe.
-            </div>
-          )}
-
-          {/* Descritivo dos Colaboradores da Equipe */}
-          <div className="border border-line rounded-lg overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-surface-2 border-b border-line font-semibold text-muted text-[11px]">
-                <tr>
-                  <th className="p-2.5">Colaborador / Operário</th>
-                  <th className="p-2.5">Função</th>
-                  <th className="p-2.5 text-center">Dias Trabalhados</th>
-                  <th className="p-2.5 text-right">Diária Base</th>
-                  <th className="p-2.5 text-right">Valor Individual</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-line">
-                {apuracaoEquipe.length === 0 ? (
+            {/* Descritivo dos Colaboradores da Equipe */}
+            <div className="border border-line rounded-lg overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-surface-2 border-b border-line font-semibold text-muted text-[11px]">
                   <tr>
-                    <td colSpan={5} className="p-6 text-center text-muted italic">
-                      Nenhum operário vinculado a este empreiteiro no período.
-                    </td>
+                    <th className="p-2.5">Colaborador / Operário</th>
+                    <th className="p-2.5">Função</th>
+                    <th className="p-2.5 text-center">Dias Trabalhados</th>
+                    <th className="p-2.5 text-right">Diária Base</th>
+                    <th className="p-2.5 text-right">Valor Individual</th>
                   </tr>
-                ) : (
-                  apuracaoEquipe.map(({ funcionario, diasTrabalhados, total, isEmpreiteiroProprio }) => (
-                    <tr key={funcionario.id} className="hover:bg-surface-2/40">
-                      <td className="p-2.5">
-                        <span className="font-semibold text-fg">{funcionario.nome}</span>
-                        {isEmpreiteiroProprio && (
-                          <Badge tone="neutral" className="ml-2 text-[10px]">
-                            Empreiteiro Titular
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="p-2.5 text-muted">{getLabelFuncao(funcionario.funcao)}</td>
-                      <td className="p-2.5 text-center font-bold tabular-nums">
-                        {diasTrabalhados} {diasTrabalhados === 1 ? 'dia' : 'dias'}
-                      </td>
-                      <td className="p-2.5 text-right text-muted tabular-nums">
-                        {funcionario.regime === 'mensalista' ? fmtBRL(funcionario.salario) : fmtBRL(funcionario.diaria)}
-                      </td>
-                      <td className="p-2.5 text-right font-black tabular-nums text-fg">
-                        {fmtBRL(total)}
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {apuracaoEquipe.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="p-6 text-center text-muted italic">
+                        Nenhum operário vinculado a este empreiteiro no período.
                       </td>
                     </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot className="bg-surface-2/80 font-bold border-t border-line text-sm">
-                <tr>
-                  <td colSpan={4} className="p-2.5 text-right">
-                    VALOR TOTAL CONSOLIDADO PARA REPASSE:
-                  </td>
-                  <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400">
-                    {fmtBRL(totalGeralConsolidado)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-
-          {/* Termo de Repasse e Declaração */}
-          <p className="text-[11px] text-muted italic border-l-2 border-brand pl-2 py-0.5">
-            "Declaro ter recebido da CONSTRUTEC a quantia consolidada de {fmtBRL(totalGeralConsolidado)} para
-            o devido repasse de diárias e remuneração à equipe sob minha coordenação acima descrita, referente
-            ao período de {fmtDate(inicio)} a {fmtDate(fim)}."
-          </p>
-
-          {/* Linhas de Assinatura */}
-          <div className="pt-4 grid grid-cols-2 gap-8 text-center text-xs">
-            <div>
-              <div className="border-t border-line pt-1 font-semibold">{empreiteiro?.nome || 'Empreiteiro'}</div>
-              <div className="text-[10px] text-muted">Assinatura do Empreiteiro (Recebedor do Repasse)</div>
+                  ) : (
+                    apuracaoEquipe.map(({ funcionario, diasTrabalhados, total, isEmpreiteiroProprio }) => (
+                      <tr key={funcionario.id} className="hover:bg-surface-2/40">
+                        <td className="p-2.5">
+                          <span className="font-semibold text-fg">{funcionario.nome}</span>
+                          {isEmpreiteiroProprio && (
+                            <Badge tone="neutral" className="ml-2 text-[10px]">
+                              Empreiteiro Titular
+                            </Badge>
+                          )}
+                        </td>
+                        <td className="p-2.5 text-muted">{getLabelFuncao(funcionario.funcao)}</td>
+                        <td className="p-2.5 text-center font-bold tabular-nums">
+                          {diasTrabalhados} {diasTrabalhados === 1 ? 'dia' : 'dias'}
+                        </td>
+                        <td className="p-2.5 text-right text-muted tabular-nums">
+                          {funcionario.regime === 'mensalista' ? fmtBRL(funcionario.salario) : fmtBRL(funcionario.diaria)}
+                        </td>
+                        <td className="p-2.5 text-right font-black tabular-nums text-fg">
+                          {fmtBRL(total)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+                <tfoot className="bg-surface-2/80 font-bold border-t border-line text-sm">
+                  <tr>
+                    <td colSpan={4} className="p-2.5 text-right">
+                      VALOR TOTAL CONSOLIDADO PARA REPASSE:
+                    </td>
+                    <td className="p-2.5 text-right text-emerald-600 dark:text-emerald-400">
+                      {fmtBRL(totalGeralConsolidado)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
-            <div>
-              <div className="border-t border-line pt-1 font-semibold">CONSTRUTEC</div>
-              <div className="text-[10px] text-muted">Responsável Financeiro / Construtora</div>
+
+            {/* Termo de Repasse e Declaração */}
+            <p className="text-[11px] text-muted italic border-l-2 border-brand pl-2 py-0.5">
+              "Declaro ter recebido da CONSTRUTEC a quantia consolidada de {fmtBRL(totalGeralConsolidado)} para
+              o devido repasse de diárias e remuneração à equipe sob minha coordenação acima descrita, referente
+              ao período de {fmtDate(inicio)} a {fmtDate(fim)}."
+            </p>
+
+            {/* Linhas de Assinatura */}
+            <div className="pt-4 grid grid-cols-2 gap-8 text-center text-xs">
+              <div>
+                <div className="border-t border-line pt-1 font-semibold">{empreiteiro?.nome || 'Empreiteiro'}</div>
+                <div className="text-[10px] text-muted">Assinatura do Empreiteiro (Recebedor do Repasse)</div>
+              </div>
+              <div>
+                <div className="border-t border-line pt-1 font-semibold">CONSTRUTEC</div>
+                <div className="text-[10px] text-muted">Responsável Financeiro / Construtora</div>
+              </div>
             </div>
           </div>
         </div>

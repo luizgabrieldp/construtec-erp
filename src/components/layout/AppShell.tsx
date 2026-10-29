@@ -262,7 +262,11 @@ function MobileDrawer() {
         {/* Rodapé da gaveta respeitando safe area inferior do iPhone */}
         <div className="border-t border-line p-4 shrink-0 bg-surface flex flex-col gap-3">
           {/* Selo institucional oficial da CONSTRUTEC */}
-          <div className="flex items-center gap-3 rounded-xl border border-line/70 bg-surface-2/40 p-3 shadow-2xs">
+          <div
+            role="region"
+            aria-label="Identidade Institucional da CONSTRUTEC"
+            className="flex items-center gap-3 rounded-xl border border-line/70 bg-surface-2/40 p-3 shadow-2xs"
+          >
             <img
               src="/logo-emblema-trim.png"
               alt="CONSTRUTEC"
@@ -344,7 +348,7 @@ export function AppShell() {
           {/* Marca d'água monumental translúcida da CONSTRUTEC para mídia e prints */}
           <div
             aria-hidden="true"
-            className="pointer-events-none select-none fixed bottom-4 right-4 sm:bottom-8 sm:right-8 md:bottom-12 md:right-12 z-0 flex items-center justify-center opacity-[0.035] dark:opacity-[0.045]"
+            className="pointer-events-none select-none fixed bottom-4 right-4 sm:bottom-8 sm:right-8 md:bottom-12 md:right-12 z-0 flex items-center justify-center opacity-[0.035] dark:opacity-[0.045] print:hidden"
           >
             <img
               src="/logo-emblema-trim.png"
