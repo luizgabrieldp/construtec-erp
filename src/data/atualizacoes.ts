@@ -28,6 +28,67 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v1.8.5',
+    dataPublicacao: '28 de Outubro de 2026 às 22:20',
+    dataIso: '2026-10-28T22:20:00Z',
+    titulo: 'Partículas Antigravity Dinâmicas, Marcas d\'Água em Grandes Tabelas & Emblema na Barra Lateral',
+    descricao:
+      'Aprimoramento estético e de alta fidelidade visual solicitado para divulgação institucional em mídia: introdução de marcas d\'água corporativas oficiais da CONSTRUTEC centralizadas diretamente dentro de grandes tabelas operacionais (Grade de Presença Semanal da Equipe, Cadastro de Colaboradores, Lista de Obras, Fechamento de Folha e Extrato Financeiro), garantindo visibilidade total do emblema mesmo com dezenas de linhas preenchidas em capturas de tela e vídeos; reposicionamento institucional na barra lateral, removendo o box com nome em cima do perfil do administrador e inserindo o emblema grandão translúcido como marca d\'água no espaço abaixo de Configurações; e refinamento espetacular das partículas interativas inspiradas no Google Antigravity com densidade ampliada, distribuição orbital com anéis concêntricos suaves e extensão do efeito aos cards de obras.',
+    tags: ['Novo', 'Melhoria'],
+    mudancas: [
+      {
+        tag: 'Novo',
+        texto:
+          'Marca d\'água oficial da CONSTRUTEC integrada diretamente nas grandes tabelas operacionais (Grade de Presença, Equipe, Obras, Folha e Extrato)',
+        detalhe:
+          'O emblema oficial agora fica centralizado e visível no fundo dos containers de grandes tabelas, permitindo capturar prints e mídias da frequência e dos dados sem que a logo fique encoberta pelas linhas preenchidas.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Emblema grandão da CONSTRUTEC como marca d\'água translúcida na barra lateral abaixo de Configurações',
+        detalhe:
+          'Remoção do box textual com nome que ficava acima do perfil de administrador no rodapé, substituindo-o pelo emblema monumental translúcido posicionado de forma limpa e imponente no espaço livre abaixo do menu de configurações.',
+      },
+      {
+        tag: 'Novo',
+        texto:
+          'Partículas interativas estilo Google Antigravity de alta densidade e extensão aos cards de obras',
+        detalhe:
+          'Campo de partículas calibrado com dezenas de elementos em órbitas elípticas concêntricas com física fluida de dispersão magnética e retorno suave, agora ativo tanto nos StatCards quanto nos cards de Obras.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Marca d\'Água na Grade de Presença e Grandes Tabelas',
+        descricao:
+          'Acesse "Equipe & Presença" e observe o emblema monumental da CONSTRUTEC centralizado como marca d\'água na grade semanal e na tabela de colaboradores. Os dados permanecem 100% legíveis enquanto a marca fica nítida em qualquer print para mídia.',
+        icone: 'Sparkles',
+        ondeEncontrar: 'Menu Lateral → Equipe & Presença (Grade Semanal e Cadastro)',
+        dica: 'O mesmo efeito está presente na tabela de Lista de Obras, Fechamento de Folha e Extrato.',
+      },
+      {
+        passo: 2,
+        titulo: 'Emblema Grandão na Barra Lateral',
+        descricao:
+          'Observe a barra lateral esquerda: o box textual acima do administrador foi removido, e o ícone grandão da CONSTRUTEC surge como marca d\'água elegante no espaço livre abaixo de Configurações.',
+        icone: 'Building2',
+        ondeEncontrar: 'Menu Lateral Esquerdo (Desktop e Mobile Drawer)',
+        dica: 'O design fica mais limpo, moderno e com identidade institucional marcante.',
+      },
+      {
+        passo: 3,
+        titulo: 'Partículas Antigravity nos Cards de Obras',
+        descricao:
+          'Vá para o menu "Obras" no modo de exibição em Cards e passe o cursor do mouse sobre qualquer card. Uma nuvem viva de partículas coloridas reagirá magneticamente ao movimento do ponteiro com física fluida.',
+        icone: 'Sparkles',
+        ondeEncontrar: 'Menu Lateral → Obras (Modo Cards)',
+        dica: 'A física é otimizada com 0% de uso de CPU quando o mouse se afasta do card.',
+      },
+    ],
+  },
+  {
     versao: 'v1.8.4',
     dataPublicacao: '28 de Outubro de 2026 às 21:40',
     dataIso: '2026-10-28T21:40:00Z',

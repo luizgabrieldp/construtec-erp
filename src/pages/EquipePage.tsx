@@ -264,12 +264,25 @@ export function EquipePage() {
       </div>
 
       {/* Cadastro e Gestão de Colaboradores */}
-      <Card className="mt-8">
-        <CardHeader
-          title="Cadastro de Colaboradores"
-          subtitle={`${funcionariosFiltrados.length} colaboradores encontrados`}
-        />
-        <div className="p-5">
+      <Card className="mt-8 relative overflow-hidden">
+        {/* Marca d'água oficial CONSTRUTEC da tabela de colaboradores */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden"
+        >
+          <img
+            src="/logo-emblema-trim.png"
+            alt=""
+            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
+          />
+        </div>
+
+        <div className="relative z-1">
+          <CardHeader
+            title="Cadastro de Colaboradores"
+            subtitle={`${funcionariosFiltrados.length} colaboradores encontrados`}
+          />
+          <div className="p-5">
           {/* Filtros */}
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1 max-w-sm">
@@ -567,7 +580,8 @@ export function EquipePage() {
             </table>
           </div>
         </div>
-      </Card>
+      </div>
+    </Card>
 
       {/* Diálogos */}
       <FuncionarioFormDialog

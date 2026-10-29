@@ -260,9 +260,22 @@ export function ExtratoPage() {
         </div>
       </div>
 
-      {/* Barra de Filtros */}
-      <Card className="mt-6 print:border-none print:shadow-none">
-        <div className="border-b border-line p-4 print:hidden">
+      {/* Barra de Filtros e Tabela de Extrato */}
+      <Card className="mt-6 relative overflow-hidden print:border-none print:shadow-none">
+        {/* Marca d'água oficial CONSTRUTEC da tabela de extrato */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden print:hidden"
+        >
+          <img
+            src="/logo-emblema-trim.png"
+            alt=""
+            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
+          />
+        </div>
+
+        <div className="relative z-1">
+          <div className="border-b border-line p-4 print:hidden">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted" />
@@ -396,7 +409,8 @@ export function ExtratoPage() {
             </tbody>
           </table>
         </div>
-      </Card>
+      </div>
+    </Card>
     </>
   );
 }

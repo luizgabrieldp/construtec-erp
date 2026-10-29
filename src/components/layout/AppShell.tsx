@@ -247,8 +247,8 @@ function MobileDrawer() {
         </div>
 
         {/* Conteúdo rolável da gaveta com overscroll contido */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 overscroll-contain">
-          <div className="flex flex-col gap-2">
+        <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 overscroll-contain relative">
+          <div className="relative z-10 flex flex-col gap-2">
             <UserInfoCard full />
             <div className="flex items-center justify-between rounded-xl border border-line px-3 py-2 bg-surface-2/30">
               <span className="text-xs font-semibold text-muted">Tema da Interface</span>
@@ -256,33 +256,25 @@ function MobileDrawer() {
             </div>
           </div>
 
-          <NavList onNavigate={() => close('menu')} />
-        </div>
+          <div className="relative z-10">
+            <NavList onNavigate={() => close('menu')} />
+          </div>
 
-        {/* Rodapé da gaveta respeitando safe area inferior do iPhone */}
-        <div className="border-t border-line p-4 shrink-0 bg-surface flex flex-col gap-3">
-          {/* Selo institucional oficial da CONSTRUTEC */}
+          {/* Marca d'água do ícone grandão no menu mobile */}
           <div
-            role="region"
-            aria-label="Identidade Institucional da CONSTRUTEC"
-            className="flex items-center gap-3 rounded-xl border border-line/70 bg-surface-2/40 p-3 shadow-2xs"
+            aria-hidden="true"
+            className="pointer-events-none select-none my-6 flex items-center justify-center opacity-[0.05] dark:opacity-[0.07]"
           >
             <img
               src="/logo-emblema-trim.png"
-              alt="CONSTRUTEC"
-              className="size-9 object-contain shrink-0 select-none"
+              alt=""
+              className="w-32 h-32 object-contain"
             />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-xs font-bold tracking-tight text-fg">
-                CONSTRUTEC CONSTRUTORA
-              </div>
-              <div className="flex items-center gap-1.5 text-[10.5px] font-medium text-muted">
-                <span className="size-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
-                <span className="truncate">Petrolina - PE</span>
-              </div>
-            </div>
           </div>
+        </div>
 
+        {/* Rodapé da gaveta respeitando safe area inferior do iPhone */}
+        <div className="border-t border-line p-4 shrink-0 bg-surface flex flex-col gap-2 relative z-10">
           <Button
             variant="ghost"
             className="w-full text-red-500 hover:bg-red-500/10 justify-start text-xs font-semibold py-3"

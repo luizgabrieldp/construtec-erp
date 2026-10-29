@@ -36,9 +36,18 @@ try {
 
   console.log('   ✅ Módulos carregados com sucesso!');
 
-  // Teste 2: Validar versões v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
-  console.log('2. Validando integridade das releases v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
-  const v184 = ATUALIZACOES_SISTEMA[0];
+  // Teste 2: Validar versões v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
+  console.log('2. Validando integridade das releases v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
+  const v185 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v185.versao, 'v1.8.5');
+  assert.equal(v185.dataPublicacao, '28 de Outubro de 2026 às 22:20');
+  assert.ok(v185.titulo.includes('Partículas Antigravity') || v185.titulo.includes('Marcas d\'Água'));
+  assert.deepEqual(v185.tags, ['Novo', 'Melhoria']);
+  assert.equal(v185.mudancas.length, 3);
+  assert.equal(v185.passosVisuais.length, 3);
+
+  const v184 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.4');
+  assert.ok(v184, 'v1.8.4 deve estar no histórico');
   assert.equal(v184.versao, 'v1.8.4');
   assert.equal(v184.dataPublicacao, '28 de Outubro de 2026 às 21:40');
   assert.equal(v184.titulo, 'Identidade Visual Reforçada: Marcas d\'Água & Selos Institucionais para Mídia');
@@ -218,15 +227,15 @@ try {
     marcarNotificacoesComoLidas,
   } = await server.ssrLoadModule('/src/lib/notifications.ts');
 
-  // Testar disparo de versão para userAdmin (versão mais recente v1.8.4)
+  // Testar disparo de versão para userAdmin (versão mais recente v1.8.5)
   globalThis.localStorage.clear();
   verificarNotificacaoNovaVersao(userAdmin.id);
   const versaoNotificadaAdmin = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`);
-  assert.equal(versaoNotificadaAdmin, 'v1.8.4', 'Deve ter gravado a versão mais recente v1.8.4 para o admin');
+  assert.equal(versaoNotificadaAdmin, 'v1.8.5', 'Deve ter gravado a versão mais recente v1.8.5 para o admin');
 
   // Segunda chamada não deve alterar ou re-notificar
   verificarNotificacaoNovaVersao(userAdmin.id);
-  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.4');
+  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.5');
 
   // Outro usuário ainda não foi notificado
   const versaoNotificadaOutro = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userEncarregado.id}`);

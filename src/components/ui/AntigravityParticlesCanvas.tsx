@@ -60,7 +60,7 @@ interface Particle {
 export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanvas({
   tone = 'brand',
   className = 'pointer-events-none absolute inset-0 w-full h-full rounded-2xl z-0',
-  particleCount = 32,
+  particleCount = 52,
   isHovered,
 }: AntigravityParticlesCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -108,42 +108,51 @@ export const AntigravityParticlesCanvas = memo(function AntigravityParticlesCanv
       active: false,
     };
 
-    // 2. Inicialização do campo de partículas (estilo visual Google Antigravity)
-    const count = Math.max(28, Math.min(particleCount, 40));
-    const cols = 8;
-    const rows = Math.ceil(count / cols);
+    // 2. Inicialização do campo de partículas (estilo visual Google Antigravity orbital & disperso)
+    const count = Math.max(36, Math.min(particleCount, 68));
     const palette = getPaletteForTone(tone);
 
     const particles: Particle[] = [];
     for (let i = 0; i < count; i++) {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
+      // Distribuição mista: 65% em anéis/órbitas concêntricas suaves e 35% dispersos pelo card
+      let baseXRatio: number;
+      let baseYRatio: number;
+      let baseAngle: number;
 
-      // Distribuição uniforme com dispersão suave para evitar aglomeração
-      const baseXRatio = (col + 0.2 + Math.random() * 0.6) / cols;
-      const baseYRatio = (row + 0.2 + Math.random() * 0.6) / rows;
+      if (i < Math.floor(count * 0.65)) {
+        // Órbita elíptica em torno do centro do card (estilo halo Google Antigravity)
+        const angle = (i / Math.floor(count * 0.65)) * Math.PI * 2 + (Math.random() * 0.3 - 0.15);
+        const ringRadius = 0.28 + (i % 3) * 0.14 + (Math.random() * 0.08 - 0.04);
+        baseXRatio = 0.5 + Math.cos(angle) * (ringRadius * 0.85);
+        baseYRatio = 0.5 + Math.sin(angle) * ringRadius;
+        baseAngle = angle + Math.PI / 2; // Alinhado tangencialmente à órbita
+      } else {
+        // Dispersão espacial orgânica nos cantos e áreas livres
+        baseXRatio = 0.08 + Math.random() * 0.84;
+        baseYRatio = 0.08 + Math.random() * 0.84;
+        baseAngle = Math.random() * Math.PI * 2;
+      }
 
       const shapeRand = Math.random();
       let type: 'circle' | 'pill' | 'ring' | 'ellipse' = 'circle';
-      let radius = 1.1 + Math.random() * 1.2; // 1.1px a 2.3px
+      let radius = 1.0 + Math.random() * 1.3; // 1.0px a 2.3px
       let length = 0;
       let thickness = 0;
 
-      if (shapeRand > 0.70) {
+      if (shapeRand > 0.62) {
         type = 'pill';
-        length = 4.5 + Math.random() * 2.5; // 4.5px a 7.0px
-        thickness = 1.6 + Math.random() * 0.7; // 1.6px a 2.3px
-      } else if (shapeRand > 0.50) {
+        length = 4.0 + Math.random() * 2.8; // 4.0px a 6.8px
+        thickness = 1.4 + Math.random() * 0.6; // 1.4px a 2.0px
+      } else if (shapeRand > 0.45) {
         type = 'ring';
-        radius = 1.8 + Math.random() * 0.7; // 1.8px a 2.5px
-        thickness = 0.8 + Math.random() * 0.3; // 0.8px a 1.1px
-      } else if (shapeRand > 0.35) {
+        radius = 1.6 + Math.random() * 0.7; // 1.6px a 2.3px
+        thickness = 0.7 + Math.random() * 0.3; // 0.7px a 1.0px
+      } else if (shapeRand > 0.30) {
         type = 'ellipse';
-        length = 2.4 + Math.random() * 1.0; // radiusX
-        thickness = 1.2 + Math.random() * 0.5; // radiusY
+        length = 2.2 + Math.random() * 1.0; // radiusX
+        thickness = 1.1 + Math.random() * 0.5; // radiusY
       }
 
-      const baseAngle = Math.random() * Math.PI * 2;
       const color = palette[i % palette.length];
 
       particles.push({

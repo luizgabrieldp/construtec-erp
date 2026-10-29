@@ -32,18 +32,22 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v184 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v184.versao, 'v1.8.4', 'A versão mais recente deve ser v1.8.4');
-  assert.ok(v184.titulo.includes('Identidade Visual Reforçada'), 'Título da v1.8.4 deve mencionar Identidade Visual Reforçada');
-  assert.ok(v184.descricao.length > 50, 'Descrição da v1.8.4 deve ser rica e no estilo App Store');
-  assert.ok(v184.mudancas.length >= 3, 'v1.8.4 deve listar as mudanças detalhadas');
-  assert.ok(v184.passosVisuais.length >= 5, 'v1.8.4 deve conter passos ilustrados');
+  const v185 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v185.versao, 'v1.8.5', 'A versão mais recente deve ser v1.8.5');
+  assert.ok(v185.titulo.includes('Partículas Antigravity') || v185.titulo.includes('Marcas d\'Água'), 'Título da v1.8.5 deve mencionar novidades visuais');
+  assert.ok(v185.descricao.length > 50, 'Descrição da v1.8.5 deve ser rica e no estilo App Store');
+  assert.ok(v185.mudancas.length >= 3, 'v1.8.5 deve listar as mudanças detalhadas');
+  assert.ok(v185.passosVisuais.length >= 3, 'v1.8.5 deve conter passos ilustrados');
 
   const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
-  v184.mudancas.forEach((m) => {
+  v185.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
   });
+
+  const v184 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.4');
+  assert.ok(v184, 'v1.8.4 deve estar presente no histórico');
+  assert.equal(v184.versao, 'v1.8.4', 'A versão deve ser v1.8.4');
 
   const v183 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.3');
   assert.ok(v183, 'v1.8.3 deve estar presente no histórico');
@@ -337,22 +341,30 @@ try {
   assert.ok(widgetCode.includes('toast'), 'TarefasWidget deve emitir toast feedback nas ações');
   console.log('   ✅ Gestão Contínua, Exclusão Ágil e Notificações em Segundo Plano validadas com 100% de sucesso!');
 
-  // Teste 12: Validar Marcas d'Água e Selos Institucionais CONSTRUTEC (v1.8.4)
-  console.log('12. Validando Marcas d\'Água Monumental e Selos Institucionais CONSTRUTEC (v1.8.4)...');
+  // Teste 12: Validar Marcas d'Água em Grandes Tabelas e Emblema na Barra Lateral (v1.8.5)
+  console.log('12. Validando Marcas d\'Água em Grandes Tabelas e Emblema na Barra Lateral (v1.8.5)...');
   const appShellAtual = readFileSync(resolve('src/components/layout/AppShell.tsx'), 'utf-8');
   assert.ok(appShellAtual.includes('logo-emblema-trim.png'), 'AppShell deve carregar o emblema oficial CONSTRUTEC');
   assert.ok(appShellAtual.includes('opacity-[0.035]'), 'AppShell deve conter marca d\'água calibrada com opacity-[0.035]');
   assert.ok(appShellAtual.includes('pointer-events-none'), 'Marca d\'água deve ter pointer-events-none');
   assert.ok(appShellAtual.includes('print:hidden'), 'Marca d\'água de tela no AppShell deve ter print:hidden');
-  assert.ok(appShellAtual.includes('CONSTRUTEC CONSTRUTORA'), 'MobileDrawer deve exibir selo CONSTRUTEC CONSTRUTORA');
-  assert.ok(appShellAtual.includes('Petrolina - PE'), 'MobileDrawer deve exibir localização Petrolina - PE');
 
   const sidebarCode = readFileSync(resolve('src/components/layout/Sidebar.tsx'), 'utf-8');
-  assert.ok(sidebarCode.includes('CONSTRUTEC CONSTRUTORA'), 'Sidebar deve exibir selo institucional expandido');
-  assert.ok(sidebarCode.includes('Petrolina - PE'), 'Sidebar deve exibir localização Petrolina - PE');
   assert.ok(sidebarCode.includes('logo-emblema-trim.png'), 'Sidebar deve usar emblema oficial');
-  assert.ok(sidebarCode.includes('role="img"'), 'Sidebar recolhida deve ter role="img" para acessibilidade');
-  assert.ok(sidebarCode.includes('role="region"'), 'Sidebar expandida deve ter role="region" para acessibilidade');
+  assert.ok(sidebarCode.includes('w-36 h-36'), 'Sidebar deve exibir o emblema grandão');
+  assert.ok(sidebarCode.includes('opacity-[0.06]'), 'Sidebar deve conter marca d\'água translúcida calibrada');
+  assert.ok(!sidebarCode.includes('role="region"'), 'Sidebar não deve exibir o antigo banner textual acima do administrador');
+
+  const apontamentoGradeCode = readFileSync(resolve('src/features/folha/ApontamentoGrade.tsx'), 'utf-8');
+  assert.ok(apontamentoGradeCode.includes('logo-emblema-trim.png'), 'ApontamentoGrade deve conter marca d\'água oficial da CONSTRUTEC');
+  assert.ok(apontamentoGradeCode.includes('opacity-[0.055]'), 'ApontamentoGrade deve conter opacidade calibrada');
+
+  const equipePageCode = readFileSync(resolve('src/pages/EquipePage.tsx'), 'utf-8');
+  assert.ok(equipePageCode.includes('logo-emblema-trim.png'), 'EquipePage deve conter marca d\'água na tabela');
+
+  const obrasPageCodeAtual = readFileSync(resolve('src/pages/ObrasPage.tsx'), 'utf-8');
+  assert.ok(obrasPageCodeAtual.includes('AntigravityParticlesCanvas'), 'ObrasPage deve integrar AntigravityParticlesCanvas nos cards');
+  assert.ok(obrasPageCodeAtual.includes('logo-emblema-trim.png'), 'ObrasPage deve conter marca d\'água na visualização em lista');
 
   const printCode = readFileSync(resolve('src/lib/print.ts'), 'utf-8');
   assert.ok(printCode.includes('watermark-emblem'), 'print.ts deve definir estilo para watermark-emblem');
@@ -366,7 +378,7 @@ try {
 
   const reciboEmpCode = readFileSync(resolve('src/features/folha/ReciboEmpreiteiroDialog.tsx'), 'utf-8');
   assert.ok(reciboEmpCode.includes('relative z-1 space-y-4'), 'ReciboEmpreiteiroDialog deve encapsular o conteúdo do recibo com relative z-1');
-  console.log('   ✅ Presença da marca CONSTRUTEC, marcas d\'água e selos institucionais validados com 100% de sucesso!');
+  console.log('   ✅ Marcas d\'água integradas nas tabelas e emblema monumental na barra lateral validados com 100% de sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');
 } catch (err) {

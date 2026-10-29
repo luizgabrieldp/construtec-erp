@@ -267,10 +267,23 @@ export function FolhaPage() {
       </div>
 
       {abaAtiva === 'historico' && (
-        <Card className="mt-4">
-          <CardHeader
-            title="Fechamentos de Folha Registrados"
-            subtitle="Cálculo detalhado com dias apontados, horas extras e débitos por obra"
+        <Card className="mt-4 relative overflow-hidden">
+          {/* Marca d'água oficial CONSTRUTEC da tabela de folha */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden"
+          >
+            <img
+              src="/logo-emblema-trim.png"
+              alt=""
+              className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
+            />
+          </div>
+
+          <div className="relative z-1">
+            <CardHeader
+              title="Fechamentos de Folha Registrados"
+              subtitle="Cálculo detalhado com dias apontados, horas extras e débitos por obra"
             action={
               <div className="flex flex-wrap items-center gap-2">
                 <Select value={filtroFuncionario} onChange={(e) => setFiltroFuncionario(e.target.value)}>
@@ -426,11 +439,25 @@ export function FolhaPage() {
               </tbody>
             </table>
           </div>
-        </Card>
-      )}
+        </div>
+      </Card>
+    )}
 
-      {abaAtiva === 'previsao' && (
-        <Card className="mt-4">
+    {abaAtiva === 'previsao' && (
+      <Card className="mt-4 relative overflow-hidden">
+        {/* Marca d'água oficial CONSTRUTEC da tabela de previsão */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden"
+        >
+          <img
+            src="/logo-emblema-trim.png"
+            alt=""
+            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
+          />
+        </div>
+
+        <div className="relative z-1">
           <CardHeader
             title="Previsão Acumulada — Semana Vigente"
             subtitle={`Apuração parcial de Segunda (${fmtDateShort(semanaAtualInicio)}) até Hoje (${fmtDateShort(hoje)})`}
@@ -488,8 +515,9 @@ export function FolhaPage() {
               </tbody>
             </table>
           </div>
-        </Card>
-      )}
+        </div>
+      </Card>
+    )}
 
       {/* Diálogo de Novo Fechamento Individual */}
       <FechamentoFolhaDialog open={dialogNovoOpen} onClose={() => setDialogNovoOpen(false)} />

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Search, Building2, Eye, Calendar, HardHat, CheckCircle2, Clock, LayoutGrid, List, ArrowUpDown } from 'lucide-react';
 import { Button, Input, PageHeader, Card, Badge, Progress, Select } from '@/components/ui';
 import { StatCard } from '@/components/ui/StatCard';
+import { AntigravityParticlesCanvas } from '@/components/ui/AntigravityParticlesCanvas';
 import { useData } from '@/data/store';
 import { useIsAdmin, useResumo } from '@/hooks';
 import type { Obra } from '@/domain/types';
@@ -291,12 +292,19 @@ export function ObrasPage() {
             const decorrido = Math.max(0, Math.min(1, diffDays(obra.dataInicio, r.hoje) / prazoTotal));
 
             return (
-              <Card key={obra.id} className="flex flex-col justify-between overflow-hidden transition-shadow hover:shadow-md">
-                <div>
-                  {/* Faixa superior com a cor da obra */}
-                  <div className="h-2 w-full" style={{ backgroundColor: obra.cor }} />
+              <Card key={obra.id} className="group relative flex flex-col justify-between overflow-hidden transition-shadow hover:shadow-md">
+                {/* Partículas Antigravity interativas no hover do card da obra */}
+                <AntigravityParticlesCanvas
+                  tone={obra.status === 'andamento' ? 'green' : obra.status === 'pausada' ? 'amber' : 'brand'}
+                  particleCount={48}
+                />
 
-                  <div className="p-5">
+                <div className="relative z-1 flex flex-col justify-between h-full">
+                  <div>
+                    {/* Faixa superior com a cor da obra */}
+                    <div className="h-2 w-full" style={{ backgroundColor: obra.cor }} />
+
+                    <div className="p-5">
                     <div className="flex items-start justify-between gap-2">
                       <div>
                         <h3 className="font-bold text-fg text-base">{obra.nome}</h3>
@@ -372,14 +380,27 @@ export function ObrasPage() {
                     Detalhes da Obra
                   </Button>
                 </div>
-              </Card>
-            );
-          })}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    ) : (
+      /* Modo Lista: Tabela limpa, compacta e responsiva com marca d'água oficial */
+      <div className="relative overflow-x-auto rounded-2xl border border-line bg-surface shadow-xs">
+        {/* Marca d'água oficial CONSTRUTEC da tabela de obras */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden"
+        >
+          <img
+            src="/logo-emblema-trim.png"
+            alt=""
+            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
+          />
         </div>
-      ) : (
-        /* Modo Lista: Tabela limpa, compacta e responsiva */
-        <div className="overflow-x-auto rounded-2xl border border-line bg-surface shadow-xs">
-          <table className="w-full text-left text-sm border-collapse min-w-[780px]">
+
+        <table className="relative z-1 w-full text-left text-sm border-collapse min-w-[780px]">
             <thead className="border-b border-line bg-surface-2/70 text-xs font-semibold uppercase tracking-wider text-muted">
               <tr>
                 <th className="px-4 py-3">Obra</th>

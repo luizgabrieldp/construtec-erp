@@ -75,54 +75,35 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        'no-print sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 lg:flex',
+        'no-print sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-line bg-surface transition-[width] duration-200 lg:flex relative overflow-hidden',
         collapsed ? 'w-[76px]' : 'w-64',
       )}
     >
-      <div className={cn('flex h-16 items-center border-b border-line', collapsed ? 'justify-center' : 'px-5')}>
+      <div className={cn('flex h-16 items-center border-b border-line shrink-0', collapsed ? 'justify-center' : 'px-5')}>
         <Logo compact={collapsed} size={collapsed ? 'sm' : 'md'} />
       </div>
-      <div className="flex-1 overflow-y-auto px-3 py-5">
-        <NavList collapsed={collapsed} />
-      </div>
-      <div className="flex flex-col gap-2 border-t border-line p-3">
-        {/* Selo Institucional Oficial CONSTRUTEC */}
-        {collapsed ? (
+
+      <div className="flex-1 overflow-y-auto px-3 py-5 relative flex flex-col justify-between">
+        <div className="relative z-10">
+          <NavList collapsed={collapsed} />
+        </div>
+
+        {/* Marca d'água do ícone grandão da CONSTRUTEC embaixo de Configurações */}
+        {!collapsed && (
           <div
-            role="img"
-            className="flex items-center justify-center rounded-xl border border-line/60 bg-surface-2/40 p-2 text-muted hover:text-fg hover:border-brand/40 transition-colors cursor-default"
-            title="CONSTRUTEC CONSTRUTORA • Petrolina - PE"
-            aria-label="CONSTRUTEC CONSTRUTORA • Petrolina - PE"
+            aria-hidden="true"
+            className="pointer-events-none select-none my-4 flex items-center justify-center opacity-[0.06] dark:opacity-[0.08] transition-opacity"
           >
             <img
               src="/logo-emblema-trim.png"
-              alt="CONSTRUTEC"
-              className="size-7 object-contain select-none"
+              alt=""
+              className="w-36 h-36 object-contain"
             />
-          </div>
-        ) : (
-          <div
-            role="region"
-            aria-label="Identidade Institucional da CONSTRUTEC"
-            className="flex items-center gap-2.5 rounded-xl border border-line/60 bg-surface-2/40 p-2.5 shadow-2xs"
-          >
-            <img
-              src="/logo-emblema-trim.png"
-              alt="CONSTRUTEC"
-              className="size-8 object-contain shrink-0 select-none"
-            />
-            <div className="min-w-0 flex-1">
-              <div className="truncate text-[11px] font-bold tracking-tight text-fg">
-                CONSTRUTEC CONSTRUTORA
-              </div>
-              <div className="flex items-center gap-1.5 text-[10px] font-medium text-muted">
-                <span className="size-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
-                <span className="truncate">Petrolina - PE</span>
-              </div>
-            </div>
           </div>
         )}
+      </div>
 
+      <div className="flex flex-col gap-2 border-t border-line p-3 shrink-0 relative z-10">
         <UserInfoCard compact={collapsed} full={!collapsed} />
         <button
           type="button"
