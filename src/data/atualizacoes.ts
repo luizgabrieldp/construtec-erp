@@ -28,6 +28,58 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v1.8.7',
+    dataPublicacao: '28 de Outubro de 2026 às 22:55',
+    dataIso: '2026-10-28T22:55:00Z',
+    titulo: 'Correção de Coordenadas da Marca d\'Água Sticky Viewport & Suporte a Tablet/iPad',
+    descricao:
+      'Correção importante no posicionamento do emblema flutuante nas tabelas longas (em especial a Grade de Presença da Equipe e Cadastro de Colaboradores): ajuste no ponto de ancoragem das coordenadas (0, 0) para eliminar a soma duplicada de offset que deslocava a marca d\'água para fora do campo de visão em telas com mais de 30 operários; inclusão de ResizeObserver para recalcular instantaneamente quando a lista de funcionários carrega; e captura global de eventos de rolagem para garantir funcionamento fluido e imediato tanto no computador quanto no tablet (iPad).',
+    tags: ['Correção', 'Melhoria'],
+    mudancas: [
+      {
+        tag: 'Correção',
+        texto:
+          'Correção da ancoragem de coordenadas da marca d\'água em tabelas extensas (Grade de Presença)',
+        detalhe:
+          'Eliminado o offset duplicado que fazia o emblema ser projetado abaixo da área visível em tabelas longas com dezenas de colaboradores.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Compatibilidade aprimorada com tablets (iPad) e navegadores Safari/WebKit',
+        detalhe:
+          'Adicionada captura de eventos de rolagem em fase de captura global (capture: true) e ResizeObserver para sincronizar o centro da visão imediatamente ao carregar ou filtrar os colaboradores.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Calibração de contraste da marca d\'água para melhor nitidez em telas de alta resolução',
+        detalhe:
+          'Opacidade ajustada para 0.065 no tema claro e 0.09 no tema escuro, garantindo visibilidade clara em qualquer monitor ou tablet sem interferir na leitura.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Visualização da Marca d\'Água na Equipe',
+        descricao:
+          'Acesse "Equipe & Presença" no computador ou tablet. O emblema oficial da CONSTRUTEC agora aparece nítido e perfeitamente centralizado na grade semanal desde o primeiro carregamento.',
+        icone: 'Users',
+        ondeEncontrar: 'Menu Lateral → Equipe & Presença',
+        dica: 'A marca d\'água acompanha o centro da tela durante todo o scroll vertical.',
+      },
+      {
+        passo: 2,
+        titulo: 'Rolagem Fluida no Tablet (iPad)',
+        descricao:
+          'No tablet ou computador, role para cima e para baixo na tabela de presença e observe a fixação contínua no meio da tela.',
+        icone: 'Sparkles',
+        ondeEncontrar: 'Tabela de Presença e Cadastro da Equipe',
+        dica: 'O ícone não se perde e respeita o início e fim da tabela.',
+      },
+    ],
+  },
+  {
     versao: 'v1.8.6',
     dataPublicacao: '28 de Outubro de 2026 às 22:45',
     dataIso: '2026-10-28T22:45:00Z',

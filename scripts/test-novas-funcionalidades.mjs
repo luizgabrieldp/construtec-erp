@@ -32,18 +32,22 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v186 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v186.versao, 'v1.8.6', 'A versão mais recente deve ser v1.8.6');
-  assert.ok(v186.titulo.includes('Sticky Viewport'), 'Título da v1.8.6 deve mencionar Sticky Viewport');
-  assert.ok(v186.descricao.length > 50, 'Descrição da v1.8.6 deve ser rica e no estilo App Store');
-  assert.ok(v186.mudancas.length >= 3, 'v1.8.6 deve listar as mudanças detalhadas');
-  assert.ok(v186.passosVisuais.length >= 3, 'v1.8.6 deve conter passos ilustrados');
+  const v187 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v187.versao, 'v1.8.7', 'A versão mais recente deve ser v1.8.7');
+  assert.ok(v187.titulo.includes('Correção de Coordenadas'), 'Título da v1.8.7 deve mencionar Correção de Coordenadas');
+  assert.ok(v187.descricao.length > 50, 'Descrição da v1.8.7 deve ser rica e no estilo App Store');
+  assert.ok(v187.mudancas.length >= 3, 'v1.8.7 deve listar as mudanças detalhadas');
+  assert.ok(v187.passosVisuais.length >= 2, 'v1.8.7 deve conter passos ilustrados');
 
   const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
-  v186.mudancas.forEach((m) => {
+  v187.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
   });
+
+  const v186 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.6');
+  assert.ok(v186, 'v1.8.6 deve estar presente no histórico');
+  assert.equal(v186.versao, 'v1.8.6', 'A versão deve ser v1.8.6');
 
   const v185 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.5');
   assert.ok(v185, 'v1.8.5 deve estar presente no histórico');

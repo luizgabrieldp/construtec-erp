@@ -36,15 +36,19 @@ try {
 
   console.log('   ✅ Módulos carregados com sucesso!');
 
-  // Teste 2: Validar versões v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
-  console.log('2. Validando integridade das releases v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
-  const v186 = ATUALIZACOES_SISTEMA[0];
+  // Teste 2: Validar versões v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
+  console.log('2. Validando integridade das releases v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
+  const v187 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v187.versao, 'v1.8.7');
+  assert.equal(v187.dataPublicacao, '28 de Outubro de 2026 às 22:55');
+  assert.ok(v187.titulo.includes('Correção de Coordenadas'));
+  assert.deepEqual(v187.tags, ['Correção', 'Melhoria']);
+  assert.equal(v187.mudancas.length, 3);
+  assert.equal(v187.passosVisuais.length, 2);
+
+  const v186 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.6');
+  assert.ok(v186, 'v1.8.6 deve estar no histórico');
   assert.equal(v186.versao, 'v1.8.6');
-  assert.equal(v186.dataPublicacao, '28 de Outubro de 2026 às 22:45');
-  assert.ok(v186.titulo.includes('Sticky Viewport'));
-  assert.deepEqual(v186.tags, ['Novo', 'Melhoria']);
-  assert.equal(v186.mudancas.length, 3);
-  assert.equal(v186.passosVisuais.length, 3);
 
   const v185 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.5');
   assert.ok(v185, 'v1.8.5 deve estar no histórico');
@@ -231,15 +235,15 @@ try {
     marcarNotificacoesComoLidas,
   } = await server.ssrLoadModule('/src/lib/notifications.ts');
 
-  // Testar disparo de versão para userAdmin (versão mais recente v1.8.6)
+  // Testar disparo de versão para userAdmin (versão mais recente v1.8.7)
   globalThis.localStorage.clear();
   verificarNotificacaoNovaVersao(userAdmin.id);
   const versaoNotificadaAdmin = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`);
-  assert.equal(versaoNotificadaAdmin, 'v1.8.6', 'Deve ter gravado a versão mais recente v1.8.6 para o admin');
+  assert.equal(versaoNotificadaAdmin, 'v1.8.7', 'Deve ter gravado a versão mais recente v1.8.7 para o admin');
 
   // Segunda chamada não deve alterar ou re-notificar
   verificarNotificacaoNovaVersao(userAdmin.id);
-  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.6');
+  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.7');
 
   // Outro usuário ainda não foi notificado
   const versaoNotificadaOutro = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userEncarregado.id}`);
