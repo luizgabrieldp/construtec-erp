@@ -16,6 +16,7 @@ import { SEDE, type CategoriaGasto, type CentroId } from '@/domain/types';
 import { LABEL_CATEGORIA_GASTO } from '@/domain/labels';
 import { endOfMonth, isBetween, startOfMonth } from '@/lib/dates';
 import { fmtBRL, fmtDate, fmtPct } from '@/lib/format';
+import { TableWatermark } from '@/components/brand/TableWatermark';
 
 interface ItemExtrato {
   id: string;
@@ -262,17 +263,8 @@ export function ExtratoPage() {
 
       {/* Barra de Filtros e Tabela de Extrato */}
       <Card className="mt-6 relative overflow-hidden print:border-none print:shadow-none">
-        {/* Marca d'água oficial CONSTRUTEC da tabela de extrato */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden print:hidden"
-        >
-          <img
-            src="/logo-emblema-trim.png"
-            alt=""
-            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
-          />
-        </div>
+        {/* Marca d'água oficial CONSTRUTEC com posicionamento inteligente Sticky Viewport */}
+        <TableWatermark size="lg" />
 
         <div className="relative z-1">
           <div className="border-b border-line p-4 print:hidden">

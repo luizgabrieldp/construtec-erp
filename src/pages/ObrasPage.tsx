@@ -3,6 +3,7 @@ import { Plus, Search, Building2, Eye, Calendar, HardHat, CheckCircle2, Clock, L
 import { Button, Input, PageHeader, Card, Badge, Progress, Select } from '@/components/ui';
 import { StatCard } from '@/components/ui/StatCard';
 import { AntigravityParticlesCanvas } from '@/components/ui/AntigravityParticlesCanvas';
+import { TableWatermark } from '@/components/brand/TableWatermark';
 import { useData } from '@/data/store';
 import { useIsAdmin, useResumo } from '@/hooks';
 import type { Obra } from '@/domain/types';
@@ -388,17 +389,8 @@ export function ObrasPage() {
     ) : (
       /* Modo Lista: Tabela limpa, compacta e responsiva com marca d'água oficial */
       <div className="relative overflow-x-auto rounded-2xl border border-line bg-surface shadow-xs">
-        {/* Marca d'água oficial CONSTRUTEC da tabela de obras */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden"
-        >
-          <img
-            src="/logo-emblema-trim.png"
-            alt=""
-            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
-          />
-        </div>
+        {/* Marca d'água oficial CONSTRUTEC com posicionamento inteligente Sticky Viewport */}
+        <TableWatermark size="lg" />
 
         <table className="relative z-1 w-full text-left text-sm border-collapse min-w-[780px]">
             <thead className="border-b border-line bg-surface-2/70 text-xs font-semibold uppercase tracking-wider text-muted">

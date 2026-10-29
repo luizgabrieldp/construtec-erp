@@ -28,6 +28,7 @@ import { useHoje } from '@/hooks';
 import type { Tarefa, PrioridadeTarefa } from '@/domain/types';
 import { LABEL_RECORRENCIA_TAREFA, LABEL_PRIORIDADE_TAREFA } from '@/domain/labels';
 import { startOfWeek, addDays, diffDays } from '@/lib/dates';
+import { TableWatermark } from '@/components/brand/TableWatermark';
 import { fmtDate, fmtDateShort } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { TarefaFormDialog } from '@/features/tarefas/TarefaFormDialog';
@@ -348,10 +349,13 @@ export function TarefasPage() {
         </div>
       )}
 
-      {/* Lista de Tarefas */}
-      <div className="mt-4 space-y-3">
-        {tarefasFiltradas.length === 0 ? (
-          <Card className="flex flex-col items-center justify-center p-12 text-center">
+      {/* Lista de Tarefas com Marca d'Água Sticky Viewport */}
+      <div className="mt-4 relative overflow-hidden rounded-2xl">
+        {tarefasFiltradas.length > 0 && <TableWatermark size="lg" />}
+
+        <div className="relative z-1 space-y-3">
+          {tarefasFiltradas.length === 0 ? (
+            <Card className="flex flex-col items-center justify-center p-12 text-center">
             <CheckCircle2 className="size-12 text-muted/30 mb-3" />
             <h3 className="text-base font-semibold text-fg">Nenhuma tarefa encontrada</h3>
             <p className="text-xs text-muted max-w-sm mt-1 mb-4">
@@ -542,6 +546,7 @@ export function TarefasPage() {
             );
           })
         )}
+        </div>
       </div>
 
       <TarefaFormDialog

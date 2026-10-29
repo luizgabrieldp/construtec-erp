@@ -21,6 +21,7 @@ import { chaveApontamento, FATOR_PRESENCA, valorDia } from '@/domain/engine';
 import { addDays, eachDay, startOfWeek } from '@/lib/dates';
 import { fmtBRL, fmtDate, fmtDateShort } from '@/lib/format';
 import { cn, normalizarTexto } from '@/lib/utils';
+import { TableWatermark } from '@/components/brand/TableWatermark';
 
 const DIAS_NOMES = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -403,17 +404,8 @@ export function ApontamentoGrade() {
 
       {/* Grade de Apontamento com Scroll Horizontal e Coluna Fixa */}
       <div className="relative rounded-2xl border border-line bg-surface overflow-hidden shadow-xs">
-        {/* Marca d'água oficial CONSTRUTEC integrada à própria tabela de frequência */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.055] dark:opacity-[0.075] overflow-hidden"
-        >
-          <img
-            src="/logo-emblema-trim.png"
-            alt=""
-            className="w-72 h-72 sm:w-96 sm:h-96 md:w-[440px] md:h-[440px] lg:w-[500px] lg:h-[500px] object-contain max-w-[85vw] max-h-[85%]"
-          />
-        </div>
+        {/* Marca d'água oficial CONSTRUTEC com posicionamento inteligente Sticky Viewport */}
+        <TableWatermark size="xl" />
 
         <div ref={scrollContainerRef} className="relative z-1 overflow-x-auto scrollbar-thin">
           <table className="w-full text-left text-sm border-collapse">

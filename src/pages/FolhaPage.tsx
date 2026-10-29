@@ -23,6 +23,7 @@ import type { FechamentoFolha } from '@/domain/types';
 import { LABEL_FUNCAO } from '@/domain/labels';
 import { chaveApontamento, FATOR_PRESENCA } from '@/domain/engine';
 import { eachDay, startOfWeek } from '@/lib/dates';
+import { TableWatermark } from '@/components/brand/TableWatermark';
 import { fmtBRL, fmtDateShort } from '@/lib/format';
 import { FechamentoFolhaDialog } from '@/features/folha/FechamentoFolhaDialog';
 import { FechamentoFolhaLoteDialog } from '@/features/folha/FechamentoFolhaLoteDialog';
@@ -268,17 +269,8 @@ export function FolhaPage() {
 
       {abaAtiva === 'historico' && (
         <Card className="mt-4 relative overflow-hidden">
-          {/* Marca d'água oficial CONSTRUTEC da tabela de folha */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden"
-          >
-            <img
-              src="/logo-emblema-trim.png"
-              alt=""
-              className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
-            />
-          </div>
+          {/* Marca d'água oficial CONSTRUTEC com posicionamento inteligente Sticky Viewport */}
+          <TableWatermark size="lg" />
 
           <div className="relative z-1">
             <CardHeader
@@ -445,17 +437,8 @@ export function FolhaPage() {
 
     {abaAtiva === 'previsao' && (
       <Card className="mt-4 relative overflow-hidden">
-        {/* Marca d'água oficial CONSTRUTEC da tabela de previsão */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden"
-        >
-          <img
-            src="/logo-emblema-trim.png"
-            alt=""
-            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
-          />
-        </div>
+        {/* Marca d'água oficial CONSTRUTEC com posicionamento inteligente Sticky Viewport */}
+        <TableWatermark size="lg" />
 
         <div className="relative z-1">
           <CardHeader

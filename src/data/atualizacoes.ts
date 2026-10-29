@@ -28,6 +28,67 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v1.8.6',
+    dataPublicacao: '28 de Outubro de 2026 às 22:45',
+    dataIso: '2026-10-28T22:45:00Z',
+    titulo: 'Marca d\'Água Dinâmica "Sticky Viewport" nas Tabelas & Listagens',
+    descricao:
+      'Inovação visual na apresentação corporativa da CONSTRUTEC: o emblema oficial agora permanece travado no centro visível da tela (viewport) tanto na movimentação vertical quanto na rolagem horizontal pelas colunas, acompanhando o usuário com fluidez a 120fps durante a rolagem de dezenas de colaboradores e dados, saindo suavemente apenas quando a tabela inicia ou termina. Implementado com aceleração gráfica em todas as grandes tabelas e listagens: Grade de Presença Semanal, Cadastro de Colaboradores, Lista de Obras, Fechamento de Folha, Extrato Financeiro e Lista de Tarefas.',
+    tags: ['Novo', 'Melhoria'],
+    mudancas: [
+      {
+        tag: 'Novo',
+        texto:
+          'Mecanismo de Marca d\'Água Sticky Viewport (permanece no centro da tela durante a rolagem)',
+        detalhe:
+          'O ícone da CONSTRUTEC não rola para fora nem fica preso no topo/fundo da tabela: ele fica cravado no meio visível da tela enquanto você navega vertical e lateralmente, sendo contido com precisão nos limites superior e inferior da tabela.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Cobertura abrangente em todas as grandes tabelas e listagens operacionais',
+        detalhe:
+          'Ativado na Grade de Apontamento Semanal da Equipe, Cadastro de Colaboradores, Lista de Obras, Fechamento de Folha, Extrato Financeiro Unificado e Lista de Tarefas.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Desempenho com aceleração de GPU e zero re-renders durante o scroll',
+        detalhe:
+          'Posicionamento calculado via transformações por hardware (translate3d) com IntersectionObserver passivo, garantindo 0% de uso de CPU quando a tabela está fora da tela e suavidade total em telas ProMotion de Mac e iPhone.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Marca d\'Água Centralizada na Grade de Presença',
+        descricao:
+          'Abra "Equipe & Presença" e role verticalmente pelos 31 operários. O emblema da CONSTRUTEC fica travado perfeitamente no centro da sua tela, sem variar com o movimento, ideal para capturas e mídias.',
+        icone: 'Sparkles',
+        ondeEncontrar: 'Menu Lateral → Equipe & Presença (Grade Semanal)',
+        dica: 'Ao rolar horizontalmente pelos dias da semana, a logo também se mantém no meio da tela.',
+      },
+      {
+        passo: 2,
+        titulo: 'Contenção Suave no Início e Fim da Tabela',
+        descricao:
+          'Role até o início ou final da tabela e observe como o ícone é contido com precisão milimétrica, saindo naturalmente do viewport junto com a tabela.',
+        icone: 'Building2',
+        ondeEncontrar: 'Qualquer tabela ou lista longa do sistema',
+        dica: 'O ícone nunca vaza para fora da área da tabela.',
+      },
+      {
+        passo: 3,
+        titulo: 'Presença em Todas as Telas e Listagens',
+        descricao:
+          'Confira a marca d\'água flutuante também na Lista de Obras, Cadastro da Equipe, Folha de Pagamento, Extrato e Tarefas.',
+        icone: 'CheckSquare',
+        ondeEncontrar: 'Obras, Folha, Extrato e Tarefas',
+        dica: 'A identidade CONSTRUTEC permanece visível em qualquer ângulo de captura.',
+      },
+    ],
+  },
+  {
     versao: 'v1.8.5',
     dataPublicacao: '28 de Outubro de 2026 às 22:20',
     dataIso: '2026-10-28T22:20:00Z',

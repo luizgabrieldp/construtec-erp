@@ -32,18 +32,22 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v185 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v185.versao, 'v1.8.5', 'A versão mais recente deve ser v1.8.5');
-  assert.ok(v185.titulo.includes('Partículas Antigravity') || v185.titulo.includes('Marcas d\'Água'), 'Título da v1.8.5 deve mencionar novidades visuais');
-  assert.ok(v185.descricao.length > 50, 'Descrição da v1.8.5 deve ser rica e no estilo App Store');
-  assert.ok(v185.mudancas.length >= 3, 'v1.8.5 deve listar as mudanças detalhadas');
-  assert.ok(v185.passosVisuais.length >= 3, 'v1.8.5 deve conter passos ilustrados');
+  const v186 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v186.versao, 'v1.8.6', 'A versão mais recente deve ser v1.8.6');
+  assert.ok(v186.titulo.includes('Sticky Viewport'), 'Título da v1.8.6 deve mencionar Sticky Viewport');
+  assert.ok(v186.descricao.length > 50, 'Descrição da v1.8.6 deve ser rica e no estilo App Store');
+  assert.ok(v186.mudancas.length >= 3, 'v1.8.6 deve listar as mudanças detalhadas');
+  assert.ok(v186.passosVisuais.length >= 3, 'v1.8.6 deve conter passos ilustrados');
 
   const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
-  v185.mudancas.forEach((m) => {
+  v186.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
   });
+
+  const v185 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.5');
+  assert.ok(v185, 'v1.8.5 deve estar presente no histórico');
+  assert.equal(v185.versao, 'v1.8.5', 'A versão deve ser v1.8.5');
 
   const v184 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.4');
   assert.ok(v184, 'v1.8.4 deve estar presente no histórico');
@@ -341,8 +345,8 @@ try {
   assert.ok(widgetCode.includes('toast'), 'TarefasWidget deve emitir toast feedback nas ações');
   console.log('   ✅ Gestão Contínua, Exclusão Ágil e Notificações em Segundo Plano validadas com 100% de sucesso!');
 
-  // Teste 12: Validar Marcas d'Água em Grandes Tabelas e Emblema na Barra Lateral (v1.8.5)
-  console.log('12. Validando Marcas d\'Água em Grandes Tabelas e Emblema na Barra Lateral (v1.8.5)...');
+  // Teste 12: Validar Marcas d'Água Dinâmicas Sticky Viewport e Emblema na Barra Lateral (v1.8.6)
+  console.log('12. Validando Marcas d\'Água Dinâmicas Sticky Viewport e Emblema na Barra Lateral (v1.8.6)...');
   const appShellAtual = readFileSync(resolve('src/components/layout/AppShell.tsx'), 'utf-8');
   assert.ok(appShellAtual.includes('logo-emblema-trim.png'), 'AppShell deve carregar o emblema oficial CONSTRUTEC');
   assert.ok(appShellAtual.includes('opacity-[0.035]'), 'AppShell deve conter marca d\'água calibrada com opacity-[0.035]');
@@ -355,16 +359,29 @@ try {
   assert.ok(sidebarCode.includes('opacity-[0.06]'), 'Sidebar deve conter marca d\'água translúcida calibrada');
   assert.ok(!sidebarCode.includes('role="region"'), 'Sidebar não deve exibir o antigo banner textual acima do administrador');
 
+  const tableWatermarkCode = readFileSync(resolve('src/components/brand/TableWatermark.tsx'), 'utf-8');
+  assert.ok(tableWatermarkCode.includes('TableWatermark'), 'TableWatermark deve ser exportado');
+  assert.ok(tableWatermarkCode.includes('translate3d'), 'TableWatermark deve usar aceleração de hardware translate3d');
+  assert.ok(tableWatermarkCode.includes('IntersectionObserver'), 'TableWatermark deve usar IntersectionObserver');
+
   const apontamentoGradeCode = readFileSync(resolve('src/features/folha/ApontamentoGrade.tsx'), 'utf-8');
-  assert.ok(apontamentoGradeCode.includes('logo-emblema-trim.png'), 'ApontamentoGrade deve conter marca d\'água oficial da CONSTRUTEC');
-  assert.ok(apontamentoGradeCode.includes('opacity-[0.055]'), 'ApontamentoGrade deve conter opacidade calibrada');
+  assert.ok(apontamentoGradeCode.includes('TableWatermark'), 'ApontamentoGrade deve usar TableWatermark');
 
   const equipePageCode = readFileSync(resolve('src/pages/EquipePage.tsx'), 'utf-8');
-  assert.ok(equipePageCode.includes('logo-emblema-trim.png'), 'EquipePage deve conter marca d\'água na tabela');
+  assert.ok(equipePageCode.includes('TableWatermark'), 'EquipePage deve usar TableWatermark');
 
   const obrasPageCodeAtual = readFileSync(resolve('src/pages/ObrasPage.tsx'), 'utf-8');
   assert.ok(obrasPageCodeAtual.includes('AntigravityParticlesCanvas'), 'ObrasPage deve integrar AntigravityParticlesCanvas nos cards');
-  assert.ok(obrasPageCodeAtual.includes('logo-emblema-trim.png'), 'ObrasPage deve conter marca d\'água na visualização em lista');
+  assert.ok(obrasPageCodeAtual.includes('TableWatermark'), 'ObrasPage deve usar TableWatermark na lista');
+
+  const folhaPageCode = readFileSync(resolve('src/pages/FolhaPage.tsx'), 'utf-8');
+  assert.ok(folhaPageCode.includes('TableWatermark'), 'FolhaPage deve usar TableWatermark');
+
+  const extratoPageCode = readFileSync(resolve('src/pages/ExtratoPage.tsx'), 'utf-8');
+  assert.ok(extratoPageCode.includes('TableWatermark'), 'ExtratoPage deve usar TableWatermark');
+
+  const tarefasPageCodeAtual = readFileSync(resolve('src/pages/TarefasPage.tsx'), 'utf-8');
+  assert.ok(tarefasPageCodeAtual.includes('TableWatermark'), 'TarefasPage deve usar TableWatermark');
 
   const printCode = readFileSync(resolve('src/lib/print.ts'), 'utf-8');
   assert.ok(printCode.includes('watermark-emblem'), 'print.ts deve definir estilo para watermark-emblem');
@@ -378,7 +395,7 @@ try {
 
   const reciboEmpCode = readFileSync(resolve('src/features/folha/ReciboEmpreiteiroDialog.tsx'), 'utf-8');
   assert.ok(reciboEmpCode.includes('relative z-1 space-y-4'), 'ReciboEmpreiteiroDialog deve encapsular o conteúdo do recibo com relative z-1');
-  console.log('   ✅ Marcas d\'água integradas nas tabelas e emblema monumental na barra lateral validados com 100% de sucesso!');
+  console.log('   ✅ Marcas d\'água dinâmicas Sticky Viewport validadas em todas as tabelas com 100% de sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');
 } catch (err) {

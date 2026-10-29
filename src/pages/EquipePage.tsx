@@ -5,6 +5,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { toast } from '@/components/ui/Toast';
 import { StatCard } from '@/components/ui/StatCard';
 import { WhatsAppBadge } from '@/components/brand/WhatsAppIcon';
+import { TableWatermark } from '@/components/brand/TableWatermark';
 import { useData, useErp } from '@/data/store';
 import { useHoje, useIsAdmin } from '@/hooks';
 import type { Funcionario } from '@/domain/types';
@@ -265,17 +266,8 @@ export function EquipePage() {
 
       {/* Cadastro e Gestão de Colaboradores */}
       <Card className="mt-8 relative overflow-hidden">
-        {/* Marca d'água oficial CONSTRUTEC da tabela de colaboradores */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none select-none absolute inset-0 flex items-center justify-center z-0 opacity-[0.045] dark:opacity-[0.06] overflow-hidden"
-        >
-          <img
-            src="/logo-emblema-trim.png"
-            alt=""
-            className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 object-contain"
-          />
-        </div>
+        {/* Marca d'água oficial CONSTRUTEC com posicionamento inteligente Sticky Viewport */}
+        <TableWatermark size="lg" />
 
         <div className="relative z-1">
           <CardHeader
