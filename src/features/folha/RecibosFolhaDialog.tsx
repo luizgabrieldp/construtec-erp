@@ -83,10 +83,22 @@ export function RecibosFolhaDialog({
           {recibos.map((r, idx) => (
             <div
               key={r.id || idx}
-              className="rounded-xl border border-line bg-surface p-5 text-fg shadow-xs space-y-4 text-xs"
+              className="relative overflow-hidden rounded-xl border border-line bg-surface p-5 text-fg shadow-xs space-y-4 text-xs"
             >
+              {/* Marca d'água oficial translúcida CONSTRUTEC */}
+              <div
+                aria-hidden="true"
+                className="pointer-events-none select-none absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.035] dark:opacity-[0.045] z-0"
+              >
+                <img
+                  src="/logo-emblema-trim.png"
+                  alt=""
+                  className="w-56 h-56 object-contain"
+                />
+              </div>
+
               {/* Cabeçalho do Recibo */}
-              <div className="flex flex-wrap items-start justify-between border-b border-line pb-3 gap-2">
+              <div className="relative z-1 flex flex-wrap items-start justify-between border-b border-line pb-3 gap-2">
                 <div className="flex items-center gap-3">
                   <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
                   <div>

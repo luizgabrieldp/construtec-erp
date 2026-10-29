@@ -28,6 +28,85 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v1.8.4',
+    dataPublicacao: '28 de Outubro de 2026 às 21:40',
+    dataIso: '2026-10-28T21:40:00Z',
+    titulo: 'Identidade Visual Reforçada: Marcas d\'Água & Selos Institucionais para Mídia',
+    descricao:
+      'Reforço na presença institucional da marca CONSTRUTEC em todo o sistema. Introdução de marca d\'água monumental translúcida nas áreas operacionais e no Dashboard para captura de prints e gravações corporativas para redes sociais com proteção de autoria; selos institucionais oficiais com localização Petrolina - PE integrados no rodapé dos menus laterais desktop e mobile; e marcas d\'água oficiais translúcidas e cabeçalhos refinados em todos os recibos individuais e de empreiteiros para impressão e geração de PDF.',
+    tags: ['Novo', 'Melhoria'],
+    mudancas: [
+      {
+        tag: 'Novo',
+        texto:
+          'Marca d\'água monumental translúcida da CONSTRUTEC integrada no fundo das telas e no Dashboard, perfeita para captura de prints e divulgação em mídias sociais',
+        detalhe:
+          'O emblema oficial da construtora agora fica suavemente visível ao fundo das telas sem interferir na leitura ou cliques, ideal para gravar stories, reels e capturar telas para envio a clientes e redes sociais.',
+      },
+      {
+        tag: 'Novo',
+        texto:
+          'Selo institucional oficial da CONSTRUTEC com localização Petrolina - PE integrado no rodapé da barra lateral de menus (Sidebar e Mobile Drawer)',
+        detalhe:
+          'Novo badge corporativo oficial posicionado na base dos menus de navegação desktop e celular, exibindo o emblema de alta resolução e a assinatura de Petrolina - PE com indicador ativo.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Marca d\'água oficial translúcida e cabeçalho refinado em todos os recibos individuais e de empreiteiros para impressão e PDF',
+        detalhe:
+          'Todos os recibos e comprovantes emitidos na Folha de Pagamento passam a contar com a marca d\'água oficial translúcida centralizada na folha A4 e cabeçalho institucional corporativo completo.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Marca d\'Água Monumental de Fundo',
+        descricao:
+          'Navegue por qualquer tela do sistema ou pelo Dashboard e observe o emblema oficial CONSTRUTEC no fundo. Ideal para gravar vídeos e tirar prints para Instagram e WhatsApp com a marca sempre presente.',
+        icone: 'Sparkles',
+        ondeEncontrar: 'Fundo de todas as telas operacionais e Dashboard',
+        dica: 'A marca d\'água é 100% translúcida e não interfere em nenhum botão, clique ou rolagem de página.',
+      },
+      {
+        passo: 2,
+        titulo: 'Selo Institucional no Menu Desktop',
+        descricao:
+          'Na barra lateral de navegação no computador, confira o selo oficial com emblema e identificação Petrolina - PE no rodapé, que se adapta automaticamente quando o menu é recolhido.',
+        icone: 'Building2',
+        ondeEncontrar: 'Rodapé do Menu Lateral Esquerdo (Desktop)',
+        dica: 'Ao recolher o menu, passe o mouse sobre o selo para visualizar as informações completas.',
+      },
+      {
+        passo: 3,
+        titulo: 'Selo Oficial no Menu Mobile',
+        descricao:
+          'No smartphone ou tablet, abra o menu lateral clicando no ícone do cabeçalho para visualizar o selo da CONSTRUTEC posicionado acima do botão de saída.',
+        icone: 'Smartphone',
+        ondeEncontrar: 'Menu de Navegação em Dispositivos Móveis',
+        dica: 'Garante a autoridade corporativa em qualquer tamanho de tela.',
+      },
+      {
+        passo: 4,
+        titulo: 'Marca d\'Água nos Recibos e Impressões PDF',
+        descricao:
+          'Ao emitir recibos individuais ou do empreiteiro na Folha de Pagamento, cada página A4 impressa ou salva em PDF exibe a marca d\'água oficial da CONSTRUTEC ao centro.',
+        icone: 'Printer',
+        ondeEncontrar: 'Menu Folha > Recibos > Imprimir / Salvar PDF',
+        dica: 'As assinaturas e valores permanecem com legibilidade impecável sobre a marca.',
+      },
+      {
+        passo: 5,
+        titulo: 'Exportação do Guia v1.8.4 em PDF',
+        descricao:
+          'Exporte este guia completo em PDF para manter seu time alinhado com os novos padrões visuais e institucionais da empresa.',
+        icone: 'Printer',
+        ondeEncontrar: 'Rodapé deste modal > Exportar em PDF',
+        dica: 'O layout é pré-formatado para folha A4 limpa e profissional.',
+      },
+    ],
+  },
+  {
     versao: 'v1.8.3',
     dataPublicacao: '27 de Outubro de 2026 às 23:45',
     dataIso: '2026-10-27T23:45:00Z',

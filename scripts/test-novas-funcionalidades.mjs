@@ -32,14 +32,27 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v183 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v183.versao, 'v1.8.3', 'A versão mais recente deve ser v1.8.3');
+  const v184 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v184.versao, 'v1.8.4', 'A versão mais recente deve ser v1.8.4');
+  assert.ok(v184.titulo.includes('Identidade Visual Reforçada'), 'Título da v1.8.4 deve mencionar Identidade Visual Reforçada');
+  assert.ok(v184.descricao.length > 50, 'Descrição da v1.8.4 deve ser rica e no estilo App Store');
+  assert.ok(v184.mudancas.length >= 3, 'v1.8.4 deve listar as mudanças detalhadas');
+  assert.ok(v184.passosVisuais.length >= 5, 'v1.8.4 deve conter passos ilustrados');
+
+  const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
+  v184.mudancas.forEach((m) => {
+    assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
+    assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
+  });
+
+  const v183 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.3');
+  assert.ok(v183, 'v1.8.3 deve estar presente no histórico');
+  assert.equal(v183.versao, 'v1.8.3', 'A versão deve ser v1.8.3');
   assert.ok(v183.titulo.includes('Gestão Contínua de Tarefas Atrasadas'), 'Título da v1.8.3 deve mencionar Gestão Contínua');
   assert.ok(v183.descricao.length > 50, 'Descrição da v1.8.3 deve ser rica e no estilo App Store');
   assert.ok(v183.mudancas.length >= 3, 'v1.8.3 deve listar as mudanças detalhadas');
   assert.ok(v183.passosVisuais.length >= 5, 'v1.8.3 deve conter passos ilustrados');
 
-  const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
   v183.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
@@ -323,6 +336,27 @@ try {
   assert.ok(swCode.includes('silent'), 'Service Worker deve configurar opções sonoras (silent: false)');
   assert.ok(widgetCode.includes('toast'), 'TarefasWidget deve emitir toast feedback nas ações');
   console.log('   ✅ Gestão Contínua, Exclusão Ágil e Notificações em Segundo Plano validadas com 100% de sucesso!');
+
+  // Teste 12: Validar Marcas d'Água e Selos Institucionais CONSTRUTEC (v1.8.4)
+  console.log('12. Validando Marcas d\'Água Monumental e Selos Institucionais CONSTRUTEC (v1.8.4)...');
+  const appShellAtual = readFileSync(resolve('src/components/layout/AppShell.tsx'), 'utf-8');
+  assert.ok(appShellAtual.includes('logo-emblema-trim.png'), 'AppShell deve carregar o emblema oficial CONSTRUTEC');
+  assert.ok(appShellAtual.includes('opacity-[0.035]'), 'AppShell deve conter marca d\'água calibrada com opacity-[0.035]');
+  assert.ok(appShellAtual.includes('pointer-events-none'), 'Marca d\'água deve ter pointer-events-none');
+  assert.ok(appShellAtual.includes('CONSTRUTEC CONSTRUTORA'), 'MobileDrawer deve exibir selo CONSTRUTEC CONSTRUTORA');
+  assert.ok(appShellAtual.includes('Petrolina - PE'), 'MobileDrawer deve exibir localização Petrolina - PE');
+
+  const sidebarCode = readFileSync(resolve('src/components/layout/Sidebar.tsx'), 'utf-8');
+  assert.ok(sidebarCode.includes('CONSTRUTEC CONSTRUTORA'), 'Sidebar deve exibir selo institucional expandido');
+  assert.ok(sidebarCode.includes('Petrolina - PE'), 'Sidebar deve exibir localização Petrolina - PE');
+  assert.ok(sidebarCode.includes('logo-emblema-trim.png'), 'Sidebar deve usar emblema oficial');
+
+  const printCode = readFileSync(resolve('src/lib/print.ts'), 'utf-8');
+  assert.ok(printCode.includes('watermark-emblem'), 'print.ts deve definir estilo para watermark-emblem');
+  assert.ok(printCode.includes('opacity: 0.06'), 'print.ts deve aplicar opacidade 0.06 na marca d\'água de impressão');
+  assert.ok(printCode.includes('position: absolute'), 'print.ts deve posicionar marca d\'água de forma absoluta');
+  assert.ok(printCode.includes('logo-emblema-trim.png'), 'print.ts deve carregar emblema oficial nos recibos');
+  console.log('   ✅ Presença da marca CONSTRUTEC, marcas d\'água e selos institucionais validados com 100% de sucesso!');
 
   console.log('\n🎉 TODOS OS TESTES DAS NOVAS FUNCIONALIDADES PASSARAM COM 100% DE SUCESSO!\n');
 } catch (err) {

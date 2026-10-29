@@ -36,9 +36,25 @@ try {
 
   console.log('   ✅ Módulos carregados com sucesso!');
 
-  // Teste 2: Validar versões v1.8.3, v1.8.2 e v1.8.1 e passos visuais
-  console.log('2. Validando integridade das releases v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
-  const v183 = ATUALIZACOES_SISTEMA[0];
+  // Teste 2: Validar versões v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
+  console.log('2. Validando integridade das releases v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
+  const v184 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v184.versao, 'v1.8.4');
+  assert.equal(v184.dataPublicacao, '28 de Outubro de 2026 às 21:40');
+  assert.equal(v184.titulo, 'Identidade Visual Reforçada: Marcas d\'Água & Selos Institucionais para Mídia');
+  assert.deepEqual(v184.tags, ['Novo', 'Melhoria']);
+  assert.equal(v184.mudancas.length, 3);
+  assert.equal(v184.passosVisuais.length, 5);
+
+  const titulosPassos184 = v184.passosVisuais.map((p) => p.titulo);
+  assert.ok(titulosPassos184.some((t) => t.includes('Marca d\'Água Monumental')));
+  assert.ok(titulosPassos184.some((t) => t.includes('Selo Institucional')));
+  assert.ok(titulosPassos184.some((t) => t.includes('Selo Oficial')));
+  assert.ok(titulosPassos184.some((t) => t.includes('Marca d\'Água nos Recibos')));
+  assert.ok(titulosPassos184.some((t) => t.includes('Exportação do Guia v1.8.4')));
+
+  const v183 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.3');
+  assert.ok(v183, 'v1.8.3 deve existir no histórico');
   assert.equal(v183.versao, 'v1.8.3');
   assert.equal(v183.dataPublicacao, '27 de Outubro de 2026 às 23:45');
   assert.equal(v183.titulo, 'Gestão Contínua de Tarefas Atrasadas, Exclusão Ágil & Notificações em Segundo Plano');
@@ -202,15 +218,15 @@ try {
     marcarNotificacoesComoLidas,
   } = await server.ssrLoadModule('/src/lib/notifications.ts');
 
-  // Testar disparo de versão para userAdmin (versão mais recente v1.8.3)
+  // Testar disparo de versão para userAdmin (versão mais recente v1.8.4)
   globalThis.localStorage.clear();
   verificarNotificacaoNovaVersao(userAdmin.id);
   const versaoNotificadaAdmin = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`);
-  assert.equal(versaoNotificadaAdmin, 'v1.8.3', 'Deve ter gravado a versão mais recente v1.8.3 para o admin');
+  assert.equal(versaoNotificadaAdmin, 'v1.8.4', 'Deve ter gravado a versão mais recente v1.8.4 para o admin');
 
   // Segunda chamada não deve alterar ou re-notificar
   verificarNotificacaoNovaVersao(userAdmin.id);
-  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.3');
+  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.4');
 
   // Outro usuário ainda não foi notificado
   const versaoNotificadaOutro = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userEncarregado.id}`);
@@ -220,15 +236,15 @@ try {
   const lidasAdmin = getNotificacoesLidas(userAdmin.id);
   assert.equal(lidasAdmin.size, 0);
 
-  marcarNotificacoesComoLidas(['tarefa-t1', 'versao-v1.8.3'], userAdmin.id);
+  marcarNotificacoesComoLidas(['tarefa-t1', 'versao-v1.8.4'], userAdmin.id);
   const lidasAdminApos = getNotificacoesLidas(userAdmin.id);
   assert.equal(lidasAdminApos.has('tarefa-t1'), true);
-  assert.equal(lidasAdminApos.has('versao-v1.8.3'), true);
+  assert.equal(lidasAdminApos.has('versao-v1.8.4'), true);
 
   // Encarregado NÃO deve ter herdado as notificações lidas pelo admin
   const lidasEncarregado = getNotificacoesLidas(userEncarregado.id);
   assert.equal(lidasEncarregado.has('tarefa-t1'), false, 'Encarregado não deve herdar notificações lidas do admin');
-  assert.equal(lidasEncarregado.has('versao-v1.8.3'), false, 'Encarregado não deve herdar versão lida do admin');
+  assert.equal(lidasEncarregado.has('versao-v1.8.4'), false, 'Encarregado não deve herdar versão lida do admin');
 
   console.log('   ✅ Notificação automática de versão e isolamento per-user testados e aprovados!');
 

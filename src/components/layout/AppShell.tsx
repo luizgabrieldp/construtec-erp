@@ -260,7 +260,25 @@ function MobileDrawer() {
         </div>
 
         {/* Rodapé da gaveta respeitando safe area inferior do iPhone */}
-        <div className="border-t border-line p-4 shrink-0 bg-surface">
+        <div className="border-t border-line p-4 shrink-0 bg-surface flex flex-col gap-3">
+          {/* Selo institucional oficial da CONSTRUTEC */}
+          <div className="flex items-center gap-3 rounded-xl border border-line/70 bg-surface-2/40 p-3 shadow-2xs">
+            <img
+              src="/logo-emblema-trim.png"
+              alt="CONSTRUTEC"
+              className="size-9 object-contain shrink-0 select-none"
+            />
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-bold tracking-tight text-fg">
+                CONSTRUTEC CONSTRUTORA
+              </div>
+              <div className="flex items-center gap-1.5 text-[10.5px] font-medium text-muted">
+                <span className="size-1.5 rounded-full bg-emerald-500 inline-block shrink-0" />
+                <span className="truncate">Petrolina - PE</span>
+              </div>
+            </div>
+          </div>
+
           <Button
             variant="ghost"
             className="w-full text-red-500 hover:bg-red-500/10 justify-start text-xs font-semibold py-3"
@@ -318,12 +336,26 @@ export function AppShell() {
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar />
         <main
-          className="mx-auto w-full max-w-[1600px] flex-1 px-4 pt-6 md:px-6 lg:px-8"
+          className="relative mx-auto w-full max-w-[1600px] flex-1 px-4 pt-6 md:px-6 lg:px-8"
           style={{
             paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))',
           }}
         >
-          {podeAcessar(pathname, perfilEfetivo) ? <Outlet /> : <AcessoRestrito />}
+          {/* Marca d'água monumental translúcida da CONSTRUTEC para mídia e prints */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none select-none fixed bottom-4 right-4 sm:bottom-8 sm:right-8 md:bottom-12 md:right-12 z-0 flex items-center justify-center opacity-[0.035] dark:opacity-[0.045]"
+          >
+            <img
+              src="/logo-emblema-trim.png"
+              alt=""
+              className="w-64 h-64 sm:w-80 sm:h-80 md:w-[440px] md:h-[440px] lg:w-[520px] lg:h-[520px] object-contain max-w-[80vw] max-h-[80vh]"
+            />
+          </div>
+
+          <div className="relative z-1">
+            {podeAcessar(pathname, perfilEfetivo) ? <Outlet /> : <AcessoRestrito />}
+          </div>
         </main>
       </div>
       <MobileDrawer />

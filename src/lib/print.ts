@@ -70,6 +70,7 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
       print-color-adjust: exact;
     }
     .receipt-page {
+      position: relative;
       width: 100%;
       box-sizing: border-box;
       padding: 8mm 9mm;
@@ -81,11 +82,24 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
       break-after: page;
       background: #fff;
       margin-bottom: 24px;
+      overflow: hidden;
     }
     .receipt-page:last-child {
       page-break-after: auto;
       break-after: auto;
       margin-bottom: 0;
+    }
+    .watermark-emblem {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 280px;
+      opacity: 0.06;
+      z-index: 0;
+      pointer-events: none;
+      -webkit-user-select: none;
+      user-select: none;
     }
     .header-box {
       display: flex;
@@ -298,6 +312,7 @@ export function gerarHtmlRecibosIndividuais(recibos: DadosRecibo[]): string {
 
       return `
         <div class="receipt-page">
+          <img src="/logo-emblema-trim.png" alt="" class="watermark-emblem" style="opacity: 0.06; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; z-index: 0; pointer-events: none;" />
           <div class="header-box">
             <div class="header-brand">
               <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" class="logo-img" />
@@ -403,6 +418,7 @@ export function gerarHtmlReciboEmpreiteiro(dados: DadosEmpreiteiroImpressao): st
 
   return `
     <div class="receipt-page">
+      <img src="/logo-emblema-trim.png" alt="" class="watermark-emblem" style="opacity: 0.06; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; z-index: 0; pointer-events: none;" />
       <div class="header-box">
         <div class="header-brand">
           <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" class="logo-img" />
