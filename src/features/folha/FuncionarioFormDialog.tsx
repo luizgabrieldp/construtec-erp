@@ -118,7 +118,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
   };
 
   const handleTentativaExcluir = () => {
-    if (!funcionarioParaEditar) return;
+    if (!isAdmin || !funcionarioParaEditar) return;
     const temFechamento = (data.fechamentos || []).some((fech) => fech.funcionarioId === funcionarioParaEditar.id);
     const temContaPagar = (data.contasPagar || []).some((cp) => cp.funcionarioId === funcionarioParaEditar.id);
 
@@ -131,8 +131,27 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
     }
   };
 
+  const desativarColaboradorAtual = () => {
+    if (!isAdmin || !funcionarioParaEditar) return;
+    const fId = funcionarioParaEditar.id;
+    const fNome = funcionarioParaEditar.nome;
+    mutate(
+      (d) => {
+        const item = d.funcionarios.find((x) => x.id === fId);
+        if (item) item.ativo = false;
+      },
+      {
+        acao: 'Equipe',
+        descricao: `Desativou colaborador "${fNome}"`,
+      },
+    );
+    toast(`Colaborador "${fNome}" desativado.`);
+    setBloqueioExclusao(null);
+    onClose();
+  };
+
   const executarExclusao = () => {
-    if (!funcionarioParaEditar) return;
+    if (!isAdmin || !funcionarioParaEditar) return;
     const fId = funcionarioParaEditar.id;
     const fNome = funcionarioParaEditar.nome;
 
@@ -152,7 +171,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
       },
       {
         acao: 'Equipe',
-        descricao: `Excluiu colaborador de teste "${fNome}"`,
+        descricao: `Excluiu colaborador "${fNome}"`,
       },
     );
 
@@ -708,7 +727,7 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
         )}
 
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-line/60">
-          {isEdicao ? (
+          {isEdicao && isAdmin ? (
             <Button
               type="button"
               variant="ghost"
@@ -737,14 +756,14 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
       open={modalExcluirAberto}
       onClose={() => setModalExcluirAberto(false)}
       title="Excluir Colaborador Permanentemente"
-      subtitle="Confirmação de exclusão para usuários de teste"
+      subtitle="Confirmação de exclusão permanente do cadastro"
     >
       <div className="space-y-4">
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-500 flex items-start gap-2.5">
           <AlertTriangle className="size-5 shrink-0 mt-0.5" />
           <div>
             <strong>Atenção:</strong> Tem certeza que deseja apagar permanentemente o colaborador{' '}
-            <strong>{funcionarioParaEditar?.nome}</strong>? Esta ação é definitiva e removerá o cadastro e todos os apontamentos de presença de teste associados.
+            <strong>{funcionarioParaEditar?.nome}</strong>? Esta ação é definitiva e removerá o cadastro e todos os apontamentos de presença associados.
           </div>
         </div>
 
@@ -779,8 +798,18 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="secondary" onClick={() => setBloqueioExclusao(null)}>
+        <div className="flex justify-between items-center gap-2 pt-2">
+          {funcionarioParaEditar?.ativo && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="text-amber-500 border-amber-500/40 hover:bg-amber-500/10"
+              onClick={desativarColaboradorAtual}
+            >
+              Desativar Agora
+            </Button>
+          )}
+          <Button variant="secondary" onClick={() => setBloqueioExclusao(null)} className="ml-auto">
             Entendi, Fechar
           </Button>
         </div>

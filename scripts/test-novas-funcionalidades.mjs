@@ -32,18 +32,23 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v200 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v200.versao, 'v2.0.0', 'A versão mais recente deve ser v2.0.0');
-  assert.ok(v200.titulo.includes('Design Industrial'), 'Título da v2.0.0 deve mencionar Design Industrial');
-  assert.ok(v200.descricao.length > 50, 'Descrição da v2.0.0 deve ser detalhada');
-  assert.ok(v200.mudancas.length >= 4, 'v2.0.0 deve listar as mudanças detalhadas');
-  assert.ok(v200.passosVisuais.length >= 3, 'v2.0.0 deve conter passos ilustrados');
+  const v201 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v201.versao, 'v2.0.1', 'A versão mais recente deve ser v2.0.1');
+  assert.ok(v201.titulo.includes('Web Push'), 'Título da v2.0.1 deve mencionar Web Push');
+  assert.ok(v201.descricao.length > 50, 'Descrição da v2.0.1 deve ser detalhada');
+  assert.ok(v201.mudancas.length >= 4, 'v2.0.1 deve listar as mudanças detalhadas');
+  assert.ok(v201.passosVisuais.length >= 3, 'v2.0.1 deve conter passos ilustrados');
 
   const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
-  v200.mudancas.forEach((m) => {
+  v201.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
   });
+
+  const v200 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v2.0.0');
+  assert.ok(v200, 'v2.0.0 deve estar presente no histórico');
+  assert.equal(v200.versao, 'v2.0.0', 'A versão deve ser v2.0.0');
+  assert.ok(v200.titulo.includes('Design Industrial'), 'Título da v2.0.0 deve mencionar Design Industrial');
 
   const v187 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.7');
   assert.ok(v187, 'v1.8.7 deve estar presente no histórico');

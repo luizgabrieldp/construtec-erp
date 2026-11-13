@@ -672,10 +672,13 @@ export function ConfiguracoesPage() {
                 </Button>
               </div>
 
-              <div className="rounded-xl border border-line bg-surface-2/40 p-3 text-xs text-muted">
-                <p className="font-medium text-fg">Como o CONSTRUTEC entrega seus alertas:</p>
-                <p className="mt-1">
-                  O verificador de tarefas roda em segundo plano emitindo alertas sonoros e notificações de tarefas agendadas e lembretes no horário programado.
+              <div className="rounded-xl border border-line bg-surface-2/40 p-3 text-xs text-muted space-y-1">
+                <p className="font-medium text-fg">Como o CONSTRUTEC entrega seus alertas (Web Push VAPID):</p>
+                <p>
+                  • <strong>Segunda a Sexta às 07:30 (Resumo Matinal):</strong> Lembra de apontar a presença dos funcionários e resume as tarefas atrasadas e do dia inteiro.
+                </p>
+                <p>
+                  • <strong>Horários Específicos (HH:mm) e Fins de Semana:</strong> Dispara alertas exatos no horário programado da atividade (sábado e domingo notificam apenas tarefas agendadas para o fim de semana), mesmo com a página ou navegador fechados.
                 </p>
               </div>
             </div>

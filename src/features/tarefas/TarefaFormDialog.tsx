@@ -6,6 +6,11 @@ import { useErp, useData } from '@/data/store';
 import { useAuth, USUARIOS_PADRAO } from '@/data/auth';
 import type { Tarefa, RecorrenciaTarefa, PrioridadeTarefa } from '@/domain/types';
 import { today } from '@/lib/dates';
+import {
+  agendarTimersExatosDoDia,
+  dispararWebPushRemoto,
+  sincronizarEstadoComServiceWorker,
+} from '@/lib/notifications';
 import { uid } from '@/lib/utils';
 
 interface TarefaFormDialogProps {
@@ -120,7 +125,7 @@ export function TarefaFormDialog({
               observacoes: observacoes.trim() || undefined,
               data: dataTarefa,
               diaInteiro,
-              horario: diaInteiro ? '08:00' : horario,
+              horario: diaInteiro ? '07:30' : horario,
               recorrencia,
               prioridade,
               obraId: obraId || undefined,
@@ -142,7 +147,7 @@ export function TarefaFormDialog({
         observacoes: observacoes.trim() || undefined,
         data: dataTarefa,
         diaInteiro,
-        horario: diaInteiro ? '08:00' : horario,
+        horario: diaInteiro ? '07:30' : horario,
         recorrencia,
         prioridade,
         obraId: obraId || undefined,
@@ -162,9 +167,24 @@ export function TarefaFormDialog({
         },
         { acao: 'Tarefas', descricao: `Criou tarefa "${titulo.trim()}"` },
       );
+
+      if (destinatarioTipo === 'todos' || (destinatarioTipo === 'usuario' && finalDestinatarioId !== usuarioAtual?.id)) {
+        void dispararWebPushRemoto({
+          title: `Nova Tarefa CONSTRUTEC: ${nova.titulo}`,
+          body: `${nova.criadoPorNome || 'Equipe'} atribuiu um lembrete para ${nova.diaInteiro ? 'as 07:30' : nova.horario} (${nova.data}).`,
+          tag: `nova-tarefa-${nova.id}`,
+          url: '/tarefas',
+          destinatarioTipo,
+          destinatarioId: finalDestinatarioId,
+          criadoPorId: nova.criadoPorId,
+        });
+      }
+
       toast('Lembrete / Tarefa adicionado!');
     }
 
+    agendarTimersExatosDoDia();
+    sincronizarEstadoComServiceWorker();
     onClose();
   };
 
@@ -173,7 +193,7 @@ export function TarefaFormDialog({
       open={open}
       onClose={onClose}
       title={tarefaParaEditar ? 'Editar Tarefa' : 'Nova Tarefa / Lembrete'}
-      subtitle="Defina horário, aviso programado ou dia inteiro (com notificação às 08:00), e regras de recorrência"
+      subtitle="Defina horário específico ou dia inteiro (aviso às 07:30), e regras de recorrência"
     >
       <form onSubmit={salvar} className="space-y-4">
         <Field label="Título da Tarefa">
@@ -219,7 +239,7 @@ export function TarefaFormDialog({
               </label>
 
               {diaInteiro ? (
-                <span className="text-xs text-muted">(aviso às 08:00)</span>
+                <span className="text-xs text-muted">(aviso às 07:30)</span>
               ) : (
                 <Input
                   type="time"

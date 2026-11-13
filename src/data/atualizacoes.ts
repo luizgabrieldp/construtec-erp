@@ -28,6 +28,73 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v2.0.1',
+    dataPublicacao: '13 de Novembro de 2026 às 00:28',
+    dataIso: '2026-11-13T03:28:00Z',
+    titulo: 'Notificações Web Push (Padrão G1/MacMagazine), Resumo Matinal às 07:30 & Exclusão Protegida na Equipe',
+    descricao:
+      'Implementação de Web Push nativo com protocolo W3C VAPID (funcionando no celular e computador mesmo com a aba ou navegador fechados, como no G1 e MacMagazine), Resumo Matinal inteligente às 07:30 de segunda a sexta (lembrando de registrar a presença da equipe, tarefas atrasadas e atividades do dia), disparo individual no horário exato (HH:mm) para tarefas com hora marcada, e proteção contra cliques acidentais na tabela da Equipe movendo a ação Excluir exclusivamente para dentro do modal Editar Colaborador.',
+    tags: ['Novo', 'Melhoria', 'Correção'],
+    mudancas: [
+      {
+        tag: 'Melhoria',
+        texto:
+          'Botão "Excluir Colaborador" protegido exclusivamente dentro do modal Editar',
+        detalhe:
+          'Removido o botão Excluir da linha externa da tabela em Equipe & Presença para evitar cliques acidentais. Agora a exclusão fica visível apenas ao clicar em Editar (para Administradores), mantendo a confirmação de segurança, a trava de histórico contábil com opção "Desativar Agora" e sincronização multi-dispositivo.',
+      },
+      {
+        tag: 'Novo',
+        texto:
+          'Web Push VAPID com navegador fechado (arquitetura G1 & MacMagazine)',
+        detalhe:
+          'Sincronização automática de assinatura PushManager (VAPID P-256) via Service Worker v7 e endpoints serverless (/api/push e /api/cron-notifications), permitindo que celular e computador recebam alertas mesmo com o navegador fechado.',
+      },
+      {
+        tag: 'Novo',
+        texto:
+          'Resumo Matinal às 07:30 (Segunda a Sexta) e Fins de Semana Inteligentes',
+        detalhe:
+          'De segunda a sexta às 07:30, o sistema envia um Resumo Matinal único lembrando de apontar a presença dos funcionários e listando tarefas atrasadas e do dia inteiro. Sábados e domingos não disparam resumo matinal de presença, notificando apenas lembretes agendados para o fim de semana.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Gatilhos de Horário Exato (HH:mm) para Tarefas com Hora Marcada',
+        detalhe:
+          'Atividades configuradas com horário específico disparam pontualmente no minuto agendado, tanto em segundo plano via Service Worker quanto via Web Push.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Exclusão Segura dentro de Editar Colaborador',
+        descricao:
+          'Na aba Equipe & Presença, clique em "Editar" no colaborador desejado. O botão "Excluir Colaborador" fica protegido no canto inferior esquerdo da janela de edição.',
+        icone: 'Users',
+        ondeEncontrar: 'Menu Lateral → Equipe & Presença → Editar',
+        dica: 'Na tabela principal ficam apenas os botões rápidos de Editar e Desativar/Reativar.',
+      },
+      {
+        passo: 2,
+        titulo: 'Resumo Matinal de Segunda a Sexta às 07:30',
+        descricao:
+          'Nos dias úteis às 07:30, você recebe o lembrete para apontar a frequência da equipe junto com o resumo das tarefas atrasadas e do dia.',
+        icone: 'Bell',
+        ondeEncontrar: 'Notificações do Aparelho & Sino do Topo',
+        dica: 'No sábado e no domingo o resumo matinal não incomoda você — apenas tarefas marcadas para o fim de semana são notificadas.',
+      },
+      {
+        passo: 3,
+        titulo: 'Alertas em Horário Específico com App Fechado',
+        descricao:
+          'Ao criar uma tarefa desmarcando "Dia inteiro" e escolhendo um horário (ex.: 14:30), o alerta tocará exatamente naquele horário mesmo com o navegador fechado.',
+        icone: 'CheckSquare',
+        ondeEncontrar: 'Tarefas & Lembretes → Nova Tarefa',
+      },
+    ],
+  },
+  {
     versao: 'v2.0.0',
     dataPublicacao: '12 de Novembro de 2026 às 23:42',
     dataIso: '2026-11-13T02:42:59Z',

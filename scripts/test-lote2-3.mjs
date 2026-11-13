@@ -91,5 +91,25 @@ assert.ok(apontamentoSrc.includes('Copiar último dia'), 'ApontamentoGrade deve 
 assert.ok(apontamentoSrc.includes('Pendente') && apontamentoSrc.includes('planejarCopiaUltimoDia'), 'ApontamentoGrade deve tratar estado neutro Pendente e planejarCopiaUltimoDia');
 assert.ok(apontamentoSrc.includes('min-h-[44px]') && apontamentoSrc.includes('min-w-[44px]'), 'ApontamentoGrade deve respeitar alvo de toque >= 44px no mobile');
 
+// 5. Botão Excluir apenas dentro do modal Editar Colaborador (EquipePage vs FuncionarioFormDialog)
+const equipePageSrc = readFileSync(resolve('src/pages/EquipePage.tsx'), 'utf-8');
+const funcDialogSrc = readFileSync(resolve('src/features/folha/FuncionarioFormDialog.tsx'), 'utf-8');
+assert.ok(!equipePageSrc.includes('tentarExcluirFuncionario'), 'EquipePage não deve ter ação de excluir direto na linha da tabela');
+assert.ok(!equipePageSrc.includes('Trash2'), 'EquipePage não deve renderizar ícone Trash2 na linha da tabela');
+assert.ok(funcDialogSrc.includes('isEdicao && isAdmin') && funcDialogSrc.includes('Excluir Colaborador'), 'FuncionarioFormDialog deve exibir Excluir Colaborador apenas em modo edição para admin');
+assert.ok(funcDialogSrc.includes('desativarColaboradorAtual') && funcDialogSrc.includes('Desativar Agora'), 'FuncionarioFormDialog deve oferecer opção Desativar Agora quando houver histórico financeiro');
+console.log('5. ✅ Botão Excluir protegido exclusivamente dentro de Editar Colaborador validado.');
+
+// 6. Web Push VAPID (G1 / MacMagazine), Resumo Matinal Seg-Sex 07:30 e Horários Exatos
+assert.ok(existsSync(resolve('api/_webpush.js')), 'api/_webpush.js deve existir');
+assert.ok(existsSync(resolve('api/push.js')), 'api/push.js deve existir');
+assert.ok(existsSync(resolve('api/cron-notifications.js')), 'api/cron-notifications.js deve existir');
+const swSrc = readFileSync(resolve('public/sw.js'), 'utf-8');
+assert.ok(swSrc.includes('VAPID_PUBLIC_KEY'), 'public/sw.js deve conter VAPID_PUBLIC_KEY');
+assert.ok(swSrc.includes('pushsubscriptionchange'), 'public/sw.js deve tratar renovação pushsubscriptionchange');
+assert.ok(notifSrc.includes('sincronizarInscricaoWebPush'), 'notifications.ts deve sincronizar inscrição Web Push');
+assert.ok(notifSrc.includes('avaliarNotificacoesPendentesAgora'), 'notifications.ts deve exportar avaliador de resumo matinal e horários exatos');
+
 console.log('4. ✅ Estética industrial limpa, WCAG AA e assets otimizados validados.');
+console.log('6. ✅ Arquitetura Web Push VAPID, Resumo Matinal 07:30 (Seg-Sex) e horários exatos validados.');
 console.log('\n🎉 TODOS OS TESTES DOS LOTES 2 E 3 PASSARAM COM SUCESSO!\n');

@@ -48,7 +48,13 @@
       ]
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron-notifications",
+      "schedule": "30 10 * * 1-5"
+    }
+  ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }

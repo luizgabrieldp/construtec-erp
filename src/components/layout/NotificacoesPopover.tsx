@@ -27,6 +27,8 @@ import {
   getStorageKeyNotificacoes,
   getNotificacoesLidas,
   saveNotificacoesLidas,
+  getNotificationPermission,
+  requestNotificationPermission,
 } from '@/lib/notifications';
 import { toast } from '@/components/ui/Toast';
 import { Badge, Button } from '@/components/ui';
@@ -43,6 +45,7 @@ export function NotificacoesPopover() {
   const [aberto, setAberto] = useState(false);
   const [abaAtiva, setAbaAtiva] = useState<'tarefas' | 'sistema'>('tarefas');
   const [tarefaParaExcluir, setTarefaParaExcluir] = useState<Tarefa | null>(null);
+  const [permissaoNotif, setPermissaoNotif] = useState(() => getNotificationPermission());
 
   const data = useData();
   const mutate = useErp((s) => s.mutate);
@@ -515,6 +518,25 @@ export function NotificacoesPopover() {
           </div>
 
           {/* Rodapé do Popover com atalhos */}
+          {permissaoNotif !== 'granted' && permissaoNotif !== 'unsupported' && (
+            <div className="flex items-center justify-between gap-2 border-t border-line bg-brand/5 px-3 py-2 text-[11px]">
+              <span className="text-muted">Receber alertas mesmo com o app fechado:</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  const p = await requestNotificationPermission();
+                  setPermissaoNotif(p);
+                  if (p === 'granted') {
+                    toast('Notificações Web Push ativadas neste aparelho!');
+                  }
+                }}
+                className="shrink-0 rounded-lg bg-brand-solid px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-brand-solid-hover transition-colors cursor-pointer"
+              >
+                Ativar agora
+              </button>
+            </div>
+          )}
+
           <div className="flex items-center justify-between border-t border-line bg-surface-2/50 px-3 py-2 text-[11px]">
             <button
               type="button"

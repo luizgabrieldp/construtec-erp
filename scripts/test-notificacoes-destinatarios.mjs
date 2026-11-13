@@ -36,14 +36,19 @@ try {
 
   console.log('   ✅ Módulos carregados com sucesso!');
 
-  // Teste 2: Validar versões v2.0.0, v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
-  console.log('2. Validando integridade das releases v2.0.0, v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
-  const v200 = ATUALIZACOES_SISTEMA[0];
+  // Teste 2: Validar versões v2.0.1, v2.0.0, v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
+  console.log('2. Validando integridade das releases v2.0.1, v2.0.0, v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
+  const v201 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v201.versao, 'v2.0.1');
+  assert.ok(v201.titulo.includes('Web Push'));
+  assert.deepEqual(v201.tags, ['Novo', 'Melhoria', 'Correção']);
+  assert.ok(v201.mudancas.length >= 4);
+  assert.ok(v201.passosVisuais.length >= 3);
+
+  const v200 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v2.0.0');
+  assert.ok(v200, 'v2.0.0 deve estar no histórico');
   assert.equal(v200.versao, 'v2.0.0');
   assert.ok(v200.titulo.includes('Design Industrial'));
-  assert.deepEqual(v200.tags, ['Novo', 'Melhoria', 'Correção']);
-  assert.ok(v200.mudancas.length >= 4);
-  assert.ok(v200.passosVisuais.length >= 3);
 
   const v187 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.7');
   assert.ok(v187, 'v1.8.7 deve estar no histórico');
@@ -307,6 +312,67 @@ try {
   assert.ok(notifSrc.includes('usuarioIdParam'), 'iniciarVerificadorTarefas deve propagar usuarioIdParam');
 
   console.log('   ✅ Leitura inteligente de tarefas pendentes validada sem marcação indevida de futuras!');
+
+  // Teste 8: Validar Resumo Matinal às 07:30 (Seg-Sex), Fins de Semana sem Resumo Matinal e Horário Exato (HH:mm)
+  console.log('8. Validando avaliarNotificacoesPendentesAgora (Resumo Matinal Seg-Sex 07:30 vs Fim de Semana vs HH:mm)...');
+  const { avaliarNotificacoesPendentesAgora } = await server.ssrLoadModule('/src/lib/notifications.ts');
+  const disparosTeste = new Set();
+  const cenarioTarefas = [
+    { id: 't-atrasada', titulo: 'Pagar nota de cimento', data: ontem, diaInteiro: true, concluida: false, destinatarioTipo: 'todos' },
+    { id: 't-hoje-inteiro', titulo: 'Conferir EPIs', data: hoje, diaInteiro: true, concluida: false, destinatarioTipo: 'todos' },
+    { id: 't-hoje-1430', titulo: 'Receber caminhão betoneira', data: hoje, diaInteiro: false, horario: '14:30', concluida: false, destinatarioTipo: 'todos' },
+  ];
+
+  // A) Segunda-feira (diaSemana = 1) às 07:30 -> Deve disparar apenas 1 Resumo Matinal Único (e NÃO disparar a de 14:30 ainda)
+  const alertasSeg0730 = avaliarNotificacoesPendentesAgora({
+    tarefas: cenarioTarefas,
+    usuarioAtual: userAdmin,
+    hoje,
+    horaAtual: '07:30',
+    diaSemana: 1,
+    disparosHoje: disparosTeste,
+  });
+  assert.equal(alertasSeg0730.length, 1, 'Segunda às 07:30 deve gerar exatamente 1 Resumo Matinal consolidado');
+  assert.ok(alertasSeg0730[0].title.includes('Resumo Matinal CONSTRUTEC'), 'Deve ter título Resumo Matinal CONSTRUTEC');
+  assert.ok(alertasSeg0730[0].body.includes('presença dos funcionários'), 'Deve lembrar de registrar a presença dos funcionários');
+  assert.ok(alertasSeg0730[0].body.includes('Pagar nota de cimento'), 'Deve incluir a tarefa atrasada no resumo');
+  assert.ok(alertasSeg0730[0].body.includes('Conferir EPIs'), 'Deve incluir a tarefa de dia inteiro no resumo');
+  alertasSeg0730[0].chavesDisparo.forEach((k) => disparosTeste.add(k));
+
+  // B) Segunda-feira às 14:30 -> Deve disparar exclusivamente a tarefa das 14:30
+  const alertasSeg1430 = avaliarNotificacoesPendentesAgora({
+    tarefas: cenarioTarefas,
+    usuarioAtual: userAdmin,
+    hoje,
+    horaAtual: '14:30',
+    diaSemana: 1,
+    disparosHoje: disparosTeste,
+  });
+  assert.equal(alertasSeg1430.length, 1, 'Às 14:30 deve disparar a tarefa de horário específico');
+  assert.ok(alertasSeg1430[0].title.includes('14:30') && alertasSeg1430[0].title.includes('Receber caminhão betoneira'));
+
+  // C) Sábado (diaSemana = 6) e Domingo (diaSemana = 0) às 07:30 -> NÃO deve gerar Resumo Matinal de presença
+  const alertasSab0730 = avaliarNotificacoesPendentesAgora({
+    tarefas: [{ id: 't-atrasada', titulo: 'Pagar nota de cimento', data: ontem, diaInteiro: true, concluida: false, destinatarioTipo: 'todos' }],
+    usuarioAtual: userAdmin,
+    hoje,
+    horaAtual: '07:30',
+    diaSemana: 6,
+    disparosHoje: new Set(),
+  });
+  assert.equal(alertasSab0730.length, 0, 'Sábado não deve disparar resumo matinal de presença nem tarefas atrasadas não agendadas para sábado');
+
+  // Mas se houver tarefa agendada para o Sábado (ex: às 10:00), dispara no Sábado às 10:00!
+  const alertasSab1000 = avaliarNotificacoesPendentesAgora({
+    tarefas: [{ id: 't-sab-1000', titulo: 'Vistoria sábado', data: hoje, diaInteiro: false, horario: '10:00', concluida: false, destinatarioTipo: 'todos' }],
+    usuarioAtual: userAdmin,
+    hoje,
+    horaAtual: '10:00',
+    diaSemana: 6,
+    disparosHoje: new Set(),
+  });
+  assert.equal(alertasSab1000.length, 1, 'Sábado deve disparar lembrete programado para o sábado no horário exato');
+  console.log('   ✅ Resumo Matinal (Seg-Sex 07:30), silêncio matinal no fim de semana e disparo exato HH:mm validados!');
 
   console.log('\n🎉 TODOS OS TESTES DE EDGE CASES PASSARAM COM SUCESSO!\n');
 } catch (err) {
