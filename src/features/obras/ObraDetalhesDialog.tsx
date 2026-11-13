@@ -26,13 +26,17 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
   const isAdmin = useIsAdmin();
   const [modalExcluirAberto, setModalExcluirAberto] = useState(false);
   const [servicoFormAberto, setServicoFormAberto] = useState(false);
-  const [servicoSelecionado, setServicoSelecionado] = useState<ServicoEmpreitada | null>(null);
+  const [servicoSelecionadoId, setServicoSelecionadoId] = useState<string | null>(null);
   const [servicoParaEditar, setServicoParaEditar] = useState<ServicoEmpreitada | null>(null);
 
   if (!obra) return null;
 
   const obraAtual = data.obras.find((o) => o.id === obra.id) ?? obra;
+  const servicoSelecionado = servicoSelecionadoId
+    ? (data.servicos || []).find((s) => s.id === servicoSelecionadoId) ?? null
+    : null;
   const ro = r.porObra[obraAtual.id];
+  const outrosCustos = (ro?.porGrupo?.locacao || 0) + (ro?.porGrupo?.outros || 0);
   const { estoque } = processarEstoque(data, r.hoje);
   const estoqueObra = estoque[obraAtual.id] || {};
 
@@ -107,39 +111,47 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
             </div>
           </div>
 
-          {/* Orçamento e Custos */}
-          <Card className="p-4">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-              <div>
-                <span className="text-xs text-muted">Consumo do Orçamento</span>
-                <div className="text-lg font-bold">
-                  {fmtBRL(ro?.comprometido || 0)} <span className="text-xs font-normal text-muted">de {fmtBRL(obraAtual.orcamento)}</span>
+          {/* Orçamento e Custos (somente Admin) */}
+          {isAdmin && (
+            <Card className="p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                <div>
+                  <span className="text-xs text-muted">Consumo do Orçamento</span>
+                  <div className="text-lg font-bold tabular-nums">
+                    {fmtBRL(ro?.comprometido || 0)} <span className="text-xs font-normal text-muted">de {fmtBRL(obraAtual.orcamento)}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs text-muted">Saldo Restante</span>
+                  <div className={`text-lg font-bold tabular-nums ${(ro?.saldoOrcamento || 0) < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                    {fmtBRL(ro?.saldoOrcamento || 0)}
+                  </div>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="text-xs text-muted">Saldo Restante</span>
-                <div className={`text-lg font-bold ${(ro?.saldoOrcamento || 0) < 0 ? 'text-red-500' : 'text-emerald-500'}`}>
-                  {fmtBRL(ro?.saldoOrcamento || 0)}
-                </div>
-              </div>
-            </div>
-            <Progress value={ro?.consumoPct || 0} className="mb-4" />
+              <Progress value={ro?.consumoPct || 0} className="mb-4" />
 
-            <div className="grid grid-cols-3 gap-2 border-t border-line pt-3 text-center text-xs">
-              <div>
-                <span className="text-muted">Materiais</span>
-                <div className="font-semibold text-brand">{fmtBRL(ro?.porGrupo?.materiais || 0)}</div>
+              <div className={`grid gap-2 border-t border-line pt-3 text-center text-xs ${outrosCustos > 0 ? 'grid-cols-4' : 'grid-cols-3'}`}>
+                <div>
+                  <span className="text-muted">Materiais</span>
+                  <div className="font-semibold text-brand tabular-nums">{fmtBRL(ro?.porGrupo?.materiais || 0)}</div>
+                </div>
+                <div>
+                  <span className="text-muted">Mão de Obra</span>
+                  <div className="font-semibold text-sky-500 tabular-nums">{fmtBRL(ro?.porGrupo?.mao_de_obra || 0)}</div>
+                </div>
+                <div>
+                  <span className="text-muted">Empreitadas</span>
+                  <div className="font-semibold text-emerald-500 tabular-nums">{fmtBRL(ro?.porGrupo?.servicos || 0)}</div>
+                </div>
+                {outrosCustos > 0 && (
+                  <div>
+                    <span className="text-muted">Outros Custos</span>
+                    <div className="font-semibold text-amber-500 tabular-nums">{fmtBRL(outrosCustos)}</div>
+                  </div>
+                )}
               </div>
-              <div>
-                <span className="text-muted">Mão de Obra</span>
-                <div className="font-semibold text-sky-500">{fmtBRL(ro?.porGrupo?.mao_de_obra || 0)}</div>
-              </div>
-              <div>
-                <span className="text-muted">Empreitadas</span>
-                <div className="font-semibold text-emerald-500">{fmtBRL(ro?.porGrupo?.servicos || 0)}</div>
-              </div>
-            </div>
-          </Card>
+            </Card>
+          )}
 
           {/* Materiais em Estoque na Obra */}
           <div className="rounded-xl border border-line p-4">
@@ -158,15 +170,14 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
                       <span className="text-muted ml-1.5">({LABEL_UNIDADE[material.unidade]})</span>
                     </div>
                     <div className="text-right">
-                      <span className="font-bold">{quantidade}</span>
-                      <div className="text-[10px] text-muted">{fmtBRL(valor)}</div>
+                      <span className="font-bold tabular-nums">{quantidade}</span>
+                      {isAdmin && <div className="text-[11px] text-muted tabular-nums">{fmtBRL(valor)}</div>}
                     </div>
                   </li>
                 ))}
               </ul>
             )}
           </div>
-
 
           {/* Serviços e Empreitadas Contratados */}
           <div className="rounded-xl border border-line p-4">
@@ -175,17 +186,19 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
                 <Briefcase className="size-4 text-emerald-500" />
                 Serviços Terceirizados & Empreitadas ({servicosObra.length})
               </div>
-              <Button
-                size="sm"
-                variant="secondary"
-                icon={<Plus className="size-3.5" />}
-                onClick={() => {
-                  setServicoParaEditar(null);
-                  setServicoFormAberto(true);
-                }}
-              >
-                Nova Empreitada
-              </Button>
+              {isAdmin && (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  icon={<Plus className="size-3.5" />}
+                  onClick={() => {
+                    setServicoParaEditar(null);
+                    setServicoFormAberto(true);
+                  }}
+                >
+                  Nova Empreitada
+                </Button>
+              )}
             </div>
 
             {servicosObra.length === 0 ? (
@@ -198,10 +211,11 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
                   const pagas = s.etapas.filter((e) => e.status === 'pago').reduce((acc, e) => acc + e.valor, 0);
                   const pctPago = s.valorTotal > 0 ? pagas / s.valorTotal : 0;
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={s.id}
-                      onClick={() => setServicoSelecionado(s)}
-                      className="cursor-pointer rounded-lg border border-line bg-surface-2/60 p-3 transition-colors hover:border-brand/40 hover:bg-surface-2"
+                      onClick={() => setServicoSelecionadoId(s.id)}
+                      className="w-full text-left cursor-pointer rounded-lg border border-line bg-surface-2/60 p-3 transition-colors hover:border-brand/40 hover:bg-surface-2"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0">
@@ -213,17 +227,25 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
                         </Badge>
                       </div>
 
-                      <div className="mt-2.5 flex items-end justify-between">
-                        <div>
-                          <div className="text-[10px] text-muted">Contrato: {fmtBRL(s.valorTotal)}</div>
-                          <div className="text-[10px] text-emerald-500 font-medium">Pago: {fmtBRL(pagas)} ({fmtPct(pctPago)})</div>
+                      {isAdmin ? (
+                        <>
+                          <div className="mt-2.5 flex items-end justify-between">
+                            <div>
+                              <div className="text-[11px] text-muted tabular-nums">Contrato: {fmtBRL(s.valorTotal)}</div>
+                              <div className="text-[11px] text-emerald-500 font-medium tabular-nums">Pago: {fmtBRL(pagas)} ({fmtPct(pctPago)})</div>
+                            </div>
+                            <div className="text-[11px] text-muted">
+                              {s.etapas.length} {s.etapas.length === 1 ? 'parcela' : 'etapas'}
+                            </div>
+                          </div>
+                          <Progress value={pctPago} className="mt-2 h-1.5" />
+                        </>
+                      ) : (
+                        <div className="mt-2 text-[11px] text-muted">
+                          Previsão: {fmtDate(s.previsaoEntrega)} • {s.etapas.length} {s.etapas.length === 1 ? 'etapa' : 'etapas'}
                         </div>
-                        <div className="text-[10px] text-muted">
-                          {s.etapas.length} {s.etapas.length === 1 ? 'parcela' : 'etapas'}
-                        </div>
-                      </div>
-                      <Progress value={pctPago} className="mt-2 h-1.5" />
-                    </div>
+                      )}
+                    </button>
                   );
                 })}
               </div>
@@ -288,7 +310,7 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
       />
 
       {/* Modais de Serviços */}
-      {servicoFormAberto && (
+      {isAdmin && servicoFormAberto && (
         <ServicoFormDialog
           open={servicoFormAberto}
           onClose={() => setServicoFormAberto(false)}
@@ -300,9 +322,9 @@ export function ObraDetalhesDialog({ obra, onClose, onEditar }: ObraDetalhesDial
       {servicoSelecionado && (
         <DetalhesServicoDialog
           servico={servicoSelecionado}
-          onClose={() => setServicoSelecionado(null)}
+          onClose={() => setServicoSelecionadoId(null)}
           onEditar={(srv) => {
-            setServicoSelecionado(null);
+            setServicoSelecionadoId(null);
             setServicoParaEditar(srv);
             setServicoFormAberto(true);
           }}

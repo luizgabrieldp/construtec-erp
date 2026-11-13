@@ -2,12 +2,11 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Bell,
-  Check,
   CheckCheck,
   CheckCircle2,
   Circle,
   Clock,
-  Sparkles,
+  History,
   ExternalLink,
   Settings,
   X,
@@ -17,54 +16,33 @@ import {
   User,
   Users,
   Sun,
-  ShieldAlert,
   Trash2,
 } from 'lucide-react';
 import { useErp, useData } from '@/data/store';
 import { useAuth } from '@/data/auth';
 import { useHoje } from '@/hooks';
 import { ATUALIZACOES_SISTEMA, type ReleaseVersao } from '@/data/atualizacoes';
-import { isTarefaRelevanteParaUsuario } from '@/lib/notifications';
+import {
+  isTarefaRelevanteParaUsuario,
+  getStorageKeyNotificacoes,
+  getNotificacoesLidas,
+  saveNotificacoesLidas,
+} from '@/lib/notifications';
 import { toast } from '@/components/ui/Toast';
 import { Badge, Button } from '@/components/ui';
+import { Dialog } from '@/components/ui/Dialog';
 import { diffDays } from '@/lib/dates';
 import { fmtDateShort } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { cn, uid } from '@/lib/utils';
+import { gerarProximaTarefaRecorrente } from '@/domain/engine';
 import type { Tarefa } from '@/domain/types';
 
-const STORAGE_KEY = 'construtec:notificacoes:lidas:v1';
-
-export function getStorageKey(usuarioId?: string) {
-  return usuarioId ? `construtec:notificacoes:lidas:${usuarioId}:v1` : STORAGE_KEY;
-}
-
-export function getNotificacoesLidas(usuarioId?: string): Set<string> {
-  if (typeof window === 'undefined') return new Set();
-  try {
-    const key = getStorageKey(usuarioId);
-    const raw = localStorage.getItem(key);
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
-export function saveNotificacoesLidas(set: Set<string>, usuarioId?: string) {
-  if (typeof window === 'undefined') return;
-  try {
-    const list = Array.from(set);
-    const json = JSON.stringify(list);
-    const key = getStorageKey(usuarioId);
-    localStorage.setItem(key, json);
-    window.dispatchEvent(
-      new CustomEvent('construtec:notificacoes:lidas', { detail: { usuarioId } })
-    );
-  } catch {}
-}
+export { getStorageKeyNotificacoes as getStorageKey, getNotificacoesLidas, saveNotificacoesLidas };
 
 export function NotificacoesPopover() {
   const [aberto, setAberto] = useState(false);
   const [abaAtiva, setAbaAtiva] = useState<'tarefas' | 'sistema'>('tarefas');
+  const [tarefaParaExcluir, setTarefaParaExcluir] = useState<Tarefa | null>(null);
 
   const data = useData();
   const mutate = useErp((s) => s.mutate);
@@ -144,40 +122,17 @@ export function NotificacoesPopover() {
 
   const versaoRecente: ReleaseVersao | undefined = ATUALIZACOES_SISTEMA[0];
 
-  // Leitura inteligente automática: ao abrir o popover ou alternar abas, marca como lidas as notificações visíveis
+  // Marca como lida apenas a aba que o usuário está visualizando explicitamente
   useEffect(() => {
-    if (!aberto) return;
-
+    if (!aberto || abaAtiva !== 'sistema' || !versaoRecente) return;
     const novasLidas = new Set(getNotificacoesLidas(usuarioId));
-    let mudou = false;
-
-    // Marca as tarefas pendentes de hoje como lidas ao visualizar
-    if (abaAtiva === 'tarefas' || aberto) {
-      tarefasPendentes.forEach((t) => {
-        const k = `tarefa-${t.id}`;
-        if (!novasLidas.has(k)) {
-          novasLidas.add(k);
-          mudou = true;
-        }
-      });
-    }
-
-    // Marca o aviso de atualização como lido ao visualizar
-    if (abaAtiva === 'sistema' || aberto) {
-      if (versaoRecente) {
-        const k = `versao-${versaoRecente.versao}`;
-        if (!novasLidas.has(k)) {
-          novasLidas.add(k);
-          mudou = true;
-        }
-      }
-    }
-
-    if (mudou) {
+    const k = `versao-${versaoRecente.versao}`;
+    if (!novasLidas.has(k)) {
+      novasLidas.add(k);
       setNotificacoesLidas(novasLidas);
       saveNotificacoesLidas(novasLidas, usuarioId);
     }
-  }, [aberto, abaAtiva, tarefasPendentes, versaoRecente, usuarioId]);
+  }, [aberto, abaAtiva, versaoRecente, usuarioId]);
 
   // Identificadores não lidos
   const tarefasNaoLidas = useMemo(() => {
@@ -204,16 +159,23 @@ export function NotificacoesPopover() {
 
   const concluirTarefa = (t: Tarefa, e: React.MouseEvent) => {
     e.stopPropagation();
+    let proximaGerada: Tarefa | null = null;
     mutate(
       (d) => {
         d.tarefas ??= [];
         const idx = d.tarefas.findIndex((tar) => tar.id === t.id);
         if (idx !== -1) {
-          d.tarefas[idx] = {
+          const atualizada: Tarefa = {
             ...d.tarefas[idx],
             concluida: true,
             concluidaEm: new Date().toISOString(),
           };
+          d.tarefas[idx] = atualizada;
+          const proxima = gerarProximaTarefaRecorrente(atualizada, d.tarefas, uid('tar'));
+          if (proxima) {
+            d.tarefas.push(proxima);
+            proximaGerada = proxima;
+          }
         }
       },
       { acao: 'Tarefas', descricao: `Concluiu tarefa "${t.titulo}" via Notificações In-App` },
@@ -223,13 +185,22 @@ export function NotificacoesPopover() {
     novasLidas.add(`tarefa-${t.id}`);
     setNotificacoesLidas(novasLidas);
     saveNotificacoesLidas(novasLidas, usuarioId);
-    toast(`Tarefa "${t.titulo}" marcada como concluída!`, 'success');
+    if (proximaGerada) {
+      toast(`Tarefa "${t.titulo}" concluída! Próxima agendada para ${fmtDateShort((proximaGerada as Tarefa).data)}.`, 'success');
+    } else {
+      toast(`Tarefa "${t.titulo}" marcada como concluída!`, 'success');
+    }
   };
 
   const excluirTarefa = (t: Tarefa, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(`Deseja realmente excluir a tarefa "${t.titulo}"?`)) return;
+    setTarefaParaExcluir(t);
+    setAberto(false);
+  };
 
+  const confirmarExclusaoTarefa = () => {
+    if (!tarefaParaExcluir) return;
+    const t = tarefaParaExcluir;
     mutate(
       (d) => {
         d.tarefas = (d.tarefas || []).filter((x) => x.id !== t.id);
@@ -245,6 +216,7 @@ export function NotificacoesPopover() {
     setNotificacoesLidas(novasLidas);
     saveNotificacoesLidas(novasLidas, usuarioId);
 
+    setTarefaParaExcluir(null);
     toast(`Tarefa "${t.titulo}" excluída com sucesso.`, 'success');
   };
 
@@ -276,6 +248,7 @@ export function NotificacoesPopover() {
   };
 
   return (
+    <>
     <div ref={containerRef} className="relative inline-block">
       {/* Botão de Sino no Topbar */}
       <button
@@ -298,15 +271,15 @@ export function NotificacoesPopover() {
 
         {/* Badge vermelho de contagem */}
         {totalNaoLidas > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-xs animate-in zoom-in-75">
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow-xs">
             {totalNaoLidas > 9 ? '9+' : totalNaoLidas}
           </span>
         )}
       </button>
 
-      {/* Painel Popover Elegante */}
+      {/* Painel Popover */}
       {aberto && (
-        <div className="absolute right-0 top-full mt-2 w-[340px] sm:w-[390px] max-w-[calc(100vw-1.5rem)] rounded-2xl border border-line bg-surface/95 backdrop-blur-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+        <div className="absolute right-0 top-full mt-2 w-[340px] sm:w-[390px] max-w-[calc(100vw-1.5rem)] rounded-2xl border border-line bg-surface shadow-xl z-50 overflow-hidden">
           {/* Cabeçalho do Popover */}
           <div className="flex items-center justify-between border-b border-line px-4 py-3 bg-surface-2/40">
             <div className="flex items-center gap-2">
@@ -503,7 +476,7 @@ export function NotificacoesPopover() {
               <div className="rounded-xl border border-line bg-surface p-3 space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="inline-flex items-center gap-1 text-xs font-bold text-fg">
-                    <Sparkles className="size-3.5 text-brand" />
+                    <History className="size-3.5 text-brand" />
                     <span>Versão {versaoRecente.versao}</span>
                   </span>
                   <Badge tone="green" className="text-[10px]">
@@ -564,5 +537,28 @@ export function NotificacoesPopover() {
         </div>
       )}
     </div>
+
+    <Dialog
+      open={!!tarefaParaExcluir}
+      onClose={() => setTarefaParaExcluir(null)}
+      title="Excluir Tarefa?"
+    >
+      {tarefaParaExcluir && (
+        <div className="space-y-4">
+          <p className="text-sm text-muted">
+            Deseja realmente excluir a tarefa <strong className="text-fg">"{tarefaParaExcluir.titulo}"</strong>? Esta ação não pode ser desfeita.
+          </p>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="secondary" onClick={() => setTarefaParaExcluir(null)}>
+              Cancelar
+            </Button>
+            <Button type="button" variant="danger" onClick={confirmarExclusaoTarefa}>
+              Excluir Tarefa
+            </Button>
+          </div>
+        </div>
+      )}
+    </Dialog>
+    </>
   );
 }

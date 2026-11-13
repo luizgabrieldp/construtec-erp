@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Calendar, DollarSign, Wrench, AlertCircle } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button, Field, Input, Select } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
-import type { ServicoEmpreitada, EtapaServico, ContaPagar } from '@/domain/types';
+import { useIsAdmin } from '@/hooks';
+import { SEDE, type ServicoEmpreitada, type EtapaServico, type ContaPagar } from '@/domain/types';
 import { today, addDays } from '@/lib/dates';
-import { fmtBRL, round2 } from '@/lib/format';
+import { fmtBRL, parseMoedaBR, round2 } from '@/lib/format';
 import { uid } from '@/lib/utils';
 
 interface ServicoFormDialogProps {
@@ -44,9 +45,10 @@ export function ServicoFormDialog({
   obraPadraoId,
 }: ServicoFormDialogProps) {
   const data = useData();
+  const isAdmin = useIsAdmin();
   const mutate = useErp((s) => s.mutate);
 
-  const [obraId, setObraId] = useState(obraPadraoId || data.obras[0]?.id || '');
+  const [obraId, setObraId] = useState(obraPadraoId || data.obras[0]?.id || SEDE);
   const [prestadorNome, setPrestadorNome] = useState('');
   const [prestadorContato, setPrestadorContato] = useState('');
   const [funcao, setFuncao] = useState('Eletricista');
@@ -93,7 +95,7 @@ export function ServicoFormDialog({
         ]);
       }
     } else {
-      setObraId(obraPadraoId || data.obras[0]?.id || '');
+      setObraId(obraPadraoId || data.obras[0]?.id || SEDE);
       setPrestadorNome('');
       setPrestadorContato('');
       setFuncao('Eletricista');
@@ -108,25 +110,44 @@ export function ServicoFormDialog({
     }
   }, [servicoParaEditar, obraPadraoId, open, data.obras]);
 
-  const vTotalNum = round2(Number(valorTotal.replace(',', '.')) || 0);
+  const vTotalNum = round2(parseMoedaBR(valorTotal));
+
+  const paidEtapaIds = new Set(
+    (servicoParaEditar?.etapas || [])
+      .filter((etp) => {
+        if (etp.status === 'pago') return true;
+        if (etp.contaPagarId) {
+          const conta = data.contasPagar.find((c) => c.id === etp.contaPagarId);
+          return conta?.status === 'pago';
+        }
+        return false;
+      })
+      .map((etp) => etp.id),
+  );
+  const temEtapaPaga = paidEtapaIds.size > 0;
 
   // Sincronizar valor quando modo for parcela única
   const atualizarValorTotal = (val: string) => {
     setValorTotal(val);
-    const n = round2(Number(val.replace(',', '.')) || 0);
-    if (modoPagamento === 'unica') {
+    const n = round2(parseMoedaBR(val));
+    if (modoPagamento === 'unica' && !(etapas[0] && paidEtapaIds.has(etapas[0].id))) {
       setEtapas([
         {
           id: etapas[0]?.id || uid('temp'),
-          descricao: 'Pagamento integral na entrega',
+          descricao: etapas[0]?.descricao || 'Pagamento integral na entrega',
           valor: String(n > 0 ? n : ''),
-          vencimento: previsaoEntrega,
+          vencimento: etapas[0]?.vencimento || previsaoEntrega,
         },
       ]);
     }
   };
 
   const mudarModoPagamento = (modo: 'unica' | 'etapas') => {
+    if (modo === modoPagamento) return;
+    if (temEtapaPaga) {
+      toast('Não é possível alterar a forma de pagamento quando já existem parcelas pagas.', 'error');
+      return;
+    }
     setModoPagamento(modo);
     if (modo === 'unica') {
       setEtapas([
@@ -148,7 +169,7 @@ export function ServicoFormDialog({
   };
 
   const adicionarEtapa = () => {
-    const somaAtual = etapas.reduce((s, e) => s + (Number(e.valor.replace(',', '.')) || 0), 0);
+    const somaAtual = etapas.reduce((s, e) => s + parseMoedaBR(e.valor), 0);
     const restante = Math.max(0, round2(vTotalNum - somaAtual));
     setEtapas([
       ...etapas,
@@ -163,18 +184,29 @@ export function ServicoFormDialog({
 
   const removerEtapa = (idEtapa: string) => {
     if (etapas.length <= 1) return;
+    if (paidEtapaIds.has(idEtapa)) {
+      toast('Não é possível remover uma etapa que já foi paga.', 'error');
+      return;
+    }
     setEtapas(etapas.filter((e) => e.id !== idEtapa));
   };
 
   const atualizarEtapa = (idEtapa: string, campo: keyof EtapaRascunho, valor: string) => {
+    if (paidEtapaIds.has(idEtapa) && (campo === 'valor' || campo === 'vencimento')) {
+      return;
+    }
     setEtapas(etapas.map((e) => (e.id === idEtapa ? { ...e, [campo]: valor } : e)));
   };
 
-  const somaEtapas = round2(etapas.reduce((s, e) => s + (Number(e.valor.replace(',', '.')) || 0), 0));
+  const somaEtapas = round2(etapas.reduce((s, e) => s + parseMoedaBR(e.valor), 0));
   const diferenca = round2(vTotalNum - somaEtapas);
 
   const salvar = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      toast('Apenas administradores podem gerenciar contratos e empreitadas.', 'error');
+      return;
+    }
 
     if (!prestadorNome.trim()) {
       toast('Informe o nome do prestador ou empresa.', 'error');
@@ -182,6 +214,10 @@ export function ServicoFormDialog({
     }
     if (!descricao.trim()) {
       toast('Informe a descrição do serviço a ser realizado.', 'error');
+      return;
+    }
+    if (previsaoEntrega < dataInicio) {
+      toast('A previsão de entrega não pode ser anterior à data de início.', 'error');
       return;
     }
     if (vTotalNum <= 0) {
@@ -193,26 +229,43 @@ export function ServicoFormDialog({
       return;
     }
 
-    const obraSel = data.obras.find((o) => o.id === obraId);
+    const centroFinal = obraId || data.obras[0]?.id || SEDE;
+    const obraSel = data.obras.find((o) => o.id === centroFinal);
 
     mutate((d) => {
       const servId = servicoParaEditar ? servicoParaEditar.id : uid('srv');
+      const servicoExistente = servicoParaEditar
+        ? d.servicos.find((s) => s.id === servicoParaEditar.id) ?? servicoParaEditar
+        : null;
       const novasEtapas: EtapaServico[] = [];
+      const contasMantidas = new Set<string>();
 
       etapas.forEach((eRasc, idx) => {
-        const vEtapa = round2(Number(eRasc.valor.replace(',', '.')) || 0);
+        const vEtapa = round2(parseMoedaBR(eRasc.valor));
         let contaId = '';
+        let statusEtapa: EtapaServico['status'] = 'pendente';
+        let valorEtapaFinal = vEtapa;
+        let vencimentoEtapaFinal = eRasc.vencimento;
 
-        if (servicoParaEditar) {
-          const etapaExistente = servicoParaEditar.etapas.find((x) => x.id === eRasc.id);
+        if (servicoExistente) {
+          const etapaExistente = servicoExistente.etapas.find((x) => x.id === eRasc.id);
           if (etapaExistente?.contaPagarId) {
             contaId = etapaExistente.contaPagarId;
             const cIndex = d.contasPagar.findIndex((c) => c.id === contaId);
-            if (cIndex >= 0) {
+            const contaExistente = cIndex >= 0 ? d.contasPagar[cIndex] : undefined;
+            const jaPaga = etapaExistente.status === 'pago' || contaExistente?.status === 'pago';
+
+            if (jaPaga) {
+              statusEtapa = 'pago';
+              valorEtapaFinal = etapaExistente.valor;
+              vencimentoEtapaFinal = etapaExistente.vencimento;
+            } else if (cIndex >= 0) {
               d.contasPagar[cIndex].valor = vEtapa;
               d.contasPagar[cIndex].vencimento = eRasc.vencimento;
+              d.contasPagar[cIndex].parcela = idx + 1;
+              d.contasPagar[cIndex].totalParcelas = etapas.length;
               d.contasPagar[cIndex].descricao = `Empreitada: ${descricao.trim()} (${idx + 1}/${etapas.length} - ${eRasc.descricao.trim()})`;
-              d.contasPagar[cIndex].distribuicao = [{ centroId: obraId, valor: vEtapa }];
+              d.contasPagar[cIndex].distribuicao = [{ centroId: centroFinal, valor: vEtapa }];
             }
           }
         }
@@ -231,25 +284,33 @@ export function ServicoFormDialog({
             documento: '',
             origem: 'servico',
             origemId: servId,
-            distribuicao: [{ centroId: obraId, valor: vEtapa }],
+            distribuicao: [{ centroId: centroFinal, valor: vEtapa }],
             criadoEm: new Date().toISOString(),
           };
           d.contasPagar.push(novaConta);
         }
 
+        contasMantidas.add(contaId);
         novasEtapas.push({
           id: eRasc.id.startsWith('temp') ? uid('etp') : eRasc.id,
           descricao: eRasc.descricao.trim() || `Parcela ${idx + 1}`,
-          valor: vEtapa,
-          vencimento: eRasc.vencimento,
-          status: 'pendente',
+          valor: valorEtapaFinal,
+          vencimento: vencimentoEtapaFinal,
+          status: statusEtapa,
           contaPagarId: contaId,
         });
       });
 
+      if (servicoExistente) {
+        // Remove contas pendentes órfãs que foram excluídas durante a edição
+        d.contasPagar = d.contasPagar.filter(
+          (c) => !(c.origem === 'servico' && c.origemId === servId && c.status === 'pendente' && !contasMantidas.has(c.id)),
+        );
+      }
+
       const novoServico: ServicoEmpreitada = {
         id: servId,
-        obraId,
+        obraId: centroFinal,
         prestadorNome: prestadorNome.trim(),
         prestadorContato: prestadorContato.trim(),
         funcao,
@@ -257,25 +318,27 @@ export function ServicoFormDialog({
         valorTotal: vTotalNum,
         dataInicio,
         previsaoEntrega,
-        status: servicoParaEditar ? servicoParaEditar.status : 'andamento',
+        status: servicoExistente ? servicoExistente.status : 'andamento',
         etapas: novasEtapas,
-        criadoEm: servicoParaEditar ? servicoParaEditar.criadoEm : new Date().toISOString(),
+        criadoEm: servicoExistente ? servicoExistente.criadoEm : new Date().toISOString(),
       };
 
-      if (servicoParaEditar) {
-        const idxS = d.servicos.findIndex((s) => s.id === servicoParaEditar.id);
+      if (servicoExistente) {
+        const idxS = d.servicos.findIndex((s) => s.id === servicoExistente.id);
         if (idxS >= 0) d.servicos[idxS] = novoServico;
       } else {
         d.servicos.push(novoServico);
       }
     }, {
       acao: servicoParaEditar ? 'Edição de Empreitada' : 'Novo Contrato de Serviço',
-      descricao: `${servicoParaEditar ? 'Editou' : 'Cadastrou'} serviço "${descricao.trim()}" (${fmtBRL(vTotalNum)}) com ${prestadorNome.trim()} na obra ${obraSel?.nome}`,
+      descricao: `${servicoParaEditar ? 'Editou' : 'Cadastrou'} serviço "${descricao.trim()}" (${fmtBRL(vTotalNum)}) com ${prestadorNome.trim()} na obra ${obraSel?.nome || 'Sede'}`,
     });
 
     toast(servicoParaEditar ? 'Contrato de serviço atualizado!' : 'Serviço por empreitada cadastrado com sucesso!');
     onClose();
   };
+
+  if (!isAdmin) return null;
 
   return (
     <Dialog
@@ -290,6 +353,9 @@ export function ServicoFormDialog({
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Obra Destino">
             <Select value={obraId} onChange={(e) => setObraId(e.target.value)} required>
+              {(data.obras.length === 0 || obraId === SEDE) && (
+                <option value={SEDE}>Sede / Matriz</option>
+              )}
               {data.obras.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.nome}
@@ -398,47 +464,60 @@ export function ServicoFormDialog({
           </div>
 
           <div className="space-y-2">
-            {etapas.map((etp, idx) => (
-              <div key={etp.id} className="grid grid-cols-12 gap-2 items-center bg-surface p-2.5 rounded-xl border border-line text-xs">
-                <div className="col-span-5">
-                  <Input
-                    placeholder="Descrição da etapa (ex: Entrada 30%)"
-                    value={etp.descricao}
-                    onChange={(e) => atualizarEtapa(etp.id, 'descricao', e.target.value)}
-                    required
-                  />
+            {etapas.map((etp) => {
+              const isPaga = paidEtapaIds.has(etp.id);
+              return (
+                <div key={etp.id} className="grid grid-cols-12 gap-2 items-center bg-surface p-2.5 rounded-xl border border-line text-xs">
+                  <div className="col-span-5">
+                    <Input
+                      placeholder="Descrição da etapa (ex: Entrada 30%)"
+                      value={etp.descricao}
+                      onChange={(e) => atualizarEtapa(etp.id, 'descricao', e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <Input
+                      type="text"
+                      placeholder="Valor R$"
+                      value={etp.valor}
+                      onChange={(e) => atualizarEtapa(etp.id, 'valor', e.target.value)}
+                      disabled={isPaga}
+                      title={isPaga ? 'Etapa já paga — valor bloqueado' : undefined}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-3">
+                    <Input
+                      type="date"
+                      value={etp.vencimento}
+                      onChange={(e) => atualizarEtapa(etp.id, 'vencimento', e.target.value)}
+                      disabled={isPaga}
+                      title={isPaga ? 'Etapa já paga — vencimento bloqueado' : undefined}
+                      required
+                    />
+                  </div>
+                  <div className="col-span-1 text-right">
+                    {isPaga ? (
+                      <span className="inline-block rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-500">
+                        Paga
+                      </span>
+                    ) : (
+                      modoPagamento === 'etapas' && etapas.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removerEtapa(etp.id)}
+                          className="p-1 text-muted hover:text-red-500 transition-colors"
+                          title="Remover etapa"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      )
+                    )}
+                  </div>
                 </div>
-                <div className="col-span-3">
-                  <Input
-                    type="text"
-                    placeholder="Valor R$"
-                    value={etp.valor}
-                    onChange={(e) => atualizarEtapa(etp.id, 'valor', e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="col-span-3">
-                  <Input
-                    type="date"
-                    value={etp.vencimento}
-                    onChange={(e) => atualizarEtapa(etp.id, 'vencimento', e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="col-span-1 text-right">
-                  {modoPagamento === 'etapas' && etapas.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removerEtapa(etp.id)}
-                      className="p-1 text-muted hover:text-red-500 transition-colors"
-                      title="Remover etapa"
-                    >
-                      <Trash2 className="size-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {modoPagamento === 'etapas' && (

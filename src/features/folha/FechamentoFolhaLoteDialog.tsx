@@ -1,29 +1,25 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   CheckSquare,
   Square,
   Filter,
-  DollarSign,
   Download,
   Printer,
   Users,
-  Layers,
-  Building2,
   Calendar,
-  AlertCircle,
   CheckCircle2,
-  MessageCircle,
 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
-import { Button, Field, Input, Select, Badge, Card } from '@/components/ui';
+import { Button, Field, Input, Select } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
 import { useHoje } from '@/hooks';
-import { SEDE, type FechamentoFolha, type Funcionario, type CentroId } from '@/domain/types';
+import { SEDE, type CentroId, type FechamentoFolha, type Funcionario } from '@/domain/types';
 import { LABEL_FUNCAO, getLabelFuncao } from '@/domain/labels';
-import { calcularFolha } from '@/domain/engine';
+import { calcularFolha, verificarSobreposicaoFechamento } from '@/domain/engine';
 import { addDays, endOfMonth, startOfMonth, startOfWeek, today } from '@/lib/dates';
 import { fmtBRL, fmtDate, round2 } from '@/lib/format';
+import { sanitizeCsvCell } from '@/lib/crypto';
 import { cn, uid } from '@/lib/utils';
 import { WhatsAppButton } from '@/components/brand/WhatsAppIcon';
 import { RecibosFolhaDialog, type DadosRecibo } from './RecibosFolhaDialog';
@@ -77,6 +73,13 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
   const [quinzenaOpcao, setQuinzenaOpcao] = useState<string>('atual_1');
   const [modalRecibosAberto, setModalRecibosAberto] = useState(false);
   const [modalEmpreiteiroAberto, setModalEmpreiteiroAberto] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setLoteProcessado(false);
+      setResumoUltimoLote(null);
+    }
+  }, [open]);
 
   const aplicarQuinzena = (opcao: string) => {
     setQuinzenaOpcao(opcao);
@@ -190,7 +193,6 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
         }
         porObra[dist.centroId].valor += dist.valor;
       });
-      const oNomePrinc = item.obraPrincipal.nome;
       if (porObra[item.obraPrincipal.id]) {
         porObra[item.obraPrincipal.id].qtd += 1;
       }
@@ -298,8 +300,14 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
       obrasNomes: string[];
     }> = [];
 
+    let ignoradosPorSobreposicao = 0;
+
     resumoLote.itensSelecionados.forEach(({ funcionario, resultado, obraPrincipal }) => {
       if (resultado.total <= 0) return;
+      if (verificarSobreposicaoFechamento(data.fechamentos, funcionario.id, inicio, fim)) {
+        ignoradosPorSobreposicao += 1;
+        return;
+      }
 
       const contaId = uid('cp');
       const fechamentoId = uid('fol');
@@ -350,9 +358,23 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
     });
 
     if (novosFechamentos.length === 0) {
-      toast('Nenhum colaborador com saldo a pagar maior que zero no período selecionado.', 'error');
+      toast(
+        ignoradosPorSobreposicao > 0
+          ? 'Todos os colaboradores selecionados já possuem folha fechada com sobreposição nesse período.'
+          : 'Nenhum colaborador com saldo a pagar maior que zero no período selecionado.',
+        'error',
+      );
       return;
     }
+
+    if (ignoradosPorSobreposicao > 0) {
+      toast(
+        `${ignoradosPorSobreposicao} colaborador(es) foram ignorados pois já possuem fechamento sobreposto neste período.`,
+        'info',
+      );
+    }
+
+    const valorTotalProcessado = round2(novosFechamentos.reduce((s, f) => s + f.total, 0));
 
     mutate(
       (d) => {
@@ -361,13 +383,13 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
       },
       {
         acao: 'Folha',
-        descricao: `Fechou lote de folha ${tipo} com ${novosFechamentos.length} profissionais somando ${fmtBRL(resumoLote.totalValor)}`,
+        descricao: `Fechou lote de folha ${tipo} com ${novosFechamentos.length} profissionais somando ${fmtBRL(valorTotalProcessado)}`,
       },
     );
 
     setResumoUltimoLote({
       totalColaboradores: novosFechamentos.length,
-      valorTotal: resumoLote.totalValor,
+      valorTotal: valorTotalProcessado,
       itens: resumoItens,
     });
     setLoteProcessado(true);
@@ -409,19 +431,19 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
     ];
 
     const linhas = itens.map((it) => [
-      `"${it.funcionario.nome}"`,
-      `"${LABEL_FUNCAO[it.funcionario.funcao]}"`,
-      `"${it.funcionario.regime}"`,
-      `"${it.obraNome}"`,
-      `"${fmtDate(inicio)}"`,
-      `"${fmtDate(fim)}"`,
-      it.dias.toString().replace('.', ','),
-      it.total.toFixed(2).replace('.', ','),
-      `"${fmtDate(vencimento)}"`,
-      `"${it.funcionario.telefone || '-'}"`,
+      sanitizeCsvCell(it.funcionario.nome),
+      sanitizeCsvCell(LABEL_FUNCAO[it.funcionario.funcao] || it.funcionario.funcao),
+      sanitizeCsvCell(it.funcionario.regime),
+      sanitizeCsvCell(it.obraNome),
+      sanitizeCsvCell(fmtDate(inicio)),
+      sanitizeCsvCell(fmtDate(fim)),
+      sanitizeCsvCell(it.dias.toString().replace('.', ',')),
+      sanitizeCsvCell(it.total.toFixed(2).replace('.', ',')),
+      sanitizeCsvCell(fmtDate(vencimento)),
+      sanitizeCsvCell(it.funcionario.telefone || '-'),
     ]);
 
-    const csvContent = '\uFEFF' + [headers.join(';'), ...linhas.map((l) => l.join(';'))].join('\n');
+    const csvContent = '\uFEFF' + [headers.map((h) => sanitizeCsvCell(h)).join(';'), ...linhas.map((l) => l.join(';'))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -433,11 +455,6 @@ export function FechamentoFolhaLoteDialog({ open, onClose }: FechamentoFolhaLote
     URL.revokeObjectURL(url);
 
     toast('Planilha CSV gerada e baixada com sucesso!');
-  };
-
-  // Impressão do espelho
-  const imprimirEspelho = () => {
-    window.print();
   };
 
   return (

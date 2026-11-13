@@ -148,7 +148,8 @@ function custosMaoDeObra(data: ErpData, hoje: ISODate): EventoCusto[] {
       cobertos.add(k);
       const a = data.apontamentos[k];
       if (!a || !FATOR_PRESENCA[a.status]) continue;
-      const centros = a.centroIds && a.centroIds.length > 0 ? a.centroIds : [a.centroId];
+      const centros =
+        a.centroIds && a.centroIds.length > 0 ? Array.from(new Set(a.centroIds)) : [a.centroId];
       const fatorCentro = FATOR_PRESENCA[a.status] / centros.length;
       for (const cid of centros) {
         (diasPorCentro[cid] ??= []).push(dia);
@@ -178,7 +179,8 @@ function custosMaoDeObra(data: ErpData, hoje: ISODate): EventoCusto[] {
     const f = funcs[a.funcionarioId];
     const fator = FATOR_PRESENCA[a.status];
     if (!f || !fator) continue;
-    const centros = a.centroIds && a.centroIds.length > 0 ? a.centroIds : [a.centroId];
+    const centros =
+      a.centroIds && a.centroIds.length > 0 ? Array.from(new Set(a.centroIds)) : [a.centroId];
     const valorPorCentro = round2((valorDia(f, a.data) * fator) / centros.length);
     for (const cid of centros) {
       out.push({ data: a.data, centroId: cid, grupo: 'mao_de_obra', categoria: 'mao_de_obra', valor: valorPorCentro });

@@ -1,7 +1,6 @@
 import type { MouseEventHandler, ReactNode } from 'react';
 import { Link, type To } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { AntigravityParticlesCanvas } from './AntigravityParticlesCanvas';
 
 export interface StatCardProps {
   label: string;
@@ -16,37 +15,29 @@ export interface StatCardProps {
   'aria-label'?: string;
 }
 
-interface ToneConfig {
-  badge: string;
-  radial: string;
-  border: string;
-}
-
-const TONE_THEME: Record<NonNullable<StatCardProps['tone']>, ToneConfig> = {
+const TONE_THEME: Record<
+  NonNullable<StatCardProps['tone']>,
+  { badge: string; accent: string }
+> = {
   brand: {
-    badge: 'bg-brand/10 text-brand',
-    radial: 'rgba(245, 158, 11, 0.14)',
-    border: 'rgba(245, 158, 11, 0.4)',
+    badge: 'bg-brand/10 text-brand border border-brand/20',
+    accent: 'border-l-brand',
   },
   green: {
-    badge: 'bg-emerald-500/10 text-emerald-500',
-    radial: 'rgba(16, 185, 129, 0.14)',
-    border: 'rgba(16, 185, 129, 0.4)',
+    badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20',
+    accent: 'border-l-emerald-500',
   },
   red: {
-    badge: 'bg-red-500/10 text-red-500',
-    radial: 'rgba(239, 68, 68, 0.14)',
-    border: 'rgba(239, 68, 68, 0.4)',
+    badge: 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20',
+    accent: 'border-l-red-500',
   },
   amber: {
-    badge: 'bg-amber-500/10 text-amber-500',
-    radial: 'rgba(245, 158, 11, 0.14)',
-    border: 'rgba(245, 158, 11, 0.4)',
+    badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20',
+    accent: 'border-l-amber-500',
   },
   blue: {
-    badge: 'bg-sky-500/10 text-sky-500',
-    radial: 'rgba(14, 165, 233, 0.14)',
-    border: 'rgba(14, 165, 233, 0.4)',
+    badge: 'bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20',
+    accent: 'border-l-sky-500',
   },
 };
 
@@ -65,80 +56,41 @@ export function StatCard({
   const isClickable = Boolean(to || onClick);
   const theme = TONE_THEME[tone];
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    e.currentTarget.style.setProperty('--mouse-x', `${x}px`);
-    e.currentTarget.style.setProperty('--mouse-y', `${y}px`);
-  };
-
-  const handleMouseLeave = (e: React.MouseEvent<HTMLElement>) => {
-    e.currentTarget.style.setProperty('--mouse-x', '-100px');
-    e.currentTarget.style.setProperty('--mouse-y', '-100px');
-  };
-
   const cardClasses = cn(
-    'group relative overflow-hidden rounded-2xl border border-line bg-surface p-3.5 sm:p-5 transition-all duration-300 ease-out sm:hover:-translate-y-1 sm:hover:shadow-lg sm:hover:shadow-black/5 dark:sm:hover:shadow-black/20',
+    'group relative overflow-hidden rounded-xl border border-line border-l-[3px] bg-surface p-3.5 sm:p-5 transition-colors duration-150',
+    theme.accent,
     isClickable &&
-      'block w-full text-left select-none cursor-pointer hover:border-brand/40 hover:bg-surface-2/40 active:scale-98 sm:active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
+      'block w-full text-left select-none cursor-pointer hover:border-brand/50 hover:bg-surface-2/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
     className,
   );
 
   const innerContent = (
-    <>
-      {/* Halo de luz que segue o cursor (Spotlight Antigravity) */}
-      <div
-        className="pointer-events-none absolute -inset-px rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0"
-        style={{
-          background: `radial-gradient(280px circle at var(--mouse-x, -100px) var(--mouse-y, -100px), ${theme.radial}, transparent 80%)`,
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Destaque sutil da borda que segue o ponteiro */}
-      <div
-        className="pointer-events-none absolute inset-0 rounded-2xl p-[1px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-0"
-        style={{
-          background: `radial-gradient(220px circle at var(--mouse-x, -100px) var(--mouse-y, -100px), ${theme.border}, transparent 75%)`,
-          WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-          WebkitMaskComposite: 'xor',
-          maskComposite: 'exclude',
-        }}
-        aria-hidden="true"
-      />
-
-      {/* Constelação orgânica e interativa de dezenas de partículas fluidas (Estilo Google Antigravity) */}
-      <AntigravityParticlesCanvas tone={tone} />
-
-      {/* Conteúdo do Card */}
-      <div className="relative z-10 flex flex-col justify-between h-full">
-        <div>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-muted leading-tight line-clamp-1 transition-colors duration-200 group-hover:text-fg/80">
-              {label}
-            </span>
-            <span
-              className={cn(
-                'grid size-7 sm:size-9 shrink-0 place-items-center rounded-lg sm:rounded-xl transition-all duration-300 ease-out group-hover:scale-115 group-hover:-rotate-3 group-hover:shadow-sm [&>svg]:transition-transform [&>svg]:duration-500 group-hover:[&>svg]:scale-110 group-hover:[&>svg]:rotate-6',
-                theme.badge,
-              )}
-              aria-hidden="true"
-            >
-              {icon}
-            </span>
-          </div>
-          <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-bold tracking-tight text-fg tabular-nums leading-tight truncate transition-transform duration-200 group-hover:translate-x-0.5">
-            {value}
-          </div>
+    <div className="flex flex-col justify-between h-full">
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[11px] sm:text-xs font-semibold uppercase tracking-wide text-muted leading-tight line-clamp-1">
+            {label}
+          </span>
+          <span
+            className={cn(
+              'grid size-8 sm:size-9 shrink-0 place-items-center rounded-lg',
+              theme.badge,
+            )}
+            aria-hidden="true"
+          >
+            {icon}
+          </span>
         </div>
-        {hint && (
-          <div className="mt-1 text-[11px] sm:text-xs text-muted leading-snug line-clamp-1 transition-colors duration-200 group-hover:text-muted/90">
-            {hint}
-          </div>
-        )}
+        <div className="mt-2 sm:mt-3 text-xl sm:text-2xl font-bold tracking-tight text-fg tabular-nums leading-tight truncate">
+          {value}
+        </div>
       </div>
-    </>
+      {hint && (
+        <div className="mt-1.5 text-[11px] sm:text-xs text-muted leading-snug line-clamp-1">
+          {hint}
+        </div>
+      )}
+    </div>
   );
 
   if (to) {
@@ -149,8 +101,6 @@ export function StatCard({
         title={title}
         aria-label={ariaLabel}
         onClick={onClick}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
       >
         {innerContent}
       </Link>
@@ -165,8 +115,6 @@ export function StatCard({
         className={cardClasses}
         title={title}
         aria-label={ariaLabel}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
       >
         {innerContent}
       </button>
@@ -174,13 +122,7 @@ export function StatCard({
   }
 
   return (
-    <div
-      className={cardClasses}
-      title={title}
-      aria-label={ariaLabel}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-    >
+    <div className={cardClasses} title={title} aria-label={ariaLabel}>
       {innerContent}
     </div>
   );

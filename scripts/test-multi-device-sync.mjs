@@ -247,14 +247,17 @@ try {
     usuarios: [{ ...usrIphone1, atualizadoEm: tsFuturo }],
     convites: [],
   });
-  useAuth.getState().atualizarPerfil({ nome: 'Allysson Monotônico' });
+  const resAtualizar = await useAuth.getState().atualizarPerfil({ nome: 'Allysson Monotônico' });
+  assert.equal(resAtualizar.ok, true);
   assert.equal(useAuth.getState().usuarioAtual.nome, 'Allysson Monotônico');
   assert.equal(useAuth.getState().usuarioAtual.atualizadoEm, tsFuturo + 1);
 
-  const novoConvite = useAuth.getState().criarConvite('encarregado');
+  const resConv = useAuth.getState().criarConvite('encarregado');
+  assert.equal(resConv.ok, true);
+  const novoConvite = resConv.convite;
   assert.equal(novoConvite.atualizadoEm, tsFuturo + 2);
 
-  const resCad = useAuth.getState().cadastrarComConvite(novoConvite.codigo, {
+  const resCad = await useAuth.getState().cadastrarComConvite(novoConvite.codigo, {
     nome: 'Mestre João',
     emailOuLogin: 'joao.obra',
     senha: '789',
@@ -262,7 +265,16 @@ try {
   assert.equal(resCad.ok, true);
   assert.equal(useAuth.getState().usuarioAtual.atualizadoEm, tsFuturo + 3);
 
-  useAuth.getState().alternarStatusUsuario('usr-admin');
+  // Encarregado recém-cadastrado NÃO pode alternar status de usuários (RBAC)
+  const resNegado = useAuth.getState().alternarStatusUsuario('usr-admin');
+  assert.equal(resNegado.ok, false);
+
+  // Restaura sessão de admin para testar alternarStatusUsuario com permissão válida
+  const adminAtual = useAuth.getState().usuarios.find((u) => u.id === 'usr-admin');
+  useAuth.setState({ usuarioAtual: adminAtual });
+
+  const resAlt = useAuth.getState().alternarStatusUsuario('usr-admin');
+  assert.equal(resAlt.ok, true);
   const adminAlternado = useAuth.getState().usuarios.find((u) => u.id === 'usr-admin');
   assert.equal(adminAlternado.ativo, false);
   assert.equal(adminAlternado.atualizadoEm, tsFuturo + 4);

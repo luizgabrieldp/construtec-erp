@@ -1,16 +1,15 @@
 import { useState, useMemo } from 'react';
-import { Printer, Users, Building2, Calendar, FileText, CheckCircle2 } from 'lucide-react';
+import { Printer } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button, Field, Input, Select, Badge } from '@/components/ui';
 import { useData } from '@/data/store';
 import { useHoje } from '@/hooks';
-import type { Funcionario, CentroId } from '@/domain/types';
+import type { ConfigEmpresa } from '@/domain/types';
 import { SEDE } from '@/domain/types';
 import { getLabelFuncao } from '@/domain/labels';
 import { calcularFolha } from '@/domain/engine';
 import { addDays, startOfWeek, endOfMonth, startOfMonth, today } from '@/lib/dates';
 import { fmtBRL, fmtDate, round2 } from '@/lib/format';
-import { WhatsAppBadge } from '@/components/brand/WhatsAppIcon';
 import { imprimirHtmlIframe, gerarHtmlReciboEmpreiteiro, type DadosEmpreiteiroImpressao } from '@/lib/print';
 
 interface ReciboEmpreiteiroDialogProps {
@@ -32,6 +31,27 @@ export function ReciboEmpreiteiroDialog({
 }: ReciboEmpreiteiroDialogProps) {
   const data = useData();
   const hoje = useHoje();
+
+  const detalhes = data.config.empresaDetalhes;
+  const empresaNome =
+    detalhes?.nomeFantasia?.trim() ||
+    detalhes?.nome?.trim() ||
+    detalhes?.razaoSocial?.trim() ||
+    data.config.empresa?.trim() ||
+    'CONSTRUTEC';
+  const empresaConfig: ConfigEmpresa = {
+    ...detalhes,
+    nomeFantasia: empresaNome,
+    nome: empresaNome,
+  };
+  const empresaCidade = detalhes?.cidadeUf?.trim() || detalhes?.cidade?.trim() || '';
+  const empresaMeta = [
+    empresaConfig.cnpj ? `CNPJ: ${empresaConfig.cnpj}` : '',
+    empresaCidade,
+    empresaConfig.telefone || '',
+  ]
+    .filter(Boolean)
+    .join(' • ');
 
   // Empreiteiros cadastrados ou com colaboradores vinculados
   const empreiteiros = useMemo(() => {
@@ -138,7 +158,7 @@ export function ReciboEmpreiteiroDialog({
     };
 
     try {
-      const html = gerarHtmlReciboEmpreiteiro(dadosImpressao);
+      const html = gerarHtmlReciboEmpreiteiro(dadosImpressao, empresaConfig);
       imprimirHtmlIframe(html, `Recibo Empreiteiro - ${empreiteiro.nome}`);
     } finally {
       setTimeout(() => setImprimindo(false), 500);
@@ -177,11 +197,14 @@ export function ReciboEmpreiteiroDialog({
           <Field label="Periodicidade">
             <Select
               value={tipo}
-              onChange={(e) => aplicarTipoPeriodo(e.target.value as 'semanal' | 'quinzenal' | 'mensal')}
+              onChange={(e) =>
+                aplicarTipoPeriodo(e.target.value as 'semanal' | 'quinzenal' | 'mensal' | 'personalizado')
+              }
             >
               <option value="quinzenal">Quinzenal</option>
               <option value="semanal">Semanal</option>
               <option value="mensal">Mensal</option>
+              <option value="personalizado">Personalizado</option>
             </Select>
           </Field>
 
@@ -223,10 +246,12 @@ export function ReciboEmpreiteiroDialog({
             {/* Topo do Recibo */}
             <div className="flex flex-wrap items-start justify-between border-b border-line pb-3 gap-3">
               <div className="flex items-center gap-3">
-                <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
+                <img src="/logo-emblema-trim.png" alt={empresaNome} className="size-10 object-contain shrink-0" />
                 <div>
-                  <h3 className="text-lg font-black text-brand tracking-tight">CONSTRUTEC</h3>
-                  <p className="text-[11px] text-muted">Construção Civil & Reformas • CNPJ: 35.477.198/0001-83 • Petrolina/PE</p>
+                  <h3 className="text-lg font-black text-brand tracking-tight">{empresaNome}</h3>
+                  <p className="text-[11px] text-muted">
+                    Construção Civil &amp; Reformas{empresaMeta ? ` • ${empresaMeta}` : ''}
+                  </p>
                   <div className="mt-1 flex items-center gap-2">
                     <Badge tone="orange">RECIBO CONSOLIDADO DO EMPREITEIRO ({tipo.toUpperCase()})</Badge>
                     <span className="text-xs font-semibold text-fg">
@@ -255,12 +280,8 @@ export function ReciboEmpreiteiroDialog({
                   <strong className="text-fg">{empreiteiro.nome}</strong>
                 </div>
                 <div>
-                  <span className="text-[10px] text-muted block uppercase font-bold">Telefone / WhatsApp</span>
-                  {empreiteiro.telefone ? (
-                    <WhatsAppBadge telefone={empreiteiro.telefone} />
-                  ) : (
-                    <span>Não informado</span>
-                  )}
+                  <span className="text-[10px] text-muted block uppercase font-bold">Telefone</span>
+                  <span>{empreiteiro.telefone || 'Não informado'}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-muted block uppercase font-bold">CPF</span>
@@ -336,7 +357,7 @@ export function ReciboEmpreiteiroDialog({
 
             {/* Termo de Repasse e Declaração */}
             <p className="text-[11px] text-muted italic border-l-2 border-brand pl-2 py-0.5">
-              "Declaro ter recebido da CONSTRUTEC a quantia consolidada de {fmtBRL(totalGeralConsolidado)} para
+              "Declaro ter recebido da {empresaNome} a quantia consolidada de {fmtBRL(totalGeralConsolidado)} para
               o devido repasse de diárias e remuneração à equipe sob minha coordenação acima descrita, referente
               ao período de {fmtDate(inicio)} a {fmtDate(fim)}."
             </p>
@@ -348,7 +369,7 @@ export function ReciboEmpreiteiroDialog({
                 <div className="text-[10px] text-muted">Assinatura do Empreiteiro (Recebedor do Repasse)</div>
               </div>
               <div>
-                <div className="border-t border-line pt-1 font-semibold">CONSTRUTEC</div>
+                <div className="border-t border-line pt-1 font-semibold">{empresaNome}</div>
                 <div className="text-[10px] text-muted">Responsável Financeiro / Construtora</div>
               </div>
             </div>

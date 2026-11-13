@@ -123,8 +123,34 @@ export const sendNotification = async (title: string, options?: NotificationOpti
   }
 };
 
-// Evita disparos duplicados para a mesma tarefa na mesma sessão
-const tarefasNotificadas = new Set<string>();
+// Chave diária persistente evita re-disparo duplicado no mesmo dia mesmo após refresh/reabertura do PWA
+const STORAGE_KEY_DISPAROS = 'construtec:notificacoes:disparadas:v1';
+
+function getDisparosDoDia(hoje: string): Set<string> {
+  if (typeof window === 'undefined') return new Set();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DISPAROS);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as { data?: string; chaves?: string[] };
+    if (parsed.data !== hoje || !Array.isArray(parsed.chaves)) {
+      localStorage.setItem(STORAGE_KEY_DISPAROS, JSON.stringify({ data: hoje, chaves: [] }));
+      return new Set();
+    }
+    return new Set(parsed.chaves);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveDisparosDoDia(hoje: string, set: Set<string>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(
+      STORAGE_KEY_DISPAROS,
+      JSON.stringify({ data: hoje, chaves: Array.from(set) }),
+    );
+  } catch {}
+}
 
 /**
  * Valida se uma tarefa é relevante para ser notificada ou exibida para o usuário logado
@@ -160,33 +186,41 @@ export const verificarLembretesTarefas = () => {
   const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
 
   const userKey = usuarioAtual ? usuarioAtual.id : 'anon';
+  const disparosHoje = getDisparosDoDia(hoje);
+  let alterouDisparos = false;
 
   data.tarefas.forEach((t) => {
     if (t.concluida) return;
-    if (t.data !== hoje) return;
+    if (t.data > hoje) return;
 
-    const notifKey = `${userKey}:${t.id}`;
-    if (tarefasNotificadas.has(notifKey)) return;
+    const notifKey = `${hoje}:${userKey}:${t.id}`;
+    if (disparosHoje.has(notifKey)) return;
 
     // Filtrar se a tarefa é relevante para o usuário conectado no momento
     // (se foi atribuída a ele, a todos ou criada por ele)
     if (!isTarefaRelevanteParaUsuario(t, usuarioAtual)) return;
 
-    const horarioAlvo = t.diaInteiro ? '08:00' : (t.horario || '08:00');
+    const atrasada = t.data < hoje;
+    const horarioAlvo = atrasada ? '08:00' : (t.diaInteiro ? '08:00' : (t.horario || '08:00'));
 
     if (horaAtual >= horarioAlvo) {
-      tarefasNotificadas.add(notifKey);
-      tarefasNotificadas.add(t.id);
+      disparosHoje.add(notifKey);
+      alterouDisparos = true;
+      const prefixo = atrasada ? 'Tarefa Atrasada CONSTRUTEC' : 'Lembrete CONSTRUTEC';
       const mensagem = t.observacoes ? `${t.titulo} - ${t.observacoes}` : t.titulo;
 
-      sendNotification(`Lembrete CONSTRUTEC: ${t.titulo}`, {
+      sendNotification(`${prefixo}: ${t.titulo}`, {
         body: mensagem,
         tag: `tarefa-${t.id}`,
       });
 
-      toast(`Lembrete de Tarefa: ${t.titulo}`, 'success');
+      toast(`${atrasada ? 'Tarefa em atraso' : 'Lembrete de Tarefa'}: ${t.titulo}`, atrasada ? 'info' : 'success');
     }
   });
+
+  if (alterouDisparos) {
+    saveDisparosDoDia(hoje, disparosHoje);
+  }
 };
 
 /**

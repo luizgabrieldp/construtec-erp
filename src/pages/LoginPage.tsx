@@ -20,7 +20,7 @@ export function LoginPage() {
     return <Navigate to="/" replace />;
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
 
@@ -30,32 +30,34 @@ export function LoginPage() {
     }
 
     setCarregando(true);
-    const resultado = login(loginInput, senhaInput);
-    setCarregando(false);
-
-    if (resultado.ok) {
-      toast('Login realizado com sucesso!', 'success');
-      navigate('/');
-    } else {
-      setErro(resultado.error || 'Credenciais inválidas.');
+    try {
+      const resultado = await login(loginInput, senhaInput);
+      if (resultado.ok) {
+        toast('Login realizado com sucesso!', 'success');
+        navigate('/');
+      } else {
+        setErro(resultado.error || 'Credenciais inválidas.');
+      }
+    } finally {
+      setCarregando(false);
     }
   };
 
   const handleDemo = (perfil: 'admin' | 'encarregado') => {
-    loginRapido(perfil);
-    toast(`Conectado como ${perfil === 'admin' ? 'Administrador' : 'Encarregado'}!`, 'success');
-    navigate('/');
+    const res = loginRapido(perfil);
+    if (res.ok) {
+      toast(`Conectado como ${perfil === 'admin' ? 'Administrador' : 'Encarregado'}!`, 'success');
+      navigate('/');
+    } else {
+      setErro(res.error || 'Acesso rápido indisponível.');
+    }
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-bg px-4 py-12 relative overflow-hidden">
-      {/* Elementos visuais decorativos de fundo */}
-      <div className="absolute -top-40 -right-40 size-96 rounded-full bg-brand/10 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -left-40 size-96 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-md relative z-10">
+    <div className="min-h-screen w-full flex items-center justify-center bg-bg px-4 py-12">
+      <div className="w-full max-w-md">
         {/* Card Principal */}
-        <div className="rounded-3xl border border-line bg-surface/90 backdrop-blur-xl p-8 shadow-2xl">
+        <div className="rounded-2xl border border-line border-t-4 border-t-brand-solid bg-surface p-7 sm:p-8 shadow-xl">
           {/* Logo e Cabeçalho */}
           <div className="text-center mb-8">
             <div className="flex justify-center mb-4">
@@ -63,13 +65,13 @@ export function LoginPage() {
             </div>
             <h1 className="text-xl font-bold text-fg tracking-tight">Acesso ao Sistema</h1>
             <p className="text-xs text-muted mt-1">
-              Gestão de Obras, Canteiro, Equipes & Financeiro
+              Gestão de Obras, Canteiro, Equipes & Folha
             </p>
           </div>
 
           {/* Mensagem de Erro */}
           {erro && (
-            <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500 animate-in fade-in">
+            <div className="mb-6 flex items-start gap-2.5 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500">
               <AlertCircle className="size-4 shrink-0 mt-0.5" />
               <span>{erro}</span>
             </div>
@@ -121,42 +123,46 @@ export function LoginPage() {
             </Button>
           </form>
 
-          {/* Divisor */}
-          <div className="relative my-6 text-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-line" />
-            </div>
-            <span className="relative bg-surface px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
-              Ou acesse demonstração
-            </span>
-          </div>
-
-          {/* Atalhos Rápidos para Demonstração */}
-          <div className="grid grid-cols-2 gap-2.5">
-            <button
-              type="button"
-              onClick={() => handleDemo('admin')}
-              className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-line bg-surface-2/60 hover:bg-surface-2 hover:border-brand/40 p-3 text-center transition-all cursor-pointer group"
-            >
-              <div className="grid size-8 place-items-center rounded-xl bg-brand/10 text-brand group-hover:scale-105 transition-transform">
-                <ShieldCheck className="size-4" />
+          {import.meta.env.DEV && (
+            <>
+              {/* Divisor */}
+              <div className="relative my-6 text-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-line" />
+                </div>
+                <span className="relative bg-surface px-3 text-[11px] font-semibold uppercase tracking-wider text-muted">
+                  Ou acesse demonstração
+                </span>
               </div>
-              <span className="text-xs font-semibold text-fg">Administrador</span>
-              <span className="text-[10px] text-muted">admin / admin123</span>
-            </button>
 
-            <button
-              type="button"
-              onClick={() => handleDemo('encarregado')}
-              className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-line bg-surface-2/60 hover:bg-surface-2 hover:border-amber-500/40 p-3 text-center transition-all cursor-pointer group"
-            >
-              <div className="grid size-8 place-items-center rounded-xl bg-amber-500/10 text-amber-500 group-hover:scale-105 transition-transform">
-                <HardHat className="size-4" />
+              {/* Atalhos Rápidos para Demonstração */}
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleDemo('admin')}
+                  className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-line bg-surface-2/60 hover:bg-surface-2 hover:border-brand/40 p-3 text-center transition-all cursor-pointer group"
+                >
+                  <div className="grid size-8 place-items-center rounded-xl bg-brand/10 text-brand group-hover:scale-105 transition-transform">
+                    <ShieldCheck className="size-4" />
+                  </div>
+                  <span className="text-xs font-semibold text-fg">Administrador</span>
+                  <span className="text-[10px] text-muted">admin / admin123</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleDemo('encarregado')}
+                  className="flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-line bg-surface-2/60 hover:bg-surface-2 hover:border-amber-500/40 p-3 text-center transition-all cursor-pointer group"
+                >
+                  <div className="grid size-8 place-items-center rounded-xl bg-amber-500/10 text-amber-500 group-hover:scale-105 transition-transform">
+                    <HardHat className="size-4" />
+                  </div>
+                  <span className="text-xs font-semibold text-fg">Encarregado</span>
+                  <span className="text-[10px] text-muted">encarregado / obra123</span>
+                </button>
               </div>
-              <span className="text-xs font-semibold text-fg">Encarregado</span>
-              <span className="text-[10px] text-muted">encarregado / obra123</span>
-            </button>
-          </div>
+            </>
+          )}
 
           {/* Link para Ativação de Convite */}
           <div className="mt-8 text-center pt-4 border-t border-line">

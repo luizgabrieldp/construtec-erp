@@ -11,7 +11,7 @@ import {
   obterMaiorTimestampConhecido,
   registrarMutacaoErp,
 } from './sync';
-import { useUi } from './ui';
+import { useAuth } from './auth';
 import { today } from '@/lib/dates';
 import { uid } from '@/lib/utils';
 
@@ -85,11 +85,19 @@ function carregarInicial(): ErpData {
 }
 
 function entradaAuditoria(info: AuditInfo): AuditEntry {
-  return { id: uid('au'), ts: new Date().toISOString(), perfil: useUi.getState().perfil, ...info };
+  const usuario = useAuth.getState().usuarioAtual;
+  const autor = usuario ? `${usuario.nome} (${usuario.perfil})` : 'sistema';
+  return {
+    id: uid('au'),
+    ts: new Date().toISOString(),
+    perfil: usuario?.perfil ?? 'encarregado',
+    acao: info.acao,
+    descricao: `${info.descricao} [${autor}]`,
+  };
 }
 
 export const useErp = create<ErpState>()((set, get) => ({
-  data: carregarInicial(),
+  data: useAuth.getState().usuarioAtual ? carregarInicial() : dadosVazios(),
 
   mutate: (fn, audit) => {
     const prev = get().data;
@@ -120,7 +128,7 @@ export const useErp = create<ErpState>()((set, get) => ({
       lastClientId: repository.getClientId(),
       lastWriteAt: agora,
     };
-    repository.save(demo);
+    repository.save(demo, { forceReset: true });
     set({ data: demo });
   },
 
@@ -148,18 +156,59 @@ export const useErp = create<ErpState>()((set, get) => ({
     ),
 }));
 
-// Tempo real entre dispositivos (Firestore) e entre abas locais: mescla o estado sem perder alterações em memória.
-repository.subscribe(() => {
-  const externo = repository.load();
-  if (!externo) return;
+let unsubscribeErpSync: (() => void) | null = null;
+
+/** Inicia sincronização em tempo real do ERP somente após haver sessão autenticada. */
+export function iniciarSyncErp(): void {
+  if (unsubscribeErpSync || !useAuth.getState().usuarioAtual) return;
+
+  const inicial = carregarInicial();
   const atual = useErp.getState().data;
-  const mesclado = sincronizarRecorrencias(mesclarDadosErp(atual, externo));
   if (
-    fingerprintDominio(atual) !== fingerprintDominio(mesclado) ||
-    atual.audit.length !== mesclado.audit.length ||
-    obterMaiorTimestampConhecido(mesclado) > obterMaiorTimestampConhecido(atual)
+    fingerprintDominio(atual) !== fingerprintDominio(inicial) ||
+    obterMaiorTimestampConhecido(inicial) > obterMaiorTimestampConhecido(atual)
   ) {
-    useErp.setState({ data: mesclado });
+    useErp.setState({ data: inicial });
+  }
+
+  // Tempo real entre dispositivos (Firestore) e entre abas locais: mescla o estado sem perder alterações em memória.
+  unsubscribeErpSync = repository.subscribe(() => {
+    if (!useAuth.getState().usuarioAtual) return;
+    const externo = repository.load();
+    if (!externo) return;
+    const estadoAtual = useErp.getState().data;
+    const mesclado = sincronizarRecorrencias(mesclarDadosErp(estadoAtual, externo));
+    if (
+      fingerprintDominio(estadoAtual) !== fingerprintDominio(mesclado) ||
+      estadoAtual.audit.length !== mesclado.audit.length ||
+      obterMaiorTimestampConhecido(mesclado) > obterMaiorTimestampConhecido(estadoAtual)
+    ) {
+      useErp.setState({ data: mesclado });
+    }
+  });
+}
+
+/** Encerra listeners e limpa estado em memória ao sair da sessão. */
+export function pararSyncErp(): void {
+  if (unsubscribeErpSync) {
+    unsubscribeErpSync();
+    unsubscribeErpSync = null;
+  }
+  repository.clear();
+  useErp.setState({ data: dadosVazios() });
+}
+
+if (useAuth.getState().usuarioAtual) {
+  iniciarSyncErp();
+}
+
+useAuth.subscribe((state, prevState) => {
+  const logadoAntes = Boolean(prevState.usuarioAtual);
+  const logadoAgora = Boolean(state.usuarioAtual);
+  if (!logadoAntes && logadoAgora) {
+    iniciarSyncErp();
+  } else if (logadoAntes && !logadoAgora) {
+    pararSyncErp();
   }
 });
 

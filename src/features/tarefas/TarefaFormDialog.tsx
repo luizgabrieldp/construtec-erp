@@ -1,12 +1,10 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Calendar, Clock, Repeat, AlertCircle, Building2, User, Users } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
-import { Button, Field, Input, Select, Badge } from '@/components/ui';
+import { Button, Field, Input, Select } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
 import { useAuth, USUARIOS_PADRAO } from '@/data/auth';
 import type { Tarefa, RecorrenciaTarefa, PrioridadeTarefa } from '@/domain/types';
-import { LABEL_RECORRENCIA_TAREFA, LABEL_PRIORIDADE_TAREFA } from '@/domain/labels';
 import { today } from '@/lib/dates';
 import { uid } from '@/lib/utils';
 

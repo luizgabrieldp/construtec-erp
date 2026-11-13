@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import {
   Printer,
-  Sparkles,
+  History,
   CheckCircle2,
   HelpCircle,
   MapPin,
@@ -18,7 +18,7 @@ import {
   AlertCircle,
   Trash2,
 } from 'lucide-react';
-import { Badge, Button } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { Dialog } from '@/components/ui/Dialog';
 import type { ReleaseVersao } from '@/data/atualizacoes';
 
@@ -73,13 +73,13 @@ export function PassoAPassoDialog({ versao, open, onClose, autoPrint = false }: 
         return <CheckCircle2 className="size-5 text-emerald-500" />;
       case 'Touchpad':
       case 'MousePointerClick':
-        return <MousePointerClick className="size-5 text-violet-500" />;
+        return <MousePointerClick className="size-5 text-blue-600 dark:text-blue-400" />;
       case 'AlertCircle':
         return <AlertCircle className="size-5 text-red-500" />;
       case 'Trash2':
         return <Trash2 className="size-5 text-red-500" />;
       default:
-        return <Sparkles className="size-5 text-brand" />;
+        return <History className="size-5 text-brand" />;
     }
   };
 
@@ -133,7 +133,7 @@ export function PassoAPassoDialog({ versao, open, onClose, autoPrint = false }: 
         {/* Botão de topo para impressão rápida (no-print) */}
         <div className="no-print flex items-center justify-between rounded-xl bg-brand/10 p-3.5 border border-brand/20">
           <div className="flex items-center gap-2.5">
-            <Sparkles className="size-5 text-brand shrink-0" />
+            <History className="size-5 text-brand shrink-0" />
             <div className="text-xs">
               <span className="font-semibold text-fg block">Guia Ilustrado de Instruções</span>
               <span className="text-muted">Gere um documento formatado em PDF para compartilhar com encarregados e clientes.</span>

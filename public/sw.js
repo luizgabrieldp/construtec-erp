@@ -1,6 +1,8 @@
-// CONSTRUTEC ERP - Service Worker v5 (Notificações Nativas em Segundo Plano & PWA)
-const CACHE_NAME = 'construtec-pwa-v5';
+// CONSTRUTEC ERP - Service Worker v6 (Notificações Nativas, Cache Offline & Segurança)
+const CACHE_NAME = 'construtec-pwa-v6';
 const STATIC_ASSETS = [
+  '/',
+  '/index.html',
   '/favicon.ico',
   '/favicon-32x32.png',
   '/favicon-16x16.png',
@@ -10,24 +12,82 @@ const STATIC_ASSETS = [
   '/apple-touch-icon-dark.png',
   '/apple-touch-icon-light.png',
   '/logo-emblema-trim.png',
-  '/manifest.json'
+  '/manifest.json',
 ];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)).catch(() => {})
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)).catch(() => {}),
   );
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-      );
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
   );
+});
+
+// Estratégia Network-First para HTML/navegação com fallback offline seguro e Cache-First para assets locais estáticos
+self.addEventListener('fetch', (event) => {
+  const { request } = event;
+  if (request.method !== 'GET') return;
+
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return;
+  }
+
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname === '/sw.js') return;
+
+  const isNavigation =
+    request.mode === 'navigate' ||
+    (request.headers.get('accept') || '').includes('text/html');
+
+  if (isNavigation) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+          }
+          return response;
+        })
+        .catch(async () => {
+          const cachedPage = await caches.match(request);
+          if (cachedPage) return cachedPage;
+          const fallbackIndex = await caches.match('/index.html');
+          if (fallbackIndex) return fallbackIndex;
+          return new Response('Você está offline. Reconecte-se para atualizar o aplicativo.', {
+            status: 503,
+            headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+          });
+        }),
+    );
+    return;
+  }
+
+  if (url.pathname.startsWith('/assets/') || STATIC_ASSETS.includes(url.pathname)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          if (response && response.ok) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+          }
+          return response;
+        });
+      }),
+    );
+  }
 });
 
 // Listener para push notifications nativas (Web Push & Alertas em Segundo Plano)
@@ -81,11 +141,10 @@ self.addEventListener('message', (event) => {
         renotify: true,
         silent: false,
         ...options,
-      })
+      }),
     );
   } else if (event.data.type === 'SCHEDULE_NOTIFICATION') {
     const { title, options, delay = 3000 } = event.data;
-    // Utiliza event.waitUntil para reter o ciclo de vida do Service Worker em segundo plano mesmo com tela bloqueada
     event.waitUntil(
       new Promise((resolve) => {
         setTimeout(async () => {
@@ -104,22 +163,17 @@ self.addEventListener('message', (event) => {
           }
           resolve();
         }, delay);
-      })
+      }),
     );
   }
 });
 
-// Suporte a Periodic Background Sync (quando suportado por PWA instalado no Android/Desktop/iOS)
+// Suporte a Periodic Background Sync (quando suportado por PWA instalado)
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'construtec-tarefas-sync' || event.tag === 'verificar-tarefas') {
     event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-        if (clientList.length > 0) {
-          clientList.forEach((client) => {
-            client.postMessage({ type: 'BACKGROUND_SYNC_TRIGGER' });
-          });
-        } else {
-          // Quando o app está totalmente fechado, emite lembrete periódico nativo de verificação de pendências
+        if (clientList.length === 0) {
           return self.registration.showNotification('CONSTRUTEC ERP • Lembrete Operacional', {
             body: 'Verifique suas tarefas e pendências agendadas para hoje na obra.',
             icon: '/apple-touch-icon-dark.png',
@@ -131,43 +185,44 @@ self.addEventListener('periodicsync', (event) => {
             data: { url: '/tarefas' },
           });
         }
-      })
+      }),
     );
   }
 });
 
-// Suporte a Background Sync tradicional
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'construtec-sync-tarefas') {
-    event.waitUntil(
-      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-        clientList.forEach((client) => {
-          client.postMessage({ type: 'BACKGROUND_SYNC_TRIGGER' });
-        });
-      })
-    );
+function resolverUrlMesmaOrigem(rawUrl) {
+  if (!rawUrl || typeof rawUrl !== 'string') return '/';
+  try {
+    const parsed = new URL(rawUrl, self.location.origin);
+    if (parsed.origin !== self.location.origin) return '/';
+    return `${parsed.pathname}${parsed.search}${parsed.hash}` || '/';
+  } catch {
+    return '/';
   }
-});
+}
 
 // Listener para cliques em notificações disparadas pelo sistema
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = event.notification.data?.url || '/';
+  const targetUrl = resolverUrlMesmaOrigem(event.notification.data?.url);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
         if ('focus' in client) {
-          if (targetUrl && client.url && !client.url.includes(targetUrl) && 'navigate' in client) {
-            client.navigate(targetUrl);
-          }
+          try {
+            const clientPath = new URL(client.url).pathname;
+            if (targetUrl && clientPath !== targetUrl && 'navigate' in client) {
+              client.navigate(targetUrl);
+            }
+          } catch {}
           return client.focus();
         }
       }
       if (self.clients.openWindow) {
         return self.clients.openWindow(targetUrl);
       }
-    })
+    }),
   );
 });

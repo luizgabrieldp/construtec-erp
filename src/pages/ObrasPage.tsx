@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Plus, Search, Building2, Eye, Calendar, HardHat, CheckCircle2, Clock, LayoutGrid, List, ArrowUpDown } from 'lucide-react';
 import { Button, Input, PageHeader, Card, Badge, Progress, Select } from '@/components/ui';
 import { StatCard } from '@/components/ui/StatCard';
-import { AntigravityParticlesCanvas } from '@/components/ui/AntigravityParticlesCanvas';
 import { TableWatermark } from '@/components/brand/TableWatermark';
 import { useData } from '@/data/store';
 import { useIsAdmin, useResumo } from '@/hooks';
@@ -249,6 +248,7 @@ export function ObrasPage() {
             <div className="flex items-center rounded-xl border border-line bg-surface-2 p-1">
               <button
                 type="button"
+                aria-pressed={modoExibicao === 'cards'}
                 onClick={() => setModoExibicao('cards')}
                 className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
                   modoExibicao === 'cards'
@@ -262,6 +262,7 @@ export function ObrasPage() {
               </button>
               <button
                 type="button"
+                aria-pressed={modoExibicao === 'lista'}
                 onClick={() => setModoExibicao('lista')}
                 className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer ${
                   modoExibicao === 'lista'
@@ -293,14 +294,8 @@ export function ObrasPage() {
             const decorrido = Math.max(0, Math.min(1, diffDays(obra.dataInicio, r.hoje) / prazoTotal));
 
             return (
-              <Card key={obra.id} className="group relative flex flex-col justify-between overflow-hidden transition-shadow hover:shadow-md">
-                {/* Partículas Antigravity interativas no hover do card da obra */}
-                <AntigravityParticlesCanvas
-                  tone={obra.status === 'andamento' ? 'green' : obra.status === 'pausada' ? 'amber' : 'brand'}
-                  particleCount={48}
-                />
-
-                <div className="relative z-1 flex flex-col justify-between h-full">
+              <Card key={obra.id} className="group flex flex-col justify-between overflow-hidden transition-colors hover:border-brand/50">
+                <div className="flex flex-col justify-between h-full">
                   <div>
                     {/* Faixa superior com a cor da obra */}
                     <div className="h-2 w-full" style={{ backgroundColor: obra.cor }} />
@@ -344,22 +339,24 @@ export function ObrasPage() {
                       />
                     </div>
 
-                    {/* Barra de Orçamento */}
-                    <div className="mt-4 border-t border-line/60 pt-3">
-                      <div className="flex justify-between text-xs mb-1.5">
-                        <span className="text-muted">Orçamento Comprometido</span>
-                        <span className="font-bold text-fg">{fmtPct(ro?.consumoPct || 0)}</span>
+                    {/* Barra de Orçamento (somente Admin) */}
+                    {isAdmin && (
+                      <div className="mt-4 border-t border-line/60 pt-3">
+                        <div className="flex justify-between text-xs mb-1.5">
+                          <span className="text-muted">Orçamento Comprometido</span>
+                          <span className="font-bold text-fg tabular-nums">{fmtPct(ro?.consumoPct || 0)}</span>
+                        </div>
+                        <Progress value={ro?.consumoPct || 0} />
+                        <div className="mt-2 flex justify-between text-xs">
+                          <span className="text-muted tabular-nums">
+                            {fmtBRL(ro?.comprometido || 0)}
+                          </span>
+                          <span className="text-muted tabular-nums">
+                            Previsto: {fmtBRL(obra.orcamento)}
+                          </span>
+                        </div>
                       </div>
-                      <Progress value={ro?.consumoPct || 0} />
-                      <div className="mt-2 flex justify-between text-xs">
-                        <span className="text-muted tabular-nums">
-                          {fmtBRL(ro?.comprometido || 0)}
-                        </span>
-                        <span className="text-muted tabular-nums">
-                          Previsto: {fmtBRL(obra.orcamento)}
-                        </span>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Resumo do canteiro */}
                     <div className="mt-4 rounded-xl bg-surface-2 p-2.5 text-center text-xs">

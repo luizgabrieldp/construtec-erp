@@ -33,3 +33,22 @@ export const fmtMonth = (key: string) => monthFmt.format(parseISO(`${key}-01`)).
 
 /** Arredonda para centavos. */
 export const round2 = (v: number) => Math.round((v + Number.EPSILON) * 100) / 100;
+
+/** Converte moeda/número em formato BR ("1.250,50", "R$ 300,00", "1250.50") para number. */
+export function parseMoedaBR(valor: string | number): number {
+  if (typeof valor === 'number') return Number.isFinite(valor) ? valor : 0;
+  const limpo = String(valor ?? '')
+    .trim()
+    .replace(/[^\d.,-]/g, '');
+  if (!limpo || limpo === '-' || limpo === '.' || limpo === ',') return 0;
+  let normalizado: string;
+  if (limpo.includes(',')) {
+    normalizado = limpo.replace(/\./g, '').replace(',', '.');
+  } else if (/^-?\d{1,3}(\.\d{3})+$/.test(limpo)) {
+    normalizado = limpo.replace(/\./g, '');
+  } else {
+    normalizado = limpo;
+  }
+  const parsed = Number(normalizado);
+  return Number.isFinite(parsed) ? parsed : 0;
+}

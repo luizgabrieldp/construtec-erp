@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import {
-  Sparkles,
+  History,
   Printer,
   Eye,
   CheckCircle2,
-  Rocket,
-  ShieldCheck,
+  FileCheck2,
   ChevronRight,
   BookOpen,
   Calendar,
@@ -13,7 +12,7 @@ import {
 import { Badge, Button, Card } from '@/components/ui';
 import { ATUALIZACOES_SISTEMA, type ReleaseVersao } from '@/data/atualizacoes';
 import { useAuth } from '@/data/auth';
-import { getNotificacoesLidas, saveNotificacoesLidas } from '@/components/layout/NotificacoesPopover';
+import { getNotificacoesLidas, saveNotificacoesLidas } from '@/lib/notifications';
 import { PassoAPassoDialog } from './PassoAPassoDialog';
 
 export function AtualizacoesTab() {
@@ -49,8 +48,8 @@ export function AtualizacoesTab() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <span className="flex size-7 items-center justify-center rounded-lg bg-brand text-white shadow-xs">
-                <Rocket className="size-4" />
+              <span className="flex size-7 items-center justify-center rounded-lg bg-brand-solid text-white shadow-xs">
+                <FileCheck2 className="size-4" />
               </span>
               <span className="text-xs font-bold uppercase tracking-wider text-brand">
                 Central de Atualizações Versionadas
@@ -89,7 +88,7 @@ export function AtualizacoesTab() {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-wider text-muted flex items-center gap-2">
-            <Sparkles className="size-3.5 text-brand" />
+            <History className="size-3.5 text-brand" />
             <span>Histórico de Lançamentos & Atualizações</span>
           </h3>
           <span className="text-xs text-muted">

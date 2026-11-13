@@ -17,7 +17,7 @@ export const useUi = create<UiState>()(
   persist(
     (set) => ({
       theme: (localStorage.getItem(THEME_KEY) as ThemePref) || 'system',
-      perfil: 'admin',
+      perfil: 'encarregado',
       sidebarCollapsed: false,
       setTheme: (theme) => {
         // chave simples lida pelo script inline do index.html (evita flash de tema)
@@ -27,6 +27,6 @@ export const useUi = create<UiState>()(
       setPerfil: (perfil) => set({ perfil }),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
     }),
-    { name: 'construtec:ui', partialize: (s) => ({ perfil: s.perfil, sidebarCollapsed: s.sidebarCollapsed }) },
+    { name: 'construtec:ui', partialize: (s) => ({ sidebarCollapsed: s.sidebarCollapsed }) },
   ),
 );

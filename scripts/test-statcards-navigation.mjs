@@ -38,9 +38,9 @@ try {
   assert.ok(markupLink.startsWith('<a ') && markupLink.includes('href="/obras"'), `Esperado <a com href="/obras", obtido: ${markupLink.slice(0, 70)}`);
   assert.ok(markupLink.includes('title="Ver obras ativas"'), 'Deve conter o atributo title');
   assert.ok(markupLink.includes('cursor-pointer'), 'Deve conter classe cursor-pointer');
-  assert.ok(markupLink.includes('active:scale-98'), 'Deve conter feedback tátil mobile active:scale-98');
-  assert.ok(markupLink.includes('sm:active:scale-[0.99]'), 'Deve conter feedback tátil desktop sm:active:scale-[0.99]');
-  assert.ok(markupLink.includes('hover:border-brand/40'), 'Deve conter hover suave de borda');
+  assert.ok(markupLink.includes('border-l-[3px]'), 'Deve conter filete arquitetônico border-l-[3px]');
+  assert.ok(markupLink.includes('focus-visible:ring-2'), 'Deve conter anel de foco acessível focus-visible:ring-2');
+  assert.ok(markupLink.includes('hover:border-brand/50'), 'Deve conter hover suave de borda');
   assert.ok(markupLink.includes('hover:bg-surface-2/40'), 'Deve conter hover suave de fundo');
   assert.ok(markupLink.includes('aria-hidden="true"'), 'Ícone decorativo deve ter aria-hidden="true"');
   console.log('   ✅ Link semântico renderizado com classes interativas e acessibilidade!');
@@ -75,8 +75,9 @@ try {
 
   assert.ok(
     markupStatic.startsWith('<div class="') &&
-      markupStatic.includes('rounded-2xl border border-line bg-surface p-3.5 sm:p-5'),
-    `Esperado <div contendo classes de card, obtido: ${markupStatic.slice(0, 80)}`
+      markupStatic.includes('rounded-xl border border-line') &&
+      markupStatic.includes('border-l-[3px]'),
+    `Esperado <div contendo classes industriais de card, obtido: ${markupStatic.slice(0, 80)}`
   );
   assert.ok(!markupStatic.includes('cursor-pointer'), 'Não deve ter cursor-pointer quando estático');
   assert.ok(!markupStatic.includes('active:scale'), 'Não deve ter active:scale quando estático');
@@ -105,9 +106,8 @@ try {
   assert.ok(cssFiles.length > 0, 'Deve existir arquivo CSS compilado na pasta dist/assets');
 
   const cssContent = readFileSync(join(distAssetsDir, cssFiles[0]), 'utf-8');
-  assert.ok(cssContent.includes('.active\\:scale-98:active'), 'CSS deve conter .active:scale-98:active');
-  assert.ok(cssContent.includes('sm\\:active\\:scale-\\[0\\.99\\]:active'), 'CSS deve conter sm:active:scale-[0.99]:active');
-  assert.ok(cssContent.includes('.hover\\:border-brand\\/40:hover'), 'CSS deve conter .hover:border-brand/40:hover');
+  assert.ok(cssContent.includes('border-l-'), 'CSS deve conter estilos de borda lateral arquitetônica');
+  assert.ok(cssContent.includes('hover\\:border-brand\\/50:hover') || cssContent.includes('hover:border-brand/50'), 'CSS deve conter hover:border-brand/50');
   assert.ok(cssContent.includes('.hover\\:bg-surface-2\\/40:hover'), 'CSS deve conter .hover:bg-surface-2/40:hover');
   console.log('   ✅ Todas as classes Tailwind v4 foram geradas perfeitamente no bundle!');
 

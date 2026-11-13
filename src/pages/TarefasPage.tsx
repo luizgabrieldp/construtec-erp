@@ -12,25 +12,24 @@ import {
   Circle,
   Trash2,
   Edit2,
-  Building2,
-  Filter,
-  Check,
   User,
   Users,
 } from 'lucide-react';
 import { PageHeader, Card, Badge, Button, Input, Select } from '@/components/ui';
+import { Dialog } from '@/components/ui/Dialog';
 import { StatCard } from '@/components/ui/StatCard';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
 import { useAuth } from '@/data/auth';
 import { marcarNotificacoesComoLidas, isTarefaRelevanteParaUsuario } from '@/lib/notifications';
 import { useHoje } from '@/hooks';
-import type { Tarefa, PrioridadeTarefa } from '@/domain/types';
-import { LABEL_RECORRENCIA_TAREFA, LABEL_PRIORIDADE_TAREFA } from '@/domain/labels';
+import type { Tarefa } from '@/domain/types';
+import { gerarProximaTarefaRecorrente } from '@/domain/engine';
+import { LABEL_RECORRENCIA_TAREFA } from '@/domain/labels';
 import { startOfWeek, addDays, diffDays } from '@/lib/dates';
 import { TableWatermark } from '@/components/brand/TableWatermark';
 import { fmtDate, fmtDateShort } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { cn, uid } from '@/lib/utils';
 import { TarefaFormDialog } from '@/features/tarefas/TarefaFormDialog';
 
 type FiltroAba = 'todas' | 'hoje' | 'semana' | 'pendentes' | 'concluidas';
@@ -178,12 +177,20 @@ export function TarefasPage() {
 
   const toggleConcluida = (t: Tarefa) => {
     const novoStatus = !t.concluida;
+    let proximaGerada: Tarefa | null = null;
     mutate(
       (d) => {
         const item = d.tarefas.find((x) => x.id === t.id);
         if (item) {
           item.concluida = novoStatus;
           item.concluidaEm = novoStatus ? new Date().toISOString() : undefined;
+          if (novoStatus) {
+            const proxima = gerarProximaTarefaRecorrente(item, d.tarefas, uid('tar'));
+            if (proxima) {
+              d.tarefas.push(proxima);
+              proximaGerada = proxima;
+            }
+          }
         }
       },
       {
@@ -191,11 +198,22 @@ export function TarefasPage() {
         descricao: `${novoStatus ? 'Concluiu' : 'Reabriu'} tarefa: ${t.titulo}`,
       },
     );
-    toast(novoStatus ? 'Tarefa marcada como concluída!' : 'Tarefa reaberta!', 'success');
+    if (novoStatus && proximaGerada) {
+      toast(`Tarefa concluída! Próxima ocorrência agendada para ${fmtDateShort((proximaGerada as Tarefa).data)}.`, 'success');
+    } else {
+      toast(novoStatus ? 'Tarefa marcada como concluída!' : 'Tarefa reaberta!', 'success');
+    }
   };
 
+  const [tarefaParaExcluir, setTarefaParaExcluir] = useState<Tarefa | null>(null);
+
   const excluirTarefa = (t: Tarefa) => {
-    if (!confirm(`Deseja realmente excluir a tarefa "${t.titulo}"?`)) return;
+    setTarefaParaExcluir(t);
+  };
+
+  const confirmarExclusao = () => {
+    if (!tarefaParaExcluir) return;
+    const t = tarefaParaExcluir;
     mutate(
       (d) => {
         d.tarefas = d.tarefas.filter((x) => x.id !== t.id);
@@ -205,6 +223,7 @@ export function TarefasPage() {
         descricao: `Excluiu tarefa: ${t.titulo}`,
       },
     );
+    setTarefaParaExcluir(null);
     toast('Tarefa removida com sucesso.', 'success');
   };
 
@@ -532,6 +551,7 @@ export function TarefasPage() {
                       icon={<Edit2 className="size-3.5" />}
                       onClick={() => abrirEdicao(t)}
                       title="Editar tarefa"
+                      aria-label={`Editar tarefa ${t.titulo}`}
                     />
                     <Button
                       size="sm"
@@ -539,6 +559,7 @@ export function TarefasPage() {
                       icon={<Trash2 className="size-3.5 text-red-500" />}
                       onClick={() => excluirTarefa(t)}
                       title="Excluir tarefa"
+                      aria-label={`Excluir tarefa ${t.titulo}`}
                     />
                   </div>
                 </div>
@@ -555,6 +576,28 @@ export function TarefasPage() {
         tarefaParaEditar={tarefaParaEditar}
         dataPadrao={hoje}
       />
+
+      <Dialog
+        open={!!tarefaParaExcluir}
+        onClose={() => setTarefaParaExcluir(null)}
+        title="Excluir Tarefa?"
+      >
+        {tarefaParaExcluir && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted">
+              Deseja realmente excluir a tarefa <strong className="text-fg">"{tarefaParaExcluir.titulo}"</strong>? Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setTarefaParaExcluir(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmarExclusao}>
+                Excluir Tarefa
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
     </>
   );
 }

@@ -9,15 +9,18 @@ import type {
   Compra,
   ContaPagar,
   Distribuicao,
+  FechamentoFolha,
   Funcionario,
   ISODate,
   Locacao,
   PeriodicidadeRecebimento,
   Recorrencia,
+  RecorrenciaTarefa,
   StatusPresenca,
+  Tarefa,
 } from './types';
 import { SEDE } from './types';
-import { addDays, addMonths, diasUteisMes, diffDays, eachDay, endOfMonth, minDate, monthKey } from '@/lib/dates';
+import { addDays, addMonths, diffDays, eachDay, endOfMonth, isValidISODate, minDate, monthKey, weekday } from '@/lib/dates';
 import { round2 } from '@/lib/format';
 
 // ---------------------------------------------------------------- utilitários
@@ -138,9 +141,9 @@ export const FATOR_PRESENCA: Record<StatusPresenca, number> = { inteiro: 1, meio
 
 export const chaveApontamento = (funcionarioId: string, data: ISODate) => `${funcionarioId}|${data}`;
 
-/** Custo de um dia de trabalho (mensalista: salário / dias úteis Seg–Sáb do mês). */
-export function valorDia(f: Funcionario, data: ISODate): number {
-  return f.regime === 'mensalista' ? f.salario / diasUteisMes(data) : f.diaria;
+/** Custo de um dia de trabalho (mensalista: salário / 30). */
+export function valorDia(f: Funcionario, _data?: ISODate): number {
+  return f.regime === 'mensalista' ? round2(f.salario / 30) : f.diaria;
 }
 
 export interface ResultadoFolha {
@@ -156,6 +159,7 @@ export interface ResultadoFolha {
  * Calcula a folha de um funcionário no período.
  * - Diarista (semanal ou quinzenal): soma das diárias (meio período = 0,5).
  * - Mensalista: salário fixo, rateado entre centros pela proporção de dias apontados.
+ *   No modo personalizado, calcula proporcional aos dias do período descontando faltas.
  * Ajustes são distribuídos na mesma proporção.
  */
 export function calcularFolha(
@@ -166,15 +170,34 @@ export function calcularFolha(
   ajustes: AjusteFolha[] = [],
   tipoFechamento: 'semanal' | 'quinzenal' | 'mensal' | 'personalizado' = 'semanal',
 ): ResultadoFolha {
+  const totalAjustes = round2(ajustes.reduce((s, a) => s + a.valor, 0));
+  if (!inicio || !fim || !isValidISODate(inicio) || !isValidISODate(fim) || inicio > fim) {
+    const totalInvalido = round2(Math.max(0, totalAjustes));
+    return {
+      diasTrabalhados: 0,
+      valorBase: 0,
+      totalAjustes,
+      total: totalInvalido,
+      distribuicao: totalInvalido > 0 ? [{ centroId: SEDE, valor: totalInvalido }] : [],
+      porCentroDias: {},
+    };
+  }
+
   const porCentroDias: Record<CentroId, number> = {};
+  const diasIntervalo = eachDay(inicio, fim);
   let dias = 0;
-  for (const d of eachDay(inicio, fim)) {
+  let faltas = 0;
+  for (const d of diasIntervalo) {
     const a = apontamentos[chaveApontamento(f.id, d)];
     if (!a) continue;
+    if (a.status === 'falta') {
+      faltas += 1;
+      continue;
+    }
     const fator = FATOR_PRESENCA[a.status];
     if (!fator) continue;
     dias += fator;
-    const centros = a.centroIds && a.centroIds.length > 0 ? a.centroIds : [a.centroId];
+    const centros = Array.from(new Set(a.centroIds && a.centroIds.length > 0 ? a.centroIds : [a.centroId]));
     const fatorPorCentro = fator / centros.length;
     for (const cid of centros) {
       porCentroDias[cid] = (porCentroDias[cid] ?? 0) + fatorPorCentro;
@@ -190,13 +213,12 @@ export function calcularFolha(
     } else if (tipoFechamento === 'semanal') {
       valorBase = round2(f.salario / 4);
     } else if (tipoFechamento === 'personalizado') {
-      const totalDiasPeriodo = Math.max(1, eachDay(inicio, fim).length);
-      valorBase = round2((f.salario / 30) * Math.min(30, totalDiasPeriodo));
+      const totalDiasPeriodo = diasIntervalo.length;
+      valorBase = round2((f.salario / 30) * Math.max(0, totalDiasPeriodo - faltas));
     } else {
       valorBase = round2(f.salario);
     }
   }
-  const totalAjustes = round2(ajustes.reduce((s, a) => s + a.valor, 0));
   const total = round2(Math.max(0, valorBase + totalAjustes));
   const pesos = dias > 0 ? porCentroDias : { [SEDE]: 1 };
   return {
@@ -207,6 +229,27 @@ export function calcularFolha(
     distribuicao: distribuirProporcional(total, pesos),
     porCentroDias,
   };
+}
+
+/** Verifica se já existe fechamento de folha com sobreposição de datas para o mesmo funcionário. */
+export function verificarSobreposicaoFechamento<
+  T extends Pick<FechamentoFolha, 'id' | 'funcionarioId' | 'inicio' | 'fim' | 'status'>,
+>(
+  fechamentos: T[],
+  funcionarioId: string,
+  inicio: ISODate,
+  fim: ISODate,
+  ignorarFechamentoId?: string,
+): T | undefined {
+  if (!funcionarioId || !inicio || !fim || inicio > fim) return undefined;
+  return fechamentos.find(
+    (f) =>
+      f.status === 'fechado' &&
+      f.funcionarioId === funcionarioId &&
+      f.id !== ignorarFechamentoId &&
+      inicio <= f.fim &&
+      fim >= f.inicio,
+  );
 }
 
 // ---------------------------------------------------------------- recorrências
@@ -257,4 +300,59 @@ export function gerarContasRecorrentes(
 
 export function contaVencida(c: Pick<ContaPagar, 'status' | 'vencimento'>, hoje: ISODate): boolean {
   return c.status === 'pendente' && c.vencimento < hoje;
+}
+
+// ---------------------------------------------------------------- recorrência de tarefas
+
+export function proximaDataRecorrente(dataAtual: ISODate, recorrencia: RecorrenciaTarefa): ISODate | null {
+  if (!recorrencia || recorrencia === 'nenhuma' || !isValidISODate(dataAtual)) return null;
+  switch (recorrencia) {
+    case 'diaria':
+      return addDays(dataAtual, 1);
+    case 'dias_uteis': {
+      let proxima = addDays(dataAtual, 1);
+      while (weekday(proxima) === 0 || weekday(proxima) === 6) {
+        proxima = addDays(proxima, 1);
+      }
+      return proxima;
+    }
+    case 'semanal':
+      return addDays(dataAtual, 7);
+    case 'quinzenal':
+      return addDays(dataAtual, 15);
+    case 'mensal':
+      return addMonths(dataAtual, 1);
+  }
+}
+
+export function gerarProximaTarefaRecorrente(
+  tarefa: Tarefa,
+  tarefasExistentes: Tarefa[],
+  novoId: string,
+): Tarefa | null {
+  if (!tarefa.recorrencia || tarefa.recorrencia === 'nenhuma') return null;
+  const proximaData = proximaDataRecorrente(tarefa.data, tarefa.recorrencia);
+  if (!proximaData) return null;
+
+  const origemId = tarefa.origemRecorrenciaId ?? tarefa.id;
+  const jaExiste = tarefasExistentes.some((t) => {
+    if (t.concluida || t.data !== proximaData) return false;
+    if (t.origemRecorrenciaId && t.origemRecorrenciaId === origemId) return true;
+    return (
+      t.titulo === tarefa.titulo &&
+      t.recorrencia === tarefa.recorrencia &&
+      (t.obraId ?? '') === (tarefa.obraId ?? '')
+    );
+  });
+  if (jaExiste) return null;
+
+  return {
+    ...tarefa,
+    id: novoId,
+    data: proximaData,
+    concluida: false,
+    concluidaEm: undefined,
+    criadoEm: new Date().toISOString(),
+    origemRecorrenciaId: origemId,
+  };
 }

@@ -16,14 +16,16 @@ import {
   Trash2,
 } from 'lucide-react';
 import { Card, CardHeader, Badge, Button } from '@/components/ui';
+import { Dialog } from '@/components/ui/Dialog';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
 import { useHoje } from '@/hooks';
 import type { Tarefa } from '@/domain/types';
+import { gerarProximaTarefaRecorrente } from '@/domain/engine';
 import { LABEL_RECORRENCIA_TAREFA } from '@/domain/labels';
 import { startOfWeek, addDays, diffDays } from '@/lib/dates';
 import { fmtDateShort } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { cn, uid } from '@/lib/utils';
 import { TarefaFormDialog } from '@/features/tarefas/TarefaFormDialog';
 
 export function TarefasWidget() {
@@ -34,6 +36,7 @@ export function TarefasWidget() {
   const [tab, setTab] = useState<'dia' | 'semana'>('dia');
   const [formOpen, setFormOpen] = useState(false);
   const [tarefaParaEditar, setTarefaParaEditar] = useState<Tarefa | null>(null);
+  const [tarefaParaExcluir, setTarefaParaExcluir] = useState<Tarefa | null>(null);
 
   const semanaInicio = startOfWeek(hoje);
   const semanaFim = addDays(semanaInicio, 6);
@@ -101,12 +104,20 @@ export function TarefasWidget() {
   const toggleConcluida = (t: Tarefa, e: React.MouseEvent) => {
     e.stopPropagation();
     const novoStatus = !t.concluida;
+    let proximaGerada: Tarefa | null = null;
     mutate(
       (d) => {
         const item = d.tarefas.find((x) => x.id === t.id);
         if (item) {
           item.concluida = novoStatus;
           item.concluidaEm = novoStatus ? new Date().toISOString() : undefined;
+          if (novoStatus) {
+            const proxima = gerarProximaTarefaRecorrente(item, d.tarefas, uid('tar'));
+            if (proxima) {
+              d.tarefas.push(proxima);
+              proximaGerada = proxima;
+            }
+          }
         }
       },
       {
@@ -114,12 +125,24 @@ export function TarefasWidget() {
         descricao: `${novoStatus ? 'Concluiu' : 'Reabriu'} tarefa: ${t.titulo}`,
       },
     );
-    toast(novoStatus ? `Tarefa "${t.titulo}" marcada como concluída!` : `Tarefa "${t.titulo}" reaberta!`, 'success');
+    if (novoStatus && proximaGerada) {
+      toast(
+        `Tarefa "${t.titulo}" concluída! Próxima em ${fmtDateShort((proximaGerada as Tarefa).data)}.`,
+        'success',
+      );
+    } else {
+      toast(novoStatus ? `Tarefa "${t.titulo}" marcada como concluída!` : `Tarefa "${t.titulo}" reaberta!`, 'success');
+    }
   };
 
   const excluirTarefa = (t: Tarefa, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!window.confirm(`Deseja realmente excluir a tarefa "${t.titulo}"?`)) return;
+    setTarefaParaExcluir(t);
+  };
+
+  const confirmarExclusao = () => {
+    if (!tarefaParaExcluir) return;
+    const t = tarefaParaExcluir;
     mutate(
       (d) => {
         d.tarefas = (d.tarefas || []).filter((x) => x.id !== t.id);
@@ -129,6 +152,7 @@ export function TarefasWidget() {
         descricao: `Excluiu tarefa "${t.titulo}" no Dashboard`,
       },
     );
+    setTarefaParaExcluir(null);
     toast('Tarefa removida com sucesso.', 'success');
   };
 
@@ -467,6 +491,28 @@ export function TarefasWidget() {
         tarefaParaEditar={tarefaParaEditar}
         dataPadrao={hoje}
       />
+
+      <Dialog
+        open={!!tarefaParaExcluir}
+        onClose={() => setTarefaParaExcluir(null)}
+        title="Excluir Tarefa?"
+      >
+        {tarefaParaExcluir && (
+          <div className="space-y-4">
+            <p className="text-sm text-muted">
+              Deseja realmente excluir a tarefa <strong className="text-fg">"{tarefaParaExcluir.titulo}"</strong>? Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setTarefaParaExcluir(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" variant="danger" onClick={confirmarExclusao}>
+                Excluir Tarefa
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
     </>
   );
 }

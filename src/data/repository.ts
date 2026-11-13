@@ -104,7 +104,8 @@ class FirestoreRepository implements ErpRepository {
   private lastCloudData: ErpData | null = null;
   private pendingSync: { data: ErpData; forceReset: boolean } | null = null;
   private isSyncing = false;
-  private hasBackedUpThisSession = false;
+  private hasBackedUpAutoThisSession = false;
+  private hasBackedUpDeviceThisSession = false;
   private fallbackClientId = `cli_${Math.random().toString(36).slice(2, 10)}`;
   private listeners = new Set<() => void>();
 
@@ -241,6 +242,8 @@ class FirestoreRepository implements ErpRepository {
     if (!norm) return;
 
     if (options?.forceReset) {
+      this.hasBackedUpAutoThisSession = false;
+      this.hasBackedUpDeviceThisSession = false;
       this.lastCloudData = norm;
       this.persistirLocal(norm, { forceReset: true });
       this.marcarDirtyLocal(true);
@@ -392,12 +395,13 @@ class FirestoreRepository implements ErpRepository {
         }
 
         // Gravação automática em segundo plano nos documentos de backup da nuvem
-        if (possuiEstadoSincronizavelErp(alvo) && !alvo._meta?.systemResetAt) {
-          if (!jaSincronizadoNaNuvem || !this.hasBackedUpThisSession) {
+        if (possuiEstadoSincronizavelErp(alvo) && contarRegistrosErp(alvo) > 0) {
+          if (!jaSincronizadoNaNuvem || !this.hasBackedUpAutoThisSession) {
+            this.hasBackedUpAutoThisSession = true;
             setDoc(ERP_BACKUP_REF, payload).catch(() => {});
           }
-          if (contarRegistrosErp(alvo) > 0 && !this.hasBackedUpThisSession) {
-            this.hasBackedUpThisSession = true;
+          if (!jaSincronizadoNaNuvem || !this.hasBackedUpDeviceThisSession) {
+            this.hasBackedUpDeviceThisSession = true;
             const deviceBackupRef = doc(db, 'erp', `backup_${this.getClientId()}`);
             setDoc(deviceBackupRef, payload).catch(() => {});
           }
@@ -503,6 +507,10 @@ class FirestoreRepository implements ErpRepository {
   }
 
   clear(): void {
+    this.lastCloudData = null;
+    this.pendingSync = null;
+    this.hasBackedUpAutoThisSession = false;
+    this.hasBackedUpDeviceThisSession = false;
     localStorage.removeItem(LOCAL_KEY);
     localStorage.removeItem(LOCAL_BACKUP_KEY);
     localStorage.removeItem(LOCAL_VAULT_KEY);
@@ -579,10 +587,20 @@ class FirestoreRepository implements ErpRepository {
             if (!snapshot.metadata.fromCache && !this.pendingSync && !this.isSyncing) {
               this.limparDirtyLocal();
             }
-            if (contarRegistrosErp(mesclado) > 0 && !this.hasBackedUpThisSession) {
-              this.hasBackedUpThisSession = true;
+            if (
+              contarRegistrosErp(mesclado) > 0 &&
+              (!this.hasBackedUpAutoThisSession || !this.hasBackedUpDeviceThisSession)
+            ) {
               const payload = sanitizarParaFirestore(mesclado);
-              setDoc(ERP_BACKUP_REF, payload).catch(() => {});
+              if (!this.hasBackedUpAutoThisSession) {
+                this.hasBackedUpAutoThisSession = true;
+                setDoc(ERP_BACKUP_REF, payload).catch(() => {});
+              }
+              if (!this.hasBackedUpDeviceThisSession) {
+                this.hasBackedUpDeviceThisSession = true;
+                const deviceBackupRef = doc(db, 'erp', `backup_${this.getClientId()}`);
+                setDoc(deviceBackupRef, payload).catch(() => {});
+              }
             }
           }
         } else {

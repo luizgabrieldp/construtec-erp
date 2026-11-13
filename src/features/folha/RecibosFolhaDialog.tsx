@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Printer } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button } from '@/components/ui';
+import { useData } from '@/data/store';
+import type { ConfigEmpresa } from '@/domain/types';
 import { fmtBRL, fmtDate } from '@/lib/format';
 import { imprimirHtmlIframe, gerarHtmlRecibosIndividuais } from '@/lib/print';
 
@@ -35,14 +37,36 @@ export function RecibosFolhaDialog({
   recibos,
   titulo = 'Recibos de Pagamento',
 }: RecibosFolhaDialogProps) {
+  const data = useData();
   const [imprimindo, setImprimindo] = useState(false);
+
+  const detalhes = data.config.empresaDetalhes;
+  const empresaNome =
+    detalhes?.nomeFantasia?.trim() ||
+    detalhes?.nome?.trim() ||
+    detalhes?.razaoSocial?.trim() ||
+    data.config.empresa?.trim() ||
+    'CONSTRUTEC';
+  const empresaConfig: ConfigEmpresa = {
+    ...detalhes,
+    nomeFantasia: empresaNome,
+    nome: empresaNome,
+  };
+  const empresaCidade = detalhes?.cidadeUf?.trim() || detalhes?.cidade?.trim() || '';
+  const empresaMeta = [
+    empresaConfig.cnpj ? `CNPJ: ${empresaConfig.cnpj}` : '',
+    empresaCidade,
+    empresaConfig.telefone || '',
+  ]
+    .filter(Boolean)
+    .join(' • ');
 
   if (!open || recibos.length === 0) return null;
 
   const handleImprimir = (especificoId?: string) => {
     setImprimindo(true);
     const lista = especificoId ? recibos.filter((r) => r.id === especificoId) : recibos;
-    const html = gerarHtmlRecibosIndividuais(lista);
+    const html = gerarHtmlRecibosIndividuais(lista, empresaConfig);
     const tituloDoc = lista.length === 1 ? `Recibo - ${lista[0].funcionarioNome}` : `Recibos de Pagamento (${lista.length})`;
 
     try {
@@ -102,10 +126,12 @@ export function RecibosFolhaDialog({
                 {/* Cabeçalho do Recibo */}
                 <div className="flex flex-wrap items-start justify-between border-b border-line pb-3 gap-2">
                   <div className="flex items-center gap-3">
-                    <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" className="size-10 object-contain shrink-0" />
+                    <img src="/logo-emblema-trim.png" alt={empresaNome} className="size-10 object-contain shrink-0" />
                     <div>
-                      <h3 className="text-base font-black text-brand tracking-tight">CONSTRUTEC</h3>
-                      <p className="text-[11px] text-muted">Construção Civil & Reformas • CNPJ: 35.477.198/0001-83 • Petrolina/PE</p>
+                      <h3 className="text-base font-black text-brand tracking-tight">{empresaNome}</h3>
+                      <p className="text-[11px] text-muted">
+                        Construção Civil &amp; Reformas{empresaMeta ? ` • ${empresaMeta}` : ''}
+                      </p>
                       <p className="font-bold text-fg mt-0.5">
                         RECIBO DE PAGAMENTO DE SALÁRIO / DIÁRIAS (COMPROVANTE DE QUITAÇÃO)
                       </p>
@@ -191,7 +217,7 @@ export function RecibosFolhaDialog({
 
                 {/* Termo de Quitação */}
                 <p className="text-[11px] text-muted italic border-l-2 border-brand/50 pl-2 py-0.5">
-                  "Declaro ter recebido da CONSTRUTEC a quantia líquida acima discriminada de {fmtBRL(r.total)},
+                  "Declaro ter recebido da {empresaNome} a quantia líquida acima discriminada de {fmtBRL(r.total)},
                   referente à prestação de serviços no período indicado, conferida e aprovada, dando plena e rasa quitação."
                 </p>
 
@@ -202,7 +228,7 @@ export function RecibosFolhaDialog({
                     <div className="text-[10px] text-muted">Assinatura do Colaborador</div>
                   </div>
                   <div>
-                    <div className="border-t border-line pt-1 font-semibold">CONSTRUTEC</div>
+                    <div className="border-t border-line pt-1 font-semibold">{empresaNome}</div>
                     <div className="text-[10px] text-muted">Encarregado / Responsável Financeiro</div>
                   </div>
                 </div>

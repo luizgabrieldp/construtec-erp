@@ -28,6 +28,88 @@ export interface ReleaseVersao {
 
 export const ATUALIZACOES_SISTEMA: ReleaseVersao[] = [
   {
+    versao: 'v2.0.0',
+    dataPublicacao: '12 de Novembro de 2026 às 23:42',
+    dataIso: '2026-11-13T02:42:59Z',
+    titulo: 'Design Industrial de Engenharia, Blindagem de Segurança & Novo Fluxo Operacional',
+    descricao:
+      'Grande atualização estrutural da plataforma CONSTRUTEC: reformulação visual completa com estética de engenharia limpa (substituindo efeitos ornamentais de IA por precisão tipográfica, contraste WCAG AA e paletas técnicas sóbrias); endurecimento de segurança e permissões (RBAC rigoroso para encarregados, criptografia PBKDF2 de senhas, isolamento pré-login/logout, sanitização contra XSS/CSV e cabeçalhos CSP); fluxo integrado de Baixa e Estorno de pagamentos diretamente na Folha (com recibos exclusivos para impressão/PDF, sem envio via WhatsApp); edição dos Dados da Empresa em Configurações; melhorias de usabilidade em campo e otimização de bundle com code-splitting.',
+    tags: ['Novo', 'Melhoria', 'Correção'],
+    mudancas: [
+      {
+        tag: 'Melhoria',
+        texto:
+          'Novo Design Industrial Limpo ("Zero Estética de IA") e Contraste WCAG AA',
+        detalhe:
+          'Remoção de partículas flutuantes, halos blur-3xl, gradientes spotlight de mouse e ícones rotativos. Os cartões de métricas adotaram filetes arquitetônicos, paleta técnica em âmbar/ardósia e contraste reforçado para uso sob luz solar.',
+      },
+      {
+        tag: 'Novo',
+        texto:
+          'Baixa e Estorno de Pagamentos diretamente na Folha de Pagamento',
+        detalhe:
+          'Modais dedicados para registrar data e forma de pagamento ao dar baixa ou estornar lançamentos na própria Folha, mantendo recibos individuais e de empreiteiro focados em impressão/PDF limpo.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Grade de Presença com estado neutro "Pendente", "Copiar último dia" e alvos de 44px no celular',
+        detalhe:
+          'Colaboradores sem apontamento no dia ficam em estado Pendente (sem falta presumida), com confirmação em diálogo acessível para copiar a frequência do dia anterior.',
+      },
+      {
+        tag: 'Novo',
+        texto:
+          'Gestão de Dados da Empresa em Configurações & Controle de Acesso (RBAC)',
+        detalhe:
+          'Administradores agora editam Nome Fantasia, Razão Social, CNPJ, Endereço e Cidade diretamente em Configurações → Dados da Empresa, com refletimento imediato nos recibos impressos. Encarregados têm custos, orçamentos e CPFs ocultados com proteção em tela e mutação.',
+      },
+      {
+        tag: 'Melhoria',
+        texto:
+          'Segurança Criptográfica, Sanitização HTML/CSV, Notificações Persistentes e Performance',
+        detalhe:
+          'Hash PBKDF2 WebCrypto com migração automática no login, limpeza segura de dados locais ao sair, proteção contra XSS em impressões e fórmulas em CSV, lembretes atrasados persistentes, modais no lugar de window.confirm, rotas em carregamento sob demanda e favicon vetorial leve.',
+      },
+    ],
+    passosVisuais: [
+      {
+        passo: 1,
+        titulo: 'Baixa e Estorno Direto na Folha',
+        descricao:
+          'Na aba Folha de Pagamento, clique em "Dar Baixa" para registrar a data e a forma de pagamento ou use "Estornar" se precisar desfazer uma quitação.',
+        icone: 'CheckSquare',
+        ondeEncontrar: 'Menu Lateral → Folha de Pagamento',
+        dica: 'Os recibos individuais e de empreiteiro seguem otimizados para impressão e exportação em PDF.',
+      },
+      {
+        passo: 2,
+        titulo: 'Dados da Empresa Editáveis',
+        descricao:
+          'Acesse Configurações → Dados da Empresa (exclusivo para administradores) para atualizar Razão Social, CNPJ, endereço e telefone exibidos nos relatórios e recibos.',
+        icone: 'Building2',
+        ondeEncontrar: 'Menu Lateral → Configurações → Dados da Empresa',
+      },
+      {
+        passo: 3,
+        titulo: 'Apontamento em Campo com Estado Pendente',
+        descricao:
+          'Na Grade Semanal de Equipe & Presença, dias ainda não preenchidos permanecem como Pendente e você pode usar "Copiar último dia" para preencher rapidamente quem estiver pendente.',
+        icone: 'Users',
+        ondeEncontrar: 'Menu Lateral → Equipe & Presença',
+        dica: 'Os botões de presença possuem área mínima de 44px no celular para toque rápido em obra.',
+      },
+      {
+        passo: 4,
+        titulo: 'Visual de Engenharia e Notificações Aprimoradas',
+        descricao:
+          'Explore os novos cartões com leitura de alto contraste no modo claro/escuro e acompanhe lembretes do dia e atrasados pelo sino do topo sem perder alertas já na primeira abertura.',
+        icone: 'Bell',
+        ondeEncontrar: 'Topo da Aplicação → Notificações & Dashboard',
+      },
+    ],
+  },
+  {
     versao: 'v1.8.7',
     dataPublicacao: '28 de Outubro de 2026 às 22:55',
     dataIso: '2026-10-28T22:55:00Z',

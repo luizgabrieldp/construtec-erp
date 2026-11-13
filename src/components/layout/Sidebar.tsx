@@ -83,24 +83,8 @@ export function Sidebar() {
         <Logo compact={collapsed} size={collapsed ? 'sm' : 'md'} />
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-5 relative flex flex-col justify-between">
-        <div className="relative z-10">
-          <NavList collapsed={collapsed} />
-        </div>
-
-        {/* Marca d'água do ícone grandão da CONSTRUTEC embaixo de Configurações */}
-        {!collapsed && (
-          <div
-            aria-hidden="true"
-            className="pointer-events-none select-none my-4 flex items-center justify-center opacity-[0.06] dark:opacity-[0.08] transition-opacity"
-          >
-            <img
-              src="/logo-emblema-trim.png"
-              alt=""
-              className="w-36 h-36 object-contain"
-            />
-          </div>
-        )}
+      <div className="flex-1 overflow-y-auto px-3 py-5">
+        <NavList collapsed={collapsed} />
       </div>
 
       <div className="flex flex-col gap-2 border-t border-line p-3 shrink-0 relative z-10">

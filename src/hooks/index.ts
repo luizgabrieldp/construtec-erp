@@ -63,9 +63,7 @@ export function useResumo() {
 }
 
 export function usePerfil() {
-  const usuario = useAuth((s) => s.usuarioAtual);
-  const perfilUi = useUi((s) => s.perfil);
-  return usuario?.perfil ?? perfilUi;
+  return useAuth((s) => s.usuarioAtual?.perfil) ?? 'encarregado';
 }
 
 export function useIsAdmin() {

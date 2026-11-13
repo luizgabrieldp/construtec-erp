@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import {
   User,
   Users,
@@ -7,18 +7,20 @@ import {
   Copy,
   Check,
   Bell,
+  Building2,
   Smartphone,
   Globe,
   LogOut,
   CheckCircle2,
   ShieldCheck,
   HardHat,
-  Sparkles,
+  History,
 } from 'lucide-react';
 import { Badge, Button, Card, CardHeader, Field, Input, Select, PageHeader } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { ThemeSwitcher } from '@/components/layout/Switchers';
 import { useAuth } from '@/data/auth';
+import { useData, useErp } from '@/data/store';
 import { useIsAdmin } from '@/hooks';
 import { fmtDate } from '@/lib/format';
 import {
@@ -32,30 +34,68 @@ import type { Perfil } from '@/domain/types';
 
 import { AtualizacoesTab } from '@/features/atualizacoes/AtualizacoesTab';
 
-type TabConfig = 'atualizacoes' | 'perfil' | 'usuarios' | 'notificacoes';
+type TabConfig = 'perfil' | 'empresa' | 'usuarios' | 'notificacoes' | 'atualizacoes';
+
+const TABS_VALIDAS: TabConfig[] = ['perfil', 'empresa', 'usuarios', 'notificacoes', 'atualizacoes'];
 
 export function ConfiguracoesPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const data = useData();
+  const atualizarConfig = useErp((s) => s.atualizarConfig);
   const { usuarioAtual, usuarios, convites, atualizarPerfil, criarConvite, alternarStatusUsuario, logout } = useAuth();
   const isAdmin = useIsAdmin();
 
-  const [abaAtiva, setAbaAtiva] = useState<TabConfig>('atualizacoes');
+  const abaInicialParam = searchParams.get('aba') as TabConfig | null;
+  const abaInicialState = (location.state as { tab?: TabConfig } | null)?.tab;
+  const abaInicial =
+    abaInicialParam && TABS_VALIDAS.includes(abaInicialParam)
+      ? abaInicialParam
+      : abaInicialState && TABS_VALIDAS.includes(abaInicialState)
+      ? abaInicialState
+      : 'perfil';
 
-  // Suporte a redirecionamento direto para abas (ex: via popover de notificações)
+  const [abaAtiva, setAbaAtiva] = useState<TabConfig>(abaInicial);
+
+  // Suporte a redirecionamento direto para abas (ex: via popover de notificações ou query ?aba=)
   useEffect(() => {
-    const stateTab = (location.state as { tab?: TabConfig })?.tab;
-    if (stateTab) {
+    const queryTab = searchParams.get('aba') as TabConfig | null;
+    if (queryTab && TABS_VALIDAS.includes(queryTab)) {
+      setAbaAtiva(queryTab);
+      return;
+    }
+    const stateTab = (location.state as { tab?: TabConfig } | null)?.tab;
+    if (stateTab && TABS_VALIDAS.includes(stateTab)) {
       setAbaAtiva(stateTab);
     }
-  }, [location.state]);
+  }, [location.state, searchParams]);
 
-  // Garante que o encarregado nunca caia na aba de usuários
+  // Garante que o encarregado nunca caia em abas restritas ao administrador
   useEffect(() => {
-    if (!isAdmin && abaAtiva === 'usuarios') {
-      setAbaAtiva('atualizacoes');
+    if (!isAdmin && (abaAtiva === 'usuarios' || abaAtiva === 'empresa')) {
+      setAbaAtiva('perfil');
     }
   }, [isAdmin, abaAtiva]);
+
+  // Estados Dados da Empresa (Admin)
+  const detalhes = data.config.empresaDetalhes;
+  const [empNomeFantasia, setEmpNomeFantasia] = useState(detalhes?.nomeFantasia || data.config.empresa || 'CONSTRUTEC');
+  const [empRazaoSocial, setEmpRazaoSocial] = useState(detalhes?.razaoSocial || '');
+  const [empCnpj, setEmpCnpj] = useState(detalhes?.cnpj || '');
+  const [empEndereco, setEmpEndereco] = useState(detalhes?.endereco || '');
+  const [empCidadeUf, setEmpCidadeUf] = useState(detalhes?.cidadeUf || detalhes?.cidade || '');
+  const [empTelefone, setEmpTelefone] = useState(detalhes?.telefone || '');
+
+  useEffect(() => {
+    const det = data.config.empresaDetalhes;
+    setEmpNomeFantasia(det?.nomeFantasia || data.config.empresa || 'CONSTRUTEC');
+    setEmpRazaoSocial(det?.razaoSocial || '');
+    setEmpCnpj(det?.cnpj || '');
+    setEmpEndereco(det?.endereco || '');
+    setEmpCidadeUf(det?.cidadeUf || det?.cidade || '');
+    setEmpTelefone(det?.telefone || '');
+  }, [data.config.empresa, data.config.empresaDetalhes]);
 
   // Estados Meu Perfil
   const [nomePerfil, setNomePerfil] = useState(usuarioAtual?.nome || '');
@@ -70,17 +110,21 @@ export function ConfiguracoesPage() {
   // Estados Notificações
   const [notifPermissao, setNotifPermissao] = useState(getNotificationPermission());
 
-  const handleSalvarPerfil = (e: React.FormEvent) => {
+  const handleSalvarPerfil = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nomePerfil.trim() || !loginPerfil.trim()) {
       toast('Nome e Login são obrigatórios.', 'error');
       return;
     }
-    atualizarPerfil({
+    const res = await atualizarPerfil({
       nome: nomePerfil,
       emailOuLogin: loginPerfil,
       senha: novaSenha.trim() || undefined,
     });
+    if (!res.ok) {
+      toast(res.error || 'Erro ao atualizar perfil.', 'error');
+      return;
+    }
     setNovaSenha('');
     toast('Perfil atualizado com sucesso!', 'success');
   };
@@ -92,18 +136,51 @@ export function ConfiguracoesPage() {
   };
 
   const handleGerarConvite = () => {
-    const convite = criarConvite(perfilConvite);
-    const linkCompleto = `${window.location.origin}/cadastro?convite=${convite.codigo}`;
+    if (!isAdmin) return;
+    const res = criarConvite(perfilConvite);
+    if (!res.ok) {
+      toast(res.error, 'error');
+      return;
+    }
+    const linkCompleto = `${window.location.origin}/cadastro?convite=${res.convite.codigo}`;
     setUltimoConviteGerado(linkCompleto);
     setLinkCopiado(false);
     toast(`Convite para ${perfilConvite === 'admin' ? 'Administrador' : 'Encarregado'} gerado!`, 'success');
   };
 
-  const handleCopiarLink = (url: string) => {
-    navigator.clipboard.writeText(url);
-    setLinkCopiado(true);
-    toast('Link copiado para a área de transferência!', 'success');
-    setTimeout(() => setLinkCopiado(false), 2500);
+  const handleSalvarEmpresa = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) return;
+    const nomeLimpo = empNomeFantasia.trim() || 'CONSTRUTEC';
+    atualizarConfig({
+      empresa: nomeLimpo,
+      empresaDetalhes: {
+        nomeFantasia: nomeLimpo,
+        nome: nomeLimpo,
+        razaoSocial: empRazaoSocial.trim() || undefined,
+        cnpj: empCnpj.trim() || undefined,
+        endereco: empEndereco.trim() || undefined,
+        cidadeUf: empCidadeUf.trim() || undefined,
+        cidade: empCidadeUf.trim() || undefined,
+        telefone: empTelefone.trim() || undefined,
+      },
+    });
+    toast('Dados da empresa salvos! Eles serão aplicados aos recibos e impressões.', 'success');
+  };
+
+  const handleCopiarLink = async (url: string) => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        throw new Error('Clipboard indisponível');
+      }
+      setLinkCopiado(true);
+      toast('Link copiado para a área de transferência!', 'success');
+      setTimeout(() => setLinkCopiado(false), 2500);
+    } catch {
+      toast('Não foi possível copiar automaticamente. Selecione o link e copie manualmente.', 'error');
+    }
   };
 
   const handlePedirNotificacao = async () => {
@@ -152,20 +229,6 @@ export function ConfiguracoesPage() {
       <div className="flex flex-wrap items-center gap-2 border-b border-line pb-3 mb-6">
         <button
           type="button"
-          onClick={() => setAbaAtiva('atualizacoes')}
-          className={cn(
-            'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors cursor-pointer',
-            abaAtiva === 'atualizacoes'
-              ? 'bg-brand text-white shadow-sm shadow-brand/20'
-              : 'bg-surface-2 text-muted hover:text-fg'
-          )}
-        >
-          <Sparkles className="size-4" />
-          <span>Atualizações</span>
-        </button>
-
-        <button
-          type="button"
           onClick={() => setAbaAtiva('perfil')}
           className={cn(
             'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors cursor-pointer',
@@ -177,6 +240,22 @@ export function ConfiguracoesPage() {
           <User className="size-4" />
           <span>Meu Perfil</span>
         </button>
+
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setAbaAtiva('empresa')}
+            className={cn(
+              'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors cursor-pointer',
+              abaAtiva === 'empresa'
+                ? 'bg-brand text-white shadow-sm shadow-brand/20'
+                : 'bg-surface-2 text-muted hover:text-fg'
+            )}
+          >
+            <Building2 className="size-4" />
+            <span>Dados da Empresa</span>
+          </button>
+        )}
 
         {isAdmin && (
           <button
@@ -206,6 +285,20 @@ export function ConfiguracoesPage() {
         >
           <Bell className="size-4" />
           <span>Notificações & PWA</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAbaAtiva('atualizacoes')}
+          className={cn(
+            'flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-colors cursor-pointer',
+            abaAtiva === 'atualizacoes'
+              ? 'bg-brand text-white shadow-sm shadow-brand/20'
+              : 'bg-surface-2 text-muted hover:text-fg'
+          )}
+        >
+          <History className="size-4" />
+          <span>Atualizações</span>
         </button>
       </div>
 
@@ -269,7 +362,7 @@ export function ConfiguracoesPage() {
               </Field>
 
               <div className="pt-2 flex items-center justify-between">
-                <Button variant="danger" icon={<LogOut className="size-4" />} onClick={handleLogout}>
+                <Button type="button" variant="danger" icon={<LogOut className="size-4" />} onClick={handleLogout}>
                   Sair do Sistema
                 </Button>
                 <Button type="submit">Salvar Alterações</Button>
@@ -283,6 +376,76 @@ export function ConfiguracoesPage() {
               <span className="text-sm font-medium text-fg">Modo de Exibição</span>
               <ThemeSwitcher />
             </div>
+          </Card>
+        </div>
+      )}
+
+      {/* ABA EMPRESA: DADOS DA EMPRESA (ADMIN EXCLUSIVO) */}
+      {isAdmin && abaAtiva === 'empresa' && (
+        <div className="grid gap-6 max-w-2xl">
+          <Card>
+            <CardHeader
+              title="Dados da Empresa"
+              subtitle="Informações exibidas automaticamente nos recibos de folha, contratos e documentos para impressão"
+              action={<Building2 className="size-5 text-brand" />}
+            />
+            <form onSubmit={handleSalvarEmpresa} className="p-5 space-y-4">
+              <Field label="Nome Fantasia / Identificação no Sistema">
+                <Input
+                  required
+                  value={empNomeFantasia}
+                  onChange={(e) => setEmpNomeFantasia(e.target.value)}
+                  placeholder="Ex.: CONSTRUTEC ENGENHARIA"
+                />
+              </Field>
+
+              <Field label="Razão Social">
+                <Input
+                  value={empRazaoSocial}
+                  onChange={(e) => setEmpRazaoSocial(e.target.value)}
+                  placeholder="Ex.: Construtec Engenharia e Obras Ltda"
+                />
+              </Field>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="CNPJ">
+                  <Input
+                    value={empCnpj}
+                    onChange={(e) => setEmpCnpj(e.target.value)}
+                    placeholder="00.000.000/0001-00"
+                  />
+                </Field>
+                <Field label="Telefone / Contato">
+                  <Input
+                    value={empTelefone}
+                    onChange={(e) => setEmpTelefone(e.target.value)}
+                    placeholder="(00) 90000-0000"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Endereço">
+                <Input
+                  value={empEndereco}
+                  onChange={(e) => setEmpEndereco(e.target.value)}
+                  placeholder="Rua, número, bairro"
+                />
+              </Field>
+
+              <Field label="Cidade / UF (exibida em recibos e cabeçalhos)">
+                <Input
+                  value={empCidadeUf}
+                  onChange={(e) => setEmpCidadeUf(e.target.value)}
+                  placeholder="Ex.: Petrolina - PE"
+                />
+              </Field>
+
+              <div className="pt-2 flex justify-end">
+                <Button type="submit" icon={<CheckCircle2 className="size-4" />}>
+                  Salvar Dados da Empresa
+                </Button>
+              </div>
+            </form>
           </Card>
         </div>
       )}
@@ -316,10 +479,10 @@ export function ConfiguracoesPage() {
               </div>
 
               {ultimoConviteGerado && (
-                <div className="rounded-2xl border border-brand/30 bg-brand/5 p-4 space-y-2 animate-in fade-in">
+                <div className="rounded-xl border border-brand/30 bg-brand/5 p-4 space-y-2">
                   <span className="text-xs font-semibold text-brand">Link de Convite Gerado:</span>
                   <div className="flex items-center gap-2">
-                    <Input readOnly value={ultimoConviteGerado} className="text-xs font-mono bg-surface" />
+                    <Input readOnly value={ultimoConviteGerado} className="font-mono bg-surface" />
                     <Button
                       variant={linkCopiado ? 'primary' : 'secondary'}
                       icon={linkCopiado ? <Check className="size-4" /> : <Copy className="size-4" />}
@@ -428,12 +591,17 @@ export function ConfiguracoesPage() {
                         {u.ativo ? 'Ativo' : 'Inativo'}
                       </Badge>
 
-                      {!isProprio && (
+                      {!isProprio && isAdmin && (
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => {
-                            alternarStatusUsuario(u.id);
+                            if (!isAdmin) return;
+                            const res = alternarStatusUsuario(u.id);
+                            if (!res.ok) {
+                              toast(res.error || 'Erro ao alterar status.', 'error');
+                              return;
+                            }
                             toast(`Status de ${u.nome} alterado.`);
                           }}
                         >
@@ -572,7 +740,7 @@ export function ConfiguracoesPage() {
               <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-xl border border-brand/20 bg-brand/5 p-4">
                 <div className="space-y-0.5">
                   <div className="font-semibold text-fg flex items-center gap-1.5">
-                    <Sparkles className="size-4 text-brand" />
+                    <Bell className="size-4 text-brand" />
                     <span>Testar Notificação em Segundo Plano</span>
                   </div>
                   <p className="text-[11px] text-muted">

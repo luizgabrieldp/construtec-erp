@@ -5,9 +5,11 @@
 
 /* ------------------------------------------------------------------ tokens da marca */
 :root {
-  /* paleta oficial CONSTRUTEC */
-  --brand-orange: #ff6b00;
-  --brand-orange-hover: #e65f00;
+  /* paleta oficial CONSTRUTEC — calibrada para contraste WCAG AA */
+  --brand-orange: #c94600;
+  --brand-orange-hover: #ae3c00;
+  --brand-solid: #c94600;
+  --brand-solid-hover: #ae3c00;
   --navy-bg: #111a24;
   --navy-surface: #18222f;
   --navy-border: #243345;
@@ -21,7 +23,7 @@
   --surface-2: #f1f5f9;
   --border: var(--ice-border);
   --text: #0f172a;
-  --text-muted: #64748b;
+  --text-muted: #475569;
   --logo-text: #111a24;
 
   color-scheme: light dark;
@@ -31,23 +33,31 @@
 /* Sem JS: segue o sistema. Com JS: a classe .light / .dark decide. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
+    --brand-orange: #ff7b1c;
+    --brand-orange-hover: #ff6b00;
+    --brand-solid: #c94600;
+    --brand-solid-hover: #e05000;
     --bg: var(--navy-bg);
     --surface: var(--navy-surface);
     --surface-2: #1e2a39;
     --border: var(--navy-border);
     --text: #e6edf5;
-    --text-muted: #8b9bb0;
+    --text-muted: #9fb0c4;
     --logo-text: #ffffff;
   }
 }
 
 :root.dark {
+  --brand-orange: #ff7b1c;
+  --brand-orange-hover: #ff6b00;
+  --brand-solid: #c94600;
+  --brand-solid-hover: #e05000;
   --bg: var(--navy-bg);
   --surface: var(--navy-surface);
   --surface-2: #1e2a39;
   --border: var(--navy-border);
   --text: #e6edf5;
-  --text-muted: #8b9bb0;
+  --text-muted: #9fb0c4;
   --logo-text: #ffffff;
   color-scheme: dark;
 }
@@ -61,6 +71,8 @@
 
   --color-brand: var(--brand-orange);
   --color-brand-hover: var(--brand-orange-hover);
+  --color-brand-solid: var(--brand-solid);
+  --color-brand-solid-hover: var(--brand-solid-hover);
   --color-navy: var(--navy-bg);
   --color-navy-surface: var(--navy-surface);
   --color-navy-border: var(--navy-border);
@@ -159,7 +171,7 @@ dialog.cx-dialog::backdrop {
   -webkit-overflow-scrolling: touch;
 }
 
-/* ------------------------------------------------------------------ live pulse (Modo TV) */
+/* ------------------------------------------------------------------ indicador de status online */
 @keyframes cx-pulse {
   0% { box-shadow: 0 0 0 0 rgb(16 185 129 / 0.7); }
   70% { box-shadow: 0 0 0 10px rgb(16 185 129 / 0); }

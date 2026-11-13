@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, ArrowUp, ArrowDown, RotateCcw, Check, Sparkles } from 'lucide-react';
+import { Plus, Trash2, ArrowUp, ArrowDown, RotateCcw, Check } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button, Input } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
@@ -14,7 +14,7 @@ interface FasesObraConfigDialogProps {
   obra: Obra | null;
 }
 
-const CORES_FASE = ['#8B5CF6', '#3B82F6', '#06B6D4', '#10B981', '#F59E0B', '#EC4899', '#6366F1'];
+const CORES_FASE = ['#475569', '#2563EB', '#0284C7', '#0D9488', '#D97706', '#059669', '#EA580C'];
 
 export function FasesObraConfigDialog({ open, onClose, obra }: FasesObraConfigDialogProps) {
   const mutate = useErp((s) => s.mutate);
@@ -167,7 +167,7 @@ export function FasesObraConfigDialog({ open, onClose, obra }: FasesObraConfigDi
             >
               <div
                 className="size-3 rounded-full shrink-0"
-                style={{ backgroundColor: f.cor || '#8B5CF6' }}
+                style={{ backgroundColor: f.cor || '#475569' }}
               />
               <span className="font-bold text-muted w-5 shrink-0 text-center">
                 {idx + 1}º
@@ -177,7 +177,7 @@ export function FasesObraConfigDialog({ open, onClose, obra }: FasesObraConfigDi
                 value={f.label}
                 onChange={(e) => handleAlterarNome(f.id, e.target.value)}
                 placeholder="Nome da etapa..."
-                className="flex-1 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-xs text-fg focus:border-brand focus:outline-none"
+                className="flex-1 rounded-lg border border-line bg-surface px-2.5 py-1.5 text-base sm:text-sm text-fg focus:border-brand focus:outline-none"
               />
 
               <div className="flex items-center gap-0.5 shrink-0">

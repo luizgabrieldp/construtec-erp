@@ -36,9 +36,17 @@ try {
 
   console.log('   ✅ Módulos carregados com sucesso!');
 
-  // Teste 2: Validar versões v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
-  console.log('2. Validando integridade das releases v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
-  const v187 = ATUALIZACOES_SISTEMA[0];
+  // Teste 2: Validar versões v2.0.0, v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 e passos visuais
+  console.log('2. Validando integridade das releases v2.0.0, v1.8.7, v1.8.6, v1.8.5, v1.8.4, v1.8.3, v1.8.2 e v1.8.1 em ATUALIZACOES_SISTEMA...');
+  const v200 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v200.versao, 'v2.0.0');
+  assert.ok(v200.titulo.includes('Design Industrial'));
+  assert.deepEqual(v200.tags, ['Novo', 'Melhoria', 'Correção']);
+  assert.ok(v200.mudancas.length >= 4);
+  assert.ok(v200.passosVisuais.length >= 3);
+
+  const v187 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.7');
+  assert.ok(v187, 'v1.8.7 deve estar no histórico');
   assert.equal(v187.versao, 'v1.8.7');
   assert.equal(v187.dataPublicacao, '28 de Outubro de 2026 às 22:55');
   assert.ok(v187.titulo.includes('Correção de Coordenadas'));
@@ -217,7 +225,7 @@ try {
   assert.ok(dialogSrc.includes("case 'Trash2':"), 'PassoAPassoDialog deve tratar case Trash2');
 
   const popoverSrc = readFileSync(resolve('src/components/layout/NotificacoesPopover.tsx'), 'utf-8');
-  assert.ok(popoverSrc.includes('getStorageKey(usuarioId)'), 'NotificacoesPopover deve isolar storage por usuário');
+  assert.ok(popoverSrc.includes('getNotificacoesLidas(usuarioId)'), 'NotificacoesPopover deve isolar storage por usuário via getNotificacoesLidas');
   assert.ok(popoverSrc.includes('isTarefaRelevanteParaUsuario'), 'NotificacoesPopover deve usar isTarefaRelevanteParaUsuario');
   assert.ok(popoverSrc.includes('Trash2'), 'NotificacoesPopover deve incluir botão Trash2');
 
@@ -235,15 +243,16 @@ try {
     marcarNotificacoesComoLidas,
   } = await server.ssrLoadModule('/src/lib/notifications.ts');
 
-  // Testar disparo de versão para userAdmin (versão mais recente v1.8.7)
+  // Testar disparo de versão para userAdmin (versão mais recente v2.0.0)
+  const versaoMaisRecente = ATUALIZACOES_SISTEMA[0].versao;
   globalThis.localStorage.clear();
   verificarNotificacaoNovaVersao(userAdmin.id);
   const versaoNotificadaAdmin = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`);
-  assert.equal(versaoNotificadaAdmin, 'v1.8.7', 'Deve ter gravado a versão mais recente v1.8.7 para o admin');
+  assert.equal(versaoNotificadaAdmin, versaoMaisRecente, `Deve ter gravado a versão mais recente ${versaoMaisRecente} para o admin`);
 
   // Segunda chamada não deve alterar ou re-notificar
   verificarNotificacaoNovaVersao(userAdmin.id);
-  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), 'v1.8.7');
+  assert.equal(globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userAdmin.id}`), versaoMaisRecente);
 
   // Outro usuário ainda não foi notificado
   const versaoNotificadaOutro = globalThis.localStorage.getItem(`construtec:notificacoes:versao_notificada:${userEncarregado.id}`);

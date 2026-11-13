@@ -94,7 +94,7 @@ export function FaseObraStepper({
           className={cn(
             fases.length <= 5
               ? 'grid gap-1'
-              : 'flex gap-1 overflow-x-auto scrollbar-thin pb-1',
+              : 'flex gap-1 overflow-x-auto pb-1',
           )}
           style={
             fases.length <= 5

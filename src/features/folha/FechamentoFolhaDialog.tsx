@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { Dialog } from '@/components/ui/Dialog';
 import { Button, Field, Input, Select } from '@/components/ui';
@@ -6,10 +6,10 @@ import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
 import { useHoje } from '@/hooks';
 import { SEDE, type AjusteFolha, type FechamentoFolha, type TipoAjusteFolha, type CentroId } from '@/domain/types';
-import { LABEL_AJUSTE, LABEL_FUNCAO } from '@/domain/labels';
-import { calcularFolha } from '@/domain/engine';
+import { getLabelFuncao, LABEL_AJUSTE, LABEL_REGIME } from '@/domain/labels';
+import { calcularFolha, verificarSobreposicaoFechamento } from '@/domain/engine';
 import { addDays, endOfMonth, startOfMonth, startOfWeek, today } from '@/lib/dates';
-import { fmtBRL, fmtDate, round2 } from '@/lib/format';
+import { fmtBRL, fmtDate, parseMoedaBR, round2 } from '@/lib/format';
 import { uid } from '@/lib/utils';
 
 import { RecibosFolhaDialog, type DadosRecibo } from './RecibosFolhaDialog';
@@ -41,6 +41,22 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
   const funcionario = data.funcionarios.find((f) => f.id === funcionarioId);
 
   const [quinzenaOpcao, setQuinzenaOpcao] = useState<string>('atual_1');
+
+  useEffect(() => {
+    if (!open) return;
+    const ativos = data.funcionarios.filter((f) => f.ativo);
+    const firstId = ativos[0]?.id || data.funcionarios[0]?.id || '';
+    setFuncionarioId((prev) => (data.funcionarios.some((f) => f.id === prev) ? prev : firstId));
+    const semPassada = startOfWeek(addDays(hoje, -7));
+    setTipo('semanal');
+    setInicio(semPassada);
+    setFim(addDays(semPassada, 6));
+    setVencimento(addDays(today(), 5));
+    setAjustes([]);
+    setNovoAjusteDesc('');
+    setNovoAjusteValor('');
+    setReciboGerado(null);
+  }, [open, hoje, data.funcionarios]);
 
   const aplicarQuinzena = (opcao: string) => {
     setQuinzenaOpcao(opcao);
@@ -81,7 +97,7 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
   };
 
   const addAjuste = () => {
-    const v = round2(Number(novoAjusteValor.replace(',', '.')) || 0);
+    const v = round2(parseMoedaBR(novoAjusteValor));
     if (!novoAjusteDesc.trim() || v === 0) return;
 
     // Se for vale ou desconto, torna negativo
@@ -98,13 +114,32 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
     setAjustes(ajustes.filter((a) => a.id !== id));
   };
 
-  const resultado = funcionario
-    ? calcularFolha(funcionario, inicio, fim, data.apontamentos, ajustes, tipo)
-    : null;
+  const periodoInvalido = Boolean(inicio && fim && inicio > fim);
+
+  const resultado =
+    funcionario && !periodoInvalido
+      ? calcularFolha(funcionario, inicio, fim, data.apontamentos, ajustes, tipo)
+      : null;
+
+  const sobreposicao =
+    funcionario && !periodoInvalido
+      ? verificarSobreposicaoFechamento(data.fechamentos, funcionario.id, inicio, fim)
+      : undefined;
 
   const salvarFechamento = (e: React.FormEvent) => {
     e.preventDefault();
+    if (periodoInvalido) {
+      toast('A data inicial do período não pode ser maior que a data final.', 'error');
+      return;
+    }
     if (!funcionario || !resultado || resultado.total <= 0) return;
+    if (sobreposicao) {
+      toast(
+        `Já existe folha fechada para ${funcionario.nome} entre ${fmtDate(sobreposicao.inicio)} e ${fmtDate(sobreposicao.fim)}. Reabra a folha anterior antes de fechar novamente.`,
+        'error',
+      );
+      return;
+    }
 
     const contaId = uid('cp');
     const fechamentoId = uid('fol');
@@ -156,7 +191,7 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
     const novoRecibo: DadosRecibo = {
       id: fechamentoId,
       funcionarioNome: funcionario.nome,
-      funcionarioFuncao: LABEL_FUNCAO[funcionario.funcao],
+      funcionarioFuncao: getLabelFuncao(funcionario.funcao),
       funcionarioRegime: funcionario.regime,
       funcionarioTelefone: funcionario.telefone,
       tipo,
@@ -194,7 +229,7 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
               <Select value={funcionarioId} onChange={(e) => setFuncionarioId(e.target.value)} required>
                 {data.funcionarios.map((f) => (
                   <option key={f.id} value={f.id}>
-                    {f.nome} ({LABEL_FUNCAO[f.funcao]} - {f.regime})
+                    {f.nome} ({getLabelFuncao(f.funcao)} - {LABEL_REGIME[f.regime] || f.regime})
                   </option>
                 ))}
               </Select>
@@ -299,7 +334,7 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
               />
             </div>
             <div className="sm:col-span-2">
-              <Button size="sm" variant="secondary" className="w-full" icon={<Plus className="size-3" />} onClick={addAjuste}>
+              <Button type="button" size="sm" variant="secondary" className="w-full" icon={<Plus className="size-3" />} onClick={addAjuste}>
                 Adicionar
               </Button>
             </div>
@@ -331,11 +366,31 @@ export function FechamentoFolhaDialog({ open, onClose }: FechamentoFolhaDialogPr
           <Input type="date" required value={vencimento} onChange={(e) => setVencimento(e.target.value)} />
         </Field>
 
+        {periodoInvalido && (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-400">
+            A data inicial não pode ser maior que a data final do período.
+          </div>
+        )}
+
+        {!periodoInvalido && resultado && resultado.total <= 0 && (
+          <div className="rounded-xl border border-line bg-surface-2/60 p-3 text-xs text-muted">
+            O total líquido apurado está em R$ 0,00. Verifique se há apontamentos no período ou adicione um ajuste positivo para fechar esta folha.
+          </div>
+        )}
+
+        {sobreposicao && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-500">
+            Já existe um fechamento para <strong>{funcionario?.nome}</strong> no período de{' '}
+            <strong>{fmtDate(sobreposicao.inicio)}</strong> a <strong>{fmtDate(sobreposicao.fim)}</strong>.
+            Reabra ou ajuste as datas para evitar pagamento duplicado.
+          </div>
+        )}
+
         <div className="flex gap-2 justify-end pt-2">
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancelar
           </Button>
-          <Button type="submit" disabled={!resultado || resultado.total <= 0}>
+          <Button type="submit" disabled={periodoInvalido || !resultado || resultado.total <= 0 || Boolean(sobreposicao)}>
             Fechar Folha e Gerar Recibo
           </Button>
         </div>

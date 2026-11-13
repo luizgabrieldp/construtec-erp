@@ -343,6 +343,7 @@ export interface Tarefa {
   destinatarioNome?: string;
   criadoPorId?: string;
   criadoPorNome?: string;
+  origemRecorrenciaId?: ID;
 }
 
 // ---------------------------------------------------------------- Sistema
@@ -354,8 +355,20 @@ export interface AuditEntry {
   descricao: string;
 }
 
+export interface ConfigEmpresa {
+  nomeFantasia?: string;
+  razaoSocial?: string;
+  nome?: string;
+  cnpj?: string;
+  cidadeUf?: string;
+  cidade?: string;
+  telefone?: string;
+  endereco?: string;
+}
+
 export interface Config {
   empresa: string;
+  empresaDetalhes?: ConfigEmpresa;
   saldoInicial: number;
   dataSaldoInicial: ISODate;
 }

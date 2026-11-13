@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Outlet, useLocation, useNavigate, Navigate } from 'react-router-dom';
-import { Menu, ShieldAlert, LogOut, X } from 'lucide-react';
+import { Menu, LogOut, X } from 'lucide-react';
 import { Sidebar, NavList } from './Sidebar';
 import { UserInfoCard, ThemeSwitcher } from './Switchers';
 import { NotificacoesPopover } from './NotificacoesPopover';
@@ -12,9 +12,10 @@ import { Toaster } from '@/components/ui/Toast';
 import { NAV, navDoPerfil, podeAcessar } from '@/app/nav';
 import { useUi } from '@/data/ui';
 import { useAuth } from '@/data/auth';
+import { useData } from '@/data/store';
 import { useSyncStatus, forcarSincronizacaoAgora } from '@/data/repository';
 import { iniciarVerificadorTarefas, verificarNotificacaoNovaVersao } from '@/lib/notifications';
-import { isTyping, useHoje } from '@/hooks';
+import { isTyping, useHoje, usePerfil } from '@/hooks';
 import { fmtDateLong } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -22,7 +23,7 @@ const codeDaTecla = (k: string) => (k === ',' ? 'Comma' : k === 's' ? 'KeyS' : `
 
 function useAtalhos() {
   const navigate = useNavigate();
-  const perfil = useUi((s) => s.perfil);
+  const perfil = usePerfil();
   const toggle = useUi((s) => s.toggleSidebar);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -105,13 +106,12 @@ function Topbar() {
 
   return (
     <header
-      className="no-print sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur-md px-4 md:px-6"
+      className="no-print sticky top-0 z-30 border-b border-line bg-surface px-4 md:px-6"
       style={{
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 0.5rem)',
-        paddingBottom: '0.375rem',
+        paddingTop: 'env(safe-area-inset-top, 0px)',
       }}
     >
-      <div className="flex h-14 md:h-16 items-center gap-2.5 sm:gap-3">
+      <div className="flex h-16 items-center gap-2.5 sm:gap-3">
         {/* Botão Hambúrguer acessível com alvo de toque padrão Apple HIG (44x44px) */}
         <button
           type="button"
@@ -122,8 +122,8 @@ function Topbar() {
           <Menu className="size-5" />
         </button>
 
-        {/* Ícone oficial CONSTRUTEC isolado no topo */}
-        <div className="flex items-center">
+        {/* Ícone oficial CONSTRUTEC visível apenas no mobile/tablet (no desktop já aparece na Sidebar) */}
+        <div className="flex items-center lg:hidden">
           <img
             src="/logo-emblema-trim.png"
             alt="CONSTRUTEC"
@@ -155,6 +155,8 @@ function MobileDrawer() {
   const openMenu = useQuick((s) => s.menu);
   const close = useQuick((s) => s.close);
   const logout = useAuth((s) => s.logout);
+  const data = useData();
+  const subtituloEmpresa = data.config.empresaDetalhes?.cidadeUf || data.config.empresaDetalhes?.cidade || data.config.empresa || 'CONSTRUTEC';
   const touchStartX = useRef<number | null>(null);
 
   // Controle de gesto swipe para fechar deslizando para a esquerda
@@ -232,9 +234,9 @@ function MobileDrawer() {
       >
         {/* Topo da Gaveta com safe area respeitada e botão de fechar confortável */}
         <div className="flex h-16 items-center justify-between border-b border-line px-4 shrink-0">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <Logo size="sm" />
-            <span className="text-[10px] uppercase font-bold tracking-wider text-muted">Petrolina - PE</span>
+            <span className="truncate text-[10px] uppercase font-bold tracking-wider text-muted">{subtituloEmpresa}</span>
           </div>
           <button
             type="button"
@@ -248,7 +250,7 @@ function MobileDrawer() {
 
         {/* Conteúdo rolável da gaveta com overscroll contido */}
         <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 overscroll-contain relative">
-          <div className="relative z-10 flex flex-col gap-2">
+          <div className="flex flex-col gap-2">
             <UserInfoCard full />
             <div className="flex items-center justify-between rounded-xl border border-line px-3 py-2 bg-surface-2/30">
               <span className="text-xs font-semibold text-muted">Tema da Interface</span>
@@ -256,21 +258,7 @@ function MobileDrawer() {
             </div>
           </div>
 
-          <div className="relative z-10">
-            <NavList onNavigate={() => close('menu')} />
-          </div>
-
-          {/* Marca d'água do ícone grandão no menu mobile */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none select-none my-6 flex items-center justify-center opacity-[0.05] dark:opacity-[0.07]"
-          >
-            <img
-              src="/logo-emblema-trim.png"
-              alt=""
-              className="w-32 h-32 object-contain"
-            />
-          </div>
+          <NavList onNavigate={() => close('menu')} />
         </div>
 
         {/* Rodapé da gaveta respeitando safe area inferior do iPhone */}
@@ -292,23 +280,11 @@ function MobileDrawer() {
   );
 }
 
-function AcessoRestrito() {
-  return (
-    <div className="mx-auto mt-16 max-w-md text-center">
-      <ShieldAlert className="mx-auto size-12 text-amber-500" />
-      <h1 className="mt-4 text-xl font-bold">Acesso restrito</h1>
-      <p className="mt-2 text-sm text-muted">
-        Esta área é restrita para o perfil Administrador. O seu perfil atual é Encarregado da Obra.
-      </p>
-    </div>
-  );
-}
-
 export function AppShell() {
   useAtalhos();
   const { pathname } = useLocation();
   const usuarioAtual = useAuth((s) => s.usuarioAtual);
-  const perfilEfetivo = usuarioAtual?.perfil || 'encarregado';
+  const perfilEfetivo = usuarioAtual?.perfil ?? 'encarregado';
 
   useEffect(() => {
     if (usuarioAtual && useUi.getState().perfil !== usuarioAtual.perfil) {
@@ -317,13 +293,18 @@ export function AppShell() {
   }, [usuarioAtual]);
 
   useEffect(() => {
-    verificarNotificacaoNovaVersao(usuarioAtual?.id);
-    const cancelar = iniciarVerificadorTarefas(60000, usuarioAtual?.id);
+    if (!usuarioAtual) return;
+    verificarNotificacaoNovaVersao(usuarioAtual.id);
+    const cancelar = iniciarVerificadorTarefas(60000, usuarioAtual.id);
     return cancelar;
   }, [usuarioAtual?.id]);
 
   if (!usuarioAtual) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (!podeAcessar(pathname, perfilEfetivo)) {
+    return <Navigate to="/" replace />;
   }
 
   return (
@@ -337,21 +318,7 @@ export function AppShell() {
             paddingBottom: 'calc(2.5rem + env(safe-area-inset-bottom, 0px))',
           }}
         >
-          {/* Marca d'água monumental translúcida da CONSTRUTEC para mídia e prints */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none select-none fixed bottom-4 right-4 sm:bottom-8 sm:right-8 md:bottom-12 md:right-12 z-0 flex items-center justify-center opacity-[0.035] dark:opacity-[0.045] print:hidden"
-          >
-            <img
-              src="/logo-emblema-trim.png"
-              alt=""
-              className="w-64 h-64 sm:w-80 sm:h-80 md:w-[440px] md:h-[440px] lg:w-[520px] lg:h-[520px] object-contain max-w-[80vw] max-h-[80vh]"
-            />
-          </div>
-
-          <div className="relative z-1">
-            {podeAcessar(pathname, perfilEfetivo) ? <Outlet /> : <AcessoRestrito />}
-          </div>
+          <Outlet />
         </main>
       </div>
       <MobileDrawer />

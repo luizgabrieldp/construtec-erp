@@ -1,10 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Plus,
-  Check,
   ShieldAlert,
-  Sparkles,
-  Building2,
   Users,
   Search,
   CheckSquare,
@@ -17,10 +14,10 @@ import { Button, Field, Input, Select, Badge } from '@/components/ui';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
 import { useIsAdmin } from '@/hooks';
-import type { Funcionario, Funcao, Regime, TipoPix } from '@/domain/types';
-import { LABEL_FUNCAO, LABEL_REGIME, getLabelFuncao } from '@/domain/labels';
+import type { Funcionario, Regime, TipoPix } from '@/domain/types';
+import { LABEL_FUNCAO, getLabelFuncao } from '@/domain/labels';
 import { today } from '@/lib/dates';
-import { fmtBRL, round2 } from '@/lib/format';
+import { fmtBRL, parseMoedaBR, round2 } from '@/lib/format';
 import { cn, uid, normalizarTexto } from '@/lib/utils';
 
 interface FuncionarioFormDialogProps {
@@ -231,11 +228,9 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
   // Adicionar nova função dinamicamente
   const handleAdicionarNovaFuncao = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!isAdmin) return;
     const nomeLimpo = nomeNovaFuncao.trim();
     if (!nomeLimpo) return;
-
-    // Converte para id minúsculo sem acentos
-    const idChave = nomeLimpo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_');
 
     mutate((d) => {
       d.funcoesCustomizadas ??= [];
@@ -252,10 +247,14 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
 
   const salvar = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isAdmin) {
+      toast('Apenas administradores podem cadastrar ou editar colaboradores.', 'error');
+      return;
+    }
     if (!nome.trim()) return;
 
-    const salNum = round2(Number(salario.replace(',', '.')) || 0);
-    const diaNum = round2(Number(diaria.replace(',', '.')) || 0);
+    const salNum = round2(parseMoedaBR(salario));
+    const diaNum = round2(parseMoedaBR(diaria));
 
     const dadosFuncionario = {
       nome: nome.trim(),
@@ -347,6 +346,8 @@ export function FuncionarioFormDialog({ open, onClose, funcionarioParaEditar }: 
 
     onClose();
   };
+
+  if (!isAdmin) return null;
 
   return (
     <>

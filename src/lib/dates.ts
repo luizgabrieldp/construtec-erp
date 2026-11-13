@@ -63,10 +63,26 @@ export function weekday(s: ISODate): number {
   return parseISO(s).getDay();
 }
 
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_EACH_DAY_ITERATIONS = 1500;
+
+export function isValidISODate(s: string): s is ISODate {
+  if (!s || !ISO_DATE_RE.test(s)) return false;
+  const [y, m, d] = s.split('-').map(Number);
+  if (y < 1900 || y > 2100 || m < 1 || m > 12 || d < 1 || d > 31) return false;
+  const parsed = new Date(y, m - 1, d);
+  return parsed.getFullYear() === y && parsed.getMonth() === m - 1 && parsed.getDate() === d;
+}
+
 /** Intervalo inclusivo de datas. */
 export function eachDay(from: ISODate, to: ISODate): ISODate[] {
+  if (!isValidISODate(from) || !isValidISODate(to) || from > to) return [];
   const out: ISODate[] = [];
-  for (let d = from; d <= to; d = addDays(d, 1)) out.push(d);
+  let count = 0;
+  for (let d = from; d <= to && count < MAX_EACH_DAY_ITERATIONS; d = addDays(d, 1)) {
+    out.push(d);
+    count += 1;
+  }
   return out;
 }
 

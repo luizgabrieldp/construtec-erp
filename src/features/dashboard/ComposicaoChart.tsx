@@ -12,17 +12,17 @@ import {
   Legend,
   CartesianGrid,
 } from 'recharts';
-import { Card, Badge } from '@/components/ui';
+import { Card } from '@/components/ui';
 import { useData } from '@/data/store';
 import { useResumo } from '@/hooks';
 import type { GrupoCusto } from '@/domain/selectors';
 import { fmtBRL, fmtBRLCompact, fmtPct } from '@/lib/format';
 
 const CORES_GRUPOS: Record<GrupoCusto, string> = {
-  materiais: '#FF6B00',
-  mao_de_obra: '#38BDF8',
-  locacao: '#A78BFA',
-  servicos: '#10B981',
+  materiais: '#EA580C',
+  mao_de_obra: '#0284C7',
+  locacao: '#475569',
+  servicos: '#059669',
   outros: '#64748B',
 };
 
@@ -70,27 +70,28 @@ export function ComposicaoChart() {
     <Card className="p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-fg">Composição Detalhada de Custos</h3>
-            <Badge tone="blue">Recharts</Badge>
-          </div>
+          <h3 className="text-base font-bold text-fg">Composição Detalhada de Custos</h3>
           <p className="mt-0.5 text-xs text-muted">
-            Distribuição por materiais, equipe de campo e máquinas alugadas
+            Distribuição por materiais, equipe de campo e serviços
           </p>
         </div>
 
         <div className="flex rounded-lg border border-line bg-surface-2 p-0.5 text-xs">
           <button
+            type="button"
+            aria-pressed={visao === 'donut'}
             onClick={() => setVisao('donut')}
-            className={`rounded px-2.5 py-1 font-medium transition-colors ${
+            className={`rounded px-2.5 py-1 font-medium transition-colors cursor-pointer ${
               visao === 'donut' ? 'bg-surface font-semibold text-fg shadow-xs' : 'text-muted'
             }`}
           >
             Geral (Donut)
           </button>
           <button
+            type="button"
+            aria-pressed={visao === 'barras'}
             onClick={() => setVisao('barras')}
-            className={`rounded px-2.5 py-1 font-medium transition-colors ${
+            className={`rounded px-2.5 py-1 font-medium transition-colors cursor-pointer ${
               visao === 'barras' ? 'bg-surface font-semibold text-fg shadow-xs' : 'text-muted'
             }`}
           >

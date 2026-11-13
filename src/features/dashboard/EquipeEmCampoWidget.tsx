@@ -24,7 +24,7 @@ export function EquipeEmCampoWidget() {
       const k = chaveApontamento(f.id, hoje);
       const ap = data.apontamentos[k];
       if (ap && ap.status !== 'falta') {
-        const centros = ap.centroIds && ap.centroIds.length > 0 ? ap.centroIds : [ap.centroId];
+        const centros = Array.from(new Set(ap.centroIds && ap.centroIds.length > 0 ? ap.centroIds : [ap.centroId]));
         centros.forEach((c) => {
           if (contagem[c]) contagem[c].count += 1;
         });

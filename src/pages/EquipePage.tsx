@@ -85,10 +85,10 @@ export function EquipePage() {
       const matchTelefone =
         f.telefone.includes(busca.trim()) ||
         (qDigits.length > 0 && f.telefone.replace(/\D/g, '').includes(qDigits));
-      const matchCpf = f.cpf
+      const matchCpf = isAdmin && f.cpf
         ? f.cpf.includes(busca.trim()) || (qDigits.length > 0 && f.cpf.replace(/\D/g, '').includes(qDigits))
         : false;
-      const matchPix = f.chavePix ? normalizarTexto(f.chavePix).includes(qNorm) : false;
+      const matchPix = isAdmin && f.chavePix ? normalizarTexto(f.chavePix).includes(qNorm) : false;
 
       return matchNome || matchApelido || matchTelefone || matchCpf || matchPix;
     }
@@ -117,6 +117,10 @@ export function EquipePage() {
     }
 
     if (colunaOrdenacao === 'remuneracao') {
+      if (!isAdmin) {
+        diff = a.regime.localeCompare(b.regime, 'pt-BR', { sensitivity: 'base' });
+        return direcaoOrdenacao === 'asc' ? diff : -diff;
+      }
       const valA = a.regime === 'mensalista' ? (a.salario || 0) : (a.diaria || 0);
       const valB = b.regime === 'mensalista' ? (b.salario || 0) : (b.diaria || 0);
       diff = valA - valB;
@@ -156,6 +160,7 @@ export function EquipePage() {
   });
 
   const alternarStatusFuncionario = (f: Funcionario) => {
+    if (!isAdmin) return;
     mutate((d) => {
       const item = d.funcionarios.find((x) => x.id === f.id);
       if (item) item.ativo = !item.ativo;
@@ -163,6 +168,7 @@ export function EquipePage() {
   };
 
   const tentarExcluirFuncionario = (f: Funcionario) => {
+    if (!isAdmin) return;
     const temFechamento = (data.fechamentos || []).some((fech) => fech.funcionarioId === f.id);
     const temContaPagar = (data.contasPagar || []).some((cp) => cp.funcionarioId === f.id);
 
@@ -180,7 +186,7 @@ export function EquipePage() {
   };
 
   const confirmarExclusao = () => {
-    if (!colaboradorParaExcluir) return;
+    if (!isAdmin || !colaboradorParaExcluir) return;
     const fId = colaboradorParaExcluir.id;
     const fNome = colaboradorParaExcluir.nome;
 
@@ -214,9 +220,11 @@ export function EquipePage() {
         title="Equipe & Apontamento"
         subtitle="Controle de frequência semanal, alocação de canteiro e cadastro de profissionais"
         actions={
-          <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setDialogNovoOpen(true)}>
-            Novo Colaborador
-          </Button>
+          isAdmin ? (
+            <Button variant="primary" icon={<Plus className="size-4" />} onClick={() => setDialogNovoOpen(true)}>
+              Novo Colaborador
+            </Button>
+          ) : undefined
         }
       />
 
@@ -361,29 +369,33 @@ export function EquipePage() {
                   </th>
 
                   <th className="pb-3 select-none">
-                    <button
-                      type="button"
-                      onClick={() => alternarOrdenacao('remuneracao')}
-                      className={`group inline-flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer ${
-                        colunaOrdenacao === 'remuneracao' ? 'text-brand font-bold' : 'text-muted hover:text-fg'
-                      }`}
-                      title={
-                        colunaOrdenacao === 'remuneracao'
-                          ? direcaoOrdenacao === 'desc'
-                            ? 'Remuneração: Maior para menor valor (clique para menor para maior)'
-                            : 'Remuneração: Menor para maior valor (clique para maior para menor)'
-                          : 'Ordenar por Remuneração (Maior valor primeiro)'
-                      }
-                    >
-                      <span>Regime & Remuneração</span>
-                      <span className="inline-flex items-center text-[10px] leading-none">
-                        {colunaOrdenacao === 'remuneracao' ? (
-                          <span className="font-bold text-brand">{direcaoOrdenacao === 'desc' ? '▼' : '▲'}</span>
-                        ) : (
-                          <span className="opacity-0 group-hover:opacity-40 transition-opacity">↕</span>
-                        )}
-                      </span>
-                    </button>
+                    {isAdmin ? (
+                      <button
+                        type="button"
+                        onClick={() => alternarOrdenacao('remuneracao')}
+                        className={`group inline-flex items-center gap-1.5 font-semibold text-xs uppercase tracking-wider transition-colors cursor-pointer ${
+                          colunaOrdenacao === 'remuneracao' ? 'text-brand font-bold' : 'text-muted hover:text-fg'
+                        }`}
+                        title={
+                          colunaOrdenacao === 'remuneracao'
+                            ? direcaoOrdenacao === 'desc'
+                              ? 'Remuneração: Maior para menor valor (clique para menor para maior)'
+                              : 'Remuneração: Menor para maior valor (clique para maior para menor)'
+                            : 'Ordenar por Remuneração (Maior valor primeiro)'
+                        }
+                      >
+                        <span>Regime & Remuneração</span>
+                        <span className="inline-flex items-center text-[10px] leading-none">
+                          {colunaOrdenacao === 'remuneracao' ? (
+                            <span className="font-bold text-brand">{direcaoOrdenacao === 'desc' ? '▼' : '▲'}</span>
+                          ) : (
+                            <span className="opacity-0 group-hover:opacity-40 transition-opacity">↕</span>
+                          )}
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="font-semibold text-xs uppercase tracking-wider text-muted">Regime</span>
+                    )}
                   </th>
 
                   <th className="pb-3 select-none">
@@ -438,7 +450,7 @@ export function EquipePage() {
                     </button>
                   </th>
 
-                  <th className="pb-3 text-right">Ações</th>
+                  {isAdmin && <th className="pb-3 text-right">Ações</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">
@@ -462,10 +474,10 @@ export function EquipePage() {
                             <WhatsAppBadge telefone={f.telefone} />
                           </div>
                         )}
-                        {f.cpf && (
+                        {isAdmin && f.cpf && (
                           <div className="text-[11px] text-muted font-normal mt-0.5">CPF: {f.cpf}</div>
                         )}
-                        {f.chavePix && (
+                        {isAdmin && f.chavePix && (
                           <div className="text-[10px] text-muted truncate max-w-[200px]" title={`Pix: ${f.chavePix}`}>
                             Pix: <span className="font-mono text-fg">{f.chavePix}</span>
                           </div>
@@ -528,42 +540,44 @@ export function EquipePage() {
                           {f.ativo ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </td>
-                      <td className="py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={<Edit className="size-3.5" />}
-                            onClick={() => setFuncionarioEditar(f)}
-                          >
-                            Editar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className={f.ativo ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-500/10' : 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10'}
-                            onClick={() => alternarStatusFuncionario(f)}
-                          >
-                            {f.ativo ? 'Desativar' : 'Reativar'}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                            icon={<Trash2 className="size-3.5" />}
-                            onClick={() => tentarExcluirFuncionario(f)}
-                            title="Excluir Colaborador"
-                          >
-                            Excluir
-                          </Button>
-                        </div>
-                      </td>
+                      {isAdmin && (
+                        <td className="py-3.5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={<Edit className="size-3.5" />}
+                              onClick={() => setFuncionarioEditar(f)}
+                            >
+                              Editar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={f.ativo ? 'text-amber-500 hover:text-amber-600 hover:bg-amber-500/10' : 'text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10'}
+                              onClick={() => alternarStatusFuncionario(f)}
+                            >
+                              {f.ativo ? 'Desativar' : 'Reativar'}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              icon={<Trash2 className="size-3.5" />}
+                              onClick={() => tentarExcluirFuncionario(f)}
+                              title="Excluir Colaborador"
+                            >
+                              Excluir
+                            </Button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
                 {funcionariosFiltrados.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-muted">
+                    <td colSpan={isAdmin ? 6 : 5} className="py-8 text-center text-muted">
                       Nenhum colaborador encontrado com os filtros selecionados.
                     </td>
                   </tr>

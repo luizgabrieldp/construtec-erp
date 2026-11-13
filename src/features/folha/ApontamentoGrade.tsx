@@ -4,13 +4,9 @@ import {
   ChevronRight,
   HardHat,
   Calendar,
-  Building2,
-  Check,
-  X,
-  Eye,
-  EyeOff,
+  Copy,
 } from 'lucide-react';
-import { Button, Badge } from '@/components/ui';
+import { Button } from '@/components/ui';
 import { Dialog } from '@/components/ui/Dialog';
 import { toast } from '@/components/ui/Toast';
 import { useErp, useData } from '@/data/store';
@@ -20,8 +16,13 @@ import { LABEL_FUNCAO, getLabelFuncao } from '@/domain/labels';
 import { chaveApontamento, FATOR_PRESENCA, valorDia } from '@/domain/engine';
 import { addDays, eachDay, startOfWeek } from '@/lib/dates';
 import { fmtBRL, fmtDate, fmtDateShort } from '@/lib/format';
-import { cn, normalizarTexto } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { TableWatermark } from '@/components/brand/TableWatermark';
+import {
+  encontrarUltimoDiaComApontamentos,
+  filtrarColaboradoresGrade,
+  planejarCopiaUltimoDia,
+} from './apontamentoUtils';
 
 const DIAS_NOMES = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -30,27 +31,6 @@ export function ApontamentoGrade() {
   const hoje = useHoje();
   const isAdmin = useIsAdmin();
   const mutate = useErp((s) => s.mutate);
-
-  const [revelarCusto, setRevelarCusto] = useState(false);
-  const timerCustoRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleRevelarCustoTemporario = () => {
-    if (timerCustoRef.current) clearTimeout(timerCustoRef.current);
-    if (revelarCusto) {
-      setRevelarCusto(false);
-      return;
-    }
-    setRevelarCusto(true);
-    timerCustoRef.current = setTimeout(() => {
-      setRevelarCusto(false);
-    }, 10000); // 10 segundos
-  };
-
-  useEffect(() => {
-    return () => {
-      if (timerCustoRef.current) clearTimeout(timerCustoRef.current);
-    };
-  }, []);
 
   const [semanaInicio, setSemanaInicio] = useState(startOfWeek(hoje));
 
@@ -140,6 +120,7 @@ export function ApontamentoGrade() {
   const [filtroFuncao, setFiltroFuncao] = useState('todos');
   const [filtroObra, setFiltroObra] = useState<string>('todas');
   const [filtroEmpreiteiro, setFiltroEmpreiteiro] = useState<string>('todos');
+  const [modalCopiarDia, setModalCopiarDia] = useState<{ diaDestino: string } | null>(null);
 
   // Lista de empreiteiros para filtro
   const empreiteirosDisponiveis = data.funcionarios.filter(
@@ -223,63 +204,65 @@ export function ApontamentoGrade() {
     ...(data.funcoesCustomizadas || []),
   ].filter((v, i, a) => a.indexOf(v) === i);
 
-  const funcionariosFiltrados = data.funcionarios
-    .filter((f) => f.ativo)
-    .filter((f) => {
-      // Filtro por Função
-      if (filtroFuncao !== 'todos' && f.funcao !== filtroFuncao) return false;
+  const funcionariosFiltrados = filtrarColaboradoresGrade(data.funcionarios, {
+    busca,
+    filtroFuncao,
+    filtroObra,
+    filtroEmpreiteiro,
+    isAdmin,
+    apontamentos: data.apontamentos,
+    diasSemana,
+  });
 
-      // Filtro por Empreiteiro
-      if (filtroEmpreiteiro !== 'todos') {
-        const ehProprioEmpreiteiro = f.id === filtroEmpreiteiro;
-        const ehMembroEquipe = f.empreiteiroId === filtroEmpreiteiro;
-        if (!ehProprioEmpreiteiro && !ehMembroEquipe) return false;
+  const diaPadraoCopia = diasSemana.includes(hoje) ? hoje : diasSemana[0];
+  const diaDestinoCopia = modalCopiarDia?.diaDestino || diaPadraoCopia;
+  const ultimoDiaOrigem = encontrarUltimoDiaComApontamentos(data.apontamentos, diaDestinoCopia);
+  const itensParaCopiar = ultimoDiaOrigem
+    ? planejarCopiaUltimoDia(funcionariosFiltrados, data.apontamentos, ultimoDiaOrigem, diaDestinoCopia)
+    : [];
+
+  const abrirModalCopiarUltimoDia = () => {
+    setModalCopiarDia({ diaDestino: diaPadraoCopia });
+  };
+
+  const confirmarCopiaUltimoDia = () => {
+    if (!modalCopiarDia || !ultimoDiaOrigem) return;
+    if (itensParaCopiar.length === 0) {
+      toast('Nenhum colaborador pendente para preencher nesta data.', 'info');
+      setModalCopiarDia(null);
+      return;
+    }
+
+    mutate((d) => {
+      for (const item of itensParaCopiar) {
+        const k = chaveApontamento(item.funcionarioId, modalCopiarDia.diaDestino);
+        if (d.apontamentos[k]) continue;
+        const centros =
+          item.origem.centroIds && item.origem.centroIds.length > 0
+            ? [...item.origem.centroIds]
+            : [item.origem.centroId];
+        d.apontamentos[k] = {
+          funcionarioId: item.funcionarioId,
+          data: modalCopiarDia.diaDestino,
+          centroId: centros[0],
+          centroIds: centros,
+          status: item.origem.status,
+        };
       }
-
-      // Filtro por Obra
-      if (filtroObra !== 'todas') {
-        const temObraPadrao = f.obraPadraoId === filtroObra;
-        const tevePresencaNaObra = diasSemana.some((dia) => {
-          const k = chaveApontamento(f.id, dia);
-          const ap = data.apontamentos[k];
-          if (!ap || ap.status === 'falta') return false;
-          if (ap.centroIds && ap.centroIds.length > 0) {
-            return ap.centroIds.includes(filtroObra);
-          }
-          return ap.centroId === filtroObra;
-        });
-
-        if (!temObraPadrao && !tevePresencaNaObra) return false;
-      }
-
-      if (busca.trim()) {
-        const qNorm = normalizarTexto(busca);
-        const qDigits = busca.replace(/\D/g, '');
-        const matchNome = normalizarTexto(f.nome).includes(qNorm);
-        const matchApelido = f.apelido?.trim() ? normalizarTexto(f.apelido).includes(qNorm) : false;
-        const matchTelefone =
-          f.telefone.includes(busca.trim()) ||
-          (qDigits.length > 0 && f.telefone.replace(/\D/g, '').includes(qDigits));
-        const matchCpf = f.cpf
-          ? f.cpf.includes(busca.trim()) || (qDigits.length > 0 && f.cpf.replace(/\D/g, '').includes(qDigits))
-          : false;
-
-        return matchNome || matchApelido || matchTelefone || matchCpf;
-      }
-      return true;
-    })
-    .sort((a, b) => {
-      const nomeA = (a.apelido?.trim() || a.nome).trim();
-      const nomeB = (b.apelido?.trim() || b.nome).trim();
-      return nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' });
     });
+
+    toast(
+      `${itensParaCopiar.length} apontamento${itensParaCopiar.length > 1 ? 's' : ''} copiado${itensParaCopiar.length > 1 ? 's' : ''} de ${fmtDateShort(ultimoDiaOrigem)} para ${fmtDateShort(modalCopiarDia.diaDestino)}.`,
+    );
+    setModalCopiarDia(null);
+  };
 
   return (
     <div className="space-y-4">
       {/* Barra de Navegação da Semana e Filtros Rápidos */}
       <div className="rounded-2xl border border-line bg-surface p-4 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <Button size="sm" variant="secondary" icon={<ChevronLeft className="size-4" />} onClick={() => mudarSemana(-1)}>
               <span className="hidden sm:inline">Semana</span> Anterior
             </Button>
@@ -295,6 +278,15 @@ export function ApontamentoGrade() {
             </Button>
             <Button size="sm" variant="secondary" icon={<ChevronRight className="size-4" />} onClick={() => mudarSemana(1)}>
               Próxima
+            </Button>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<Copy className="size-3.5" />}
+              onClick={abrirModalCopiarUltimoDia}
+              title={`Copiar lançamentos do último dia registrado para preencher pendentes em ${fmtDateShort(diaPadraoCopia)}`}
+            >
+              Copiar último dia
             </Button>
           </div>
 
@@ -316,7 +308,11 @@ export function ApontamentoGrade() {
             </div>
             <div className="flex items-center gap-1">
               <span className="size-4 sm:size-5 rounded bg-red-500 text-white font-bold grid place-items-center text-[9px] sm:text-[10px]">F</span>
-              <span className="hidden sm:inline">Falta (Vermelho)</span>
+              <span className="hidden sm:inline">Falta</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <span className="size-4 sm:size-5 rounded border border-dashed border-line bg-surface-2 text-muted font-bold grid place-items-center text-[9px] sm:text-[10px]">—</span>
+              <span className="hidden sm:inline">Pendente</span>
             </div>
           </div>
         </div>
@@ -327,7 +323,7 @@ export function ApontamentoGrade() {
             <div className="relative w-full sm:w-56">
               <input
                 type="text"
-                placeholder="Buscar por nome ou apelido..."
+                placeholder={isAdmin ? 'Buscar nome, função, tel ou CPF...' : 'Buscar por nome ou função...'}
                 value={busca}
                 onChange={(e) => setBusca(e.target.value)}
                 className="w-full rounded-lg border border-line bg-surface-2 px-3 py-1.5 text-xs text-fg placeholder:text-muted focus:border-brand focus:outline-none"
@@ -407,7 +403,7 @@ export function ApontamentoGrade() {
         {/* Marca d'água oficial CONSTRUTEC com posicionamento inteligente Sticky Viewport */}
         <TableWatermark size="xl" />
 
-        <div ref={scrollContainerRef} className="relative z-1 overflow-x-auto scrollbar-thin">
+        <div ref={scrollContainerRef} className="relative z-1 overflow-x-auto">
           <table className="w-full text-left text-sm border-collapse">
             <thead className="border-b border-line bg-surface-2 text-xs font-semibold text-muted uppercase">
               <tr>
@@ -429,7 +425,7 @@ export function ApontamentoGrade() {
                         thRefs.current[idx] = el;
                       }}
                       className={cn(
-                        'sticky top-0 z-20 bg-surface-2 px-1 py-2 sm:py-3 text-center min-w-[66px] sm:min-w-[84px] max-w-[96px] border-r border-line/40',
+                        'sticky top-0 z-20 bg-surface-2 px-1.5 py-2 sm:py-3 text-center min-w-[150px] sm:min-w-[136px] border-r border-line/40',
                         isHoje && 'bg-brand/10 text-brand font-bold',
                       )}
                     >
@@ -445,32 +441,18 @@ export function ApontamentoGrade() {
                 <th className="sticky top-0 z-20 bg-surface-2 px-2 sm:px-3 py-3 text-right min-w-[56px] sm:min-w-[70px]">
                   Dias
                 </th>
-                <th className="sticky top-0 z-20 bg-surface-2 px-2.5 sm:px-4 py-3 text-right min-w-[76px] sm:min-w-[95px]">
-                  <div className="flex items-center justify-end gap-1.5">
+                {isAdmin && (
+                  <th className="sticky top-0 z-20 bg-surface-2 px-2.5 sm:px-4 py-3 text-right min-w-[76px] sm:min-w-[95px]">
                     <span>Custo</span>
-                    {!isAdmin && (
-                      <button
-                        type="button"
-                        onClick={handleRevelarCustoTemporario}
-                        title={revelarCusto ? 'Custo visível por 10s' : 'Clique para visualizar o custo por 10 segundos'}
-                        className={cn(
-                          'rounded p-1 transition-colors cursor-pointer',
-                          revelarCusto ? 'bg-brand/10 text-brand' : 'text-muted hover:bg-surface hover:text-fg',
-                        )}
-                      >
-                        {revelarCusto ? <Eye className="size-3.5" /> : <EyeOff className="size-3.5" />}
-                        <span className="sr-only">Alternar visualização de custo</span>
-                      </button>
-                    )}
-                  </div>
-                </th>
+                  </th>
+                )}
               </tr>
             </thead>
 
             <tbody className="divide-y divide-line text-xs">
               {funcionariosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center text-muted">
+                  <td colSpan={isAdmin ? 10 : 9} className="p-8 text-center text-muted">
                     Nenhum colaborador encontrado com os filtros atuais.
                   </td>
                 </tr>
@@ -509,7 +491,7 @@ export function ApontamentoGrade() {
                           </div>
                         )}
                         <div className="text-[10px] sm:text-[11px] text-muted flex items-center gap-1 mt-0.5 truncate">
-                          <span className="truncate">{LABEL_FUNCAO[f.funcao] || f.funcao}</span>
+                          <span className="truncate">{getLabelFuncao(f.funcao)}</span>
                         </div>
                         <div className="text-[9px] sm:text-[10px] text-muted font-medium mt-0.5 truncate">
                           {f.regime === 'mensalista'
@@ -524,7 +506,8 @@ export function ApontamentoGrade() {
                       {diasSemana.map((dia) => {
                         const k = chaveApontamento(f.id, dia);
                         const ap = data.apontamentos[k];
-                        const status: StatusPresenca = ap?.status || 'falta';
+                        const status: StatusPresenca | null = ap?.status ?? null;
+                        const isPendente = status === null;
 
                         const centroPadrao = filtroObra !== 'todas' ? filtroObra : (f.obraPadraoId || data.obras[0]?.id || SEDE);
                         const centros: CentroId[] =
@@ -532,14 +515,15 @@ export function ApontamentoGrade() {
                             ? ap.centroIds
                             : [ap?.centroId || centroPadrao];
 
-                        const fator = FATOR_PRESENCA[status];
+                        const fator = status ? FATOR_PRESENCA[status] : 0;
                         totalDiasFunc += fator;
-                        custoAcumuladoSemana += valorDia(f, dia) * fator;
+                        if (isAdmin) {
+                          custoAcumuladoSemana += valorDia(f, dia) * fator;
+                        }
 
-                        const isPassadoOuHoje = dia <= hoje;
                         const obraPrincipal = data.obras.find((o) => o.id === centros[0]);
                         const corPrincipal = obraPrincipal?.cor || '#64748B';
-                        const nomePrincipal = obraPrincipal ? obraPrincipal.nome : 'Sede';
+                        const nomePrincipal = obraPrincipal ? obraPrincipal.nome : 'Sede / Matriz';
 
                         const nomesObras = centros.map((cid) => {
                           if (cid === SEDE) return 'Sede / Matriz';
@@ -547,16 +531,16 @@ export function ApontamentoGrade() {
                         });
 
                         return (
-                          <td key={dia} className="p-1 sm:p-1.5 text-center border-r border-line/40 align-top min-w-[66px] sm:min-w-[84px]">
-                            <div className="flex flex-col items-center gap-1">
-                              {/* Controle Segmentado Compacto [ 1 | ½ | F ] */}
-                              <div className="inline-flex rounded-lg border border-line bg-surface-2/60 p-0.5 shadow-2xs">
+                          <td key={dia} className="p-1.5 text-center border-r border-line/40 align-top min-w-[150px] sm:min-w-[136px]">
+                            <div className="flex flex-col items-center gap-1.5">
+                              {/* Controle Segmentado Tátil para Canteiro [ 1 | ½ | F ] */}
+                              <div className="inline-flex rounded-lg border border-line bg-surface-2/60 p-0.5 shadow-2xs gap-0.5">
                                 {/* Botão 1: Dia Inteiro */}
                                 <button
                                   type="button"
                                   onClick={() => setStatus(f.id, dia, 'inteiro', centros)}
                                   className={cn(
-                                    'size-5.5 sm:size-6 rounded text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer',
+                                    'min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded text-xs font-bold transition-all cursor-pointer',
                                     status === 'inteiro'
                                       ? 'bg-emerald-500 text-white shadow-xs'
                                       : 'text-muted hover:text-fg hover:bg-surface-2',
@@ -571,7 +555,7 @@ export function ApontamentoGrade() {
                                   type="button"
                                   onClick={() => setStatus(f.id, dia, 'meio', centros)}
                                   className={cn(
-                                    'size-5.5 sm:size-6 rounded text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer',
+                                    'min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded text-xs font-bold transition-all cursor-pointer',
                                     status === 'meio'
                                       ? 'bg-amber-500 text-white shadow-xs'
                                       : 'text-muted hover:text-fg hover:bg-surface-2',
@@ -581,30 +565,31 @@ export function ApontamentoGrade() {
                                   ½
                                 </button>
 
-                                {/* Botão F: Falta (Vermelho nítido se dia <= hoje, transparente se futuro) */}
+                                {/* Botão F: Falta (apenas quando clicado explicitamente) */}
                                 <button
                                   type="button"
                                   onClick={() => setStatus(f.id, dia, 'falta', centros)}
                                   className={cn(
-                                    'size-5.5 sm:size-6 rounded text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer',
+                                    'min-h-[44px] min-w-[44px] sm:min-h-[36px] sm:min-w-[36px] flex items-center justify-center rounded text-xs font-bold transition-all cursor-pointer',
                                     status === 'falta'
-                                      ? isPassadoOuHoje
-                                        ? 'bg-red-500 text-white shadow-xs font-black ring-1 ring-red-400'
-                                        : 'bg-surface-2/40 text-muted/30 border border-dashed border-line/40 hover:text-muted'
+                                      ? 'bg-red-500 text-white shadow-xs font-black ring-1 ring-red-400'
                                       : 'text-muted hover:text-fg hover:bg-surface-2',
                                   )}
-                                  title={
-                                    status === 'falta' && !isPassadoOuHoje
-                                      ? 'Data futura ainda não atingida'
-                                      : 'Registrar Falta (F)'
-                                  }
+                                  title="Registrar Falta (F)"
                                 >
                                   F
                                 </button>
                               </div>
 
-                              {/* Seletor Compacto de Múltiplas Obras */}
-                              {status !== 'falta' && (
+                              {/* Indicação discreta Pendente quando não lançado */}
+                              {isPendente && (
+                                <span className="text-[10px] font-medium text-muted/80 px-1.5 py-0.5 rounded border border-dashed border-line/60">
+                                  Pendente
+                                </span>
+                              )}
+
+                              {/* Seletor Legível de Múltiplas Obras */}
+                              {(status === 'inteiro' || status === 'meio') && (
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -616,17 +601,17 @@ export function ApontamentoGrade() {
                                       status,
                                     )
                                   }
-                                  className="flex w-full max-w-[66px] sm:max-w-[80px] items-center justify-center gap-1 truncate rounded border border-line bg-surface px-1 py-0.5 text-[8.5px] sm:text-[9px] font-semibold text-fg hover:border-brand/60 hover:bg-surface-2 transition-colors cursor-pointer"
+                                  className="flex w-full max-w-[140px] sm:max-w-[128px] items-center justify-center gap-1.5 rounded border border-line bg-surface px-2 py-1 text-[10px] font-semibold text-fg hover:border-brand/60 hover:bg-surface-2 transition-colors cursor-pointer"
                                   title={`Obras em ${fmtDateShort(dia)}: ${nomesObras.join(', ')} (Clique para gerenciar múltiplas obras)`}
                                 >
                                   <span
-                                    className="size-1.5 shrink-0 rounded-full"
+                                    className="size-2 shrink-0 rounded-full"
                                     style={{ backgroundColor: corPrincipal }}
                                   />
                                   <span className="truncate">
                                     {centros.length > 1
-                                      ? `${nomePrincipal.slice(0, 3)} +${centros.length - 1}`
-                                      : nomePrincipal.slice(0, 7)}
+                                      ? `${nomePrincipal} (+${centros.length - 1})`
+                                      : nomePrincipal}
                                   </span>
                                 </button>
                               )}
@@ -640,9 +625,11 @@ export function ApontamentoGrade() {
                         {totalDiasFunc}d
                       </td>
 
-                      <td className="px-2.5 sm:px-4 py-3 text-right font-bold tabular-nums text-brand">
-                        {isAdmin || revelarCusto ? fmtBRL(custoAcumuladoSemana) : 'R$ •••••'}
-                      </td>
+                      {isAdmin && (
+                        <td className="px-2.5 sm:px-4 py-3 text-right font-bold tabular-nums text-brand">
+                          {fmtBRL(custoAcumuladoSemana)}
+                        </td>
+                      )}
                     </tr>
                   );
                 })
@@ -722,6 +709,66 @@ export function ApontamentoGrade() {
               </Button>
               <Button onClick={salvarObrasModal}>
                 Salvar Obras ({modalObras.centrosSelecionados.length} selecionada{modalObras.centrosSelecionados.length > 1 ? 's' : ''})
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Modal de Confirmação: Copiar último dia */}
+      {modalCopiarDia && (
+        <Dialog
+          open={!!modalCopiarDia}
+          onClose={() => setModalCopiarDia(null)}
+          title="Copiar apontamentos do último dia"
+          subtitle={`Destino: ${fmtDate(modalCopiarDia.diaDestino)}`}
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-muted mb-1">
+                Dia a preencher (apenas pendentes)
+              </label>
+              <select
+                value={modalCopiarDia.diaDestino}
+                onChange={(e) => setModalCopiarDia({ diaDestino: e.target.value })}
+                className="w-full rounded-lg border border-line bg-surface-2 px-3 py-2 text-xs text-fg focus:border-brand focus:outline-none"
+              >
+                {diasSemana.map((d, idx) => (
+                  <option key={d} value={d}>
+                    {DIAS_NOMES[idx]} — {fmtDate(d)} {d === hoje ? '(Hoje)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {!ultimoDiaOrigem ? (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-fg">
+                Nenhum dia anterior recente possui apontamentos registrados para copiar.
+              </div>
+            ) : (
+              <div className="rounded-xl border border-line bg-surface-2/60 p-3.5 text-xs space-y-1.5">
+                <p className="text-fg">
+                  Último dia com apontamentos encontrado: <strong>{fmtDate(ultimoDiaOrigem)}</strong>
+                </p>
+                <p className="text-muted">
+                  Colaboradores ainda em estado <strong>Pendente</strong> em {fmtDateShort(modalCopiarDia.diaDestino)} que serão preenchidos:{' '}
+                  <strong className="text-fg">{itensParaCopiar.length}</strong>
+                </p>
+                <p className="text-[11px] text-muted">
+                  Lançamentos já marcados manualmente neste dia não serão sobrescritos.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="secondary" onClick={() => setModalCopiarDia(null)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={confirmarCopiaUltimoDia}
+                disabled={!ultimoDiaOrigem || itensParaCopiar.length === 0}
+              >
+                Confirmar Cópia ({itensParaCopiar.length})
               </Button>
             </div>
           </div>

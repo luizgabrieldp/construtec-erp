@@ -23,9 +23,9 @@ const server = await createServer({
 
 try {
   // -------------------------------------------------------------
-  // Teste 1: StatCard (Efeito Spotlight Antigravity & Animações de Ícone)
+  // Teste 1: StatCard (Estética Industrial Limpa sem Efeitos de IA)
   // -------------------------------------------------------------
-  console.log('1. Testando StatCard e efeitos Spotlight Antigravity...');
+  console.log('1. Testando StatCard com estética industrial limpa...');
   const statCardMod = await server.ssrLoadModule('/src/components/ui/StatCard.tsx');
   const { StatCard } = statCardMod;
 
@@ -39,15 +39,14 @@ try {
     })
   );
 
-  // Deve possuir classes para animação desktop
-  assert.ok(cardMarkup.includes('group-hover:scale-115'), 'Badge deve ter classe group-hover:scale-115');
-  assert.ok(cardMarkup.includes('group-hover:-rotate-3'), 'Badge deve ter classe group-hover:-rotate-3');
-  assert.ok(cardMarkup.includes('group-hover:[&amp;&gt;svg]:rotate-6'), 'Ícone svg deve ter rotação suave');
-  assert.ok(cardMarkup.includes('group-hover:[&amp;&gt;svg]:scale-110'), 'Ícone svg deve ter escala suave');
-  assert.ok(cardMarkup.includes('radial-gradient'), 'Deve conter gradiente radial Spotlight');
-  assert.ok(cardMarkup.includes('--mouse-x'), 'Deve usar variável CSS --mouse-x');
-  assert.ok(cardMarkup.includes('--mouse-y'), 'Deve usar variável CSS --mouse-y');
-  console.log('   ✅ StatCard possui Spotlight, partículas e microinterações de ícone!');
+  // Garantir ausência de efeitos ornamentais estilo IA (spotlight radial, rotação de ícone, mouse tracking)
+  assert.ok(!cardMarkup.includes('radial-gradient'), 'StatCard não deve conter gradiente radial Spotlight');
+  assert.ok(!cardMarkup.includes('--mouse-x'), 'StatCard não deve usar variável CSS --mouse-x');
+  assert.ok(!cardMarkup.includes('--mouse-y'), 'StatCard não deve usar variável CSS --mouse-y');
+  assert.ok(!cardMarkup.includes('group-hover:-rotate-3'), 'StatCard não deve rotacionar badges no hover');
+  assert.ok(cardMarkup.includes('border-l-[3px]'), 'StatCard deve possuir filete arquitetônico lateral border-l-[3px]');
+  assert.ok(cardMarkup.includes('rounded-xl'), 'StatCard deve usar borda rounded-xl');
+  console.log('   ✅ StatCard validado com estética de engenharia limpa e zero efeitos de IA!');
 
   // -------------------------------------------------------------
   // Teste 2: ApontamentoGrade - Lógica da Rolagem Horizontal de Hoje

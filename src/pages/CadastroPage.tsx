@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { ShieldCheck, HardHat, Lock, User, ArrowRight, AlertCircle, KeyRound, CheckCircle2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams, Link, Navigate } from 'react-router-dom';
+import { ShieldCheck, HardHat, ArrowRight, AlertCircle, KeyRound, CheckCircle2 } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { Button, Input, Field, Badge } from '@/components/ui';
 import { useAuth } from '@/data/auth';
@@ -9,7 +9,8 @@ import { toast } from '@/components/ui/Toast';
 export function CadastroPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { validarConvite, cadastrarComConvite, convites } = useAuth();
+  const { usuarioAtual, validarConvite, cadastrarComConvite, convites } = useAuth();
+  const redirectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const conviteQuery = searchParams.get('convite') || '';
   const [codigo, setCodigo] = useState(conviteQuery);
@@ -24,6 +25,14 @@ export function CadastroPage() {
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState(false);
 
+  useEffect(() => {
+    return () => {
+      if (redirectTimerRef.current) {
+        clearTimeout(redirectTimerRef.current);
+      }
+    };
+  }, []);
+
   // Se já houver convite na URL ao carregar ou assim que sincronizar da nuvem, valida imediatamente
   useEffect(() => {
     if (conviteQuery) {
@@ -36,6 +45,10 @@ export function CadastroPage() {
       }
     }
   }, [conviteQuery, validarConvite, convites]);
+
+  if (usuarioAtual && !sucesso) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleValidarCodigo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +64,7 @@ export function CadastroPage() {
     }
   };
 
-  const handleSubmitCadastro = (e: React.FormEvent) => {
+  const handleSubmitCadastro = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
 
@@ -75,7 +88,7 @@ export function CadastroPage() {
       return;
     }
 
-    const resultado = cadastrarComConvite(conviteVerificado.codigo, {
+    const resultado = await cadastrarComConvite(conviteVerificado.codigo, {
       nome,
       emailOuLogin,
       senha,
@@ -84,7 +97,7 @@ export function CadastroPage() {
     if (resultado.ok) {
       setSucesso(true);
       toast('Cadastro concluído com sucesso! Bem-vindo à CONSTRUTEC.', 'success');
-      setTimeout(() => {
+      redirectTimerRef.current = setTimeout(() => {
         navigate('/');
       }, 1000);
     } else {
@@ -93,12 +106,9 @@ export function CadastroPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-bg px-4 py-12 relative overflow-hidden">
-      <div className="absolute -top-40 -left-40 size-96 rounded-full bg-brand/10 blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 size-96 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
-
-      <div className="w-full max-w-md relative z-10">
-        <div className="rounded-3xl border border-line bg-surface/90 backdrop-blur-xl p-8 shadow-2xl">
+    <div className="min-h-screen w-full flex items-center justify-center bg-bg px-4 py-12">
+      <div className="w-full max-w-md">
+        <div className="rounded-2xl border border-line border-t-4 border-t-brand-solid bg-surface p-7 sm:p-8 shadow-xl">
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
               <Logo size="lg" />

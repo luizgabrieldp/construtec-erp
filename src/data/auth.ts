@@ -4,8 +4,9 @@ import type { Perfil } from '@/domain/types';
 import { useUi } from './ui';
 import { uid } from '@/lib/utils';
 import { db } from '@/lib/firebase';
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, getDocFromServer, setDoc, onSnapshot } from 'firebase/firestore';
 import { canonicalizarJson } from './sync';
+import { gerarCodigoSeguro, hashPassword, verifyPassword } from '@/lib/crypto';
 
 export interface Usuario {
   id: string;
@@ -27,6 +28,9 @@ export interface ConviteAcesso {
   criadoEm: string;
   atualizadoEm?: number;
 }
+
+const IS_PROD = Boolean(import.meta.env?.PROD);
+const IS_DEV = Boolean(import.meta.env?.DEV);
 
 export const USUARIOS_PADRAO: Usuario[] = [
   {
@@ -69,16 +73,38 @@ const CONVITES_PADRAO: ConviteAcesso[] = [
 const AUTH_DOC_REF = doc(db, 'erp', 'auth');
 const AUTH_BACKUP_REF = doc(db, 'erp', 'auth_backup');
 
+function limparStorageSensivel(): void {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const paraRemover = new Set<string>([
+      'construtec:data',
+      'construtec:data:backup',
+      'construtec:data:vault',
+      'construtec:auth',
+    ]);
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const k = localStorage.key(i);
+      if (k && (k.startsWith('construtec:data:') || k.startsWith('construtec:erp:'))) {
+        paraRemover.add(k);
+      }
+    }
+    for (const k of paraRemover) {
+      localStorage.removeItem(k);
+    }
+  } catch {}
+}
+
 export function mesclarUsuarios(
   local: Usuario[],
   remoto: Usuario[],
   usuarioAtual?: Usuario | null,
 ): Usuario[] {
-  const padraoMap = new Map(USUARIOS_PADRAO.map((u) => [u.id, u]));
+  const seed = IS_PROD ? [] : USUARIOS_PADRAO;
+  const padraoMap = new Map(seed.map((u) => [u.id, u]));
   const map = new Map<string, Usuario>();
 
   const todos = [
-    ...USUARIOS_PADRAO,
+    ...seed,
     ...(usuarioAtual ? [usuarioAtual] : []),
     ...(Array.isArray(local) ? local : []),
     ...(Array.isArray(remoto) ? remoto : []),
@@ -111,7 +137,6 @@ export function mesclarUsuarios(
       } else if (padrao && jsonNovo === jsonPadrao) {
         // mantém existente customizado
       } else if (existente.ativo !== item.ativo && !padrao) {
-        // Prefere o estado explícito mais recente ou determinístico
         map.set(item.id, jsonNovo >= jsonExistente ? { ...item } : existente);
       } else {
         map.set(item.id, jsonNovo >= jsonExistente ? { ...item } : existente);
@@ -127,9 +152,10 @@ export function mesclarConvites(
   remoto: ConviteAcesso[],
 ): ConviteAcesso[] {
   const map = new Map<string, ConviteAcesso>();
+  const seed = IS_PROD ? [] : CONVITES_PADRAO;
 
   const todos = [
-    ...CONVITES_PADRAO,
+    ...seed,
     ...(Array.isArray(local) ? local : []),
     ...(Array.isArray(remoto) ? remoto : []),
   ];
@@ -215,7 +241,21 @@ async function sincronizarAuthNuvem(
     let fpNuvem = '';
 
     try {
-      const snap = await getDoc(AUTH_DOC_REF);
+      let snap;
+      try {
+        snap = await getDocFromServer(AUTH_DOC_REF);
+      } catch (serverErr) {
+        const code = (serverErr as { code?: string })?.code ?? '';
+        const msg = serverErr instanceof Error ? serverErr.message.toLowerCase() : '';
+        const isNetworkError =
+          code === 'unavailable' ||
+          code === 'deadline-exceeded' ||
+          msg.includes('offline') ||
+          msg.includes('network') ||
+          (typeof navigator !== 'undefined' && navigator.onLine === false);
+        if (!isNetworkError) throw serverErr;
+        snap = await getDoc(AUTH_DOC_REF);
+      }
       if (snap.exists()) {
         const d = snap.data();
         const nuvemU = Array.isArray(d?.usuarios) ? (d.usuarios as Usuario[]) : [];
@@ -260,38 +300,52 @@ async function sincronizarAuthNuvem(
   } catch {}
 }
 
+export type AuthActionResult = { ok: boolean; error?: string };
+export type CriarConviteResult =
+  | { ok: true; convite: ConviteAcesso }
+  | { ok: false; error: string };
+
 interface AuthState {
   usuarioAtual: Usuario | null;
   usuarios: Usuario[];
   convites: ConviteAcesso[];
 
-  login: (loginOuEmail: string, senha: string) => { ok: boolean; error?: string };
-  loginRapido: (perfil: Perfil) => boolean;
+  login: (loginOuEmail: string, senha: string) => Promise<AuthActionResult>;
+  loginRapido: (perfil: Perfil) => AuthActionResult;
   logout: () => void;
-  atualizarPerfil: (dados: { nome?: string; emailOuLogin?: string; senha?: string }) => void;
-  criarConvite: (perfil: Perfil) => ConviteAcesso;
+  atualizarPerfil: (dados: { nome?: string; emailOuLogin?: string; senha?: string }) => Promise<AuthActionResult>;
+  criarConvite: (perfil: Perfil) => CriarConviteResult;
   validarConvite: (codigo: string) => ConviteAcesso | null;
   cadastrarComConvite: (
     codigo: string,
     dados: { nome: string; emailOuLogin: string; senha: string }
-  ) => { ok: boolean; error?: string };
-  alternarStatusUsuario: (usuarioId: string) => void;
+  ) => Promise<AuthActionResult>;
+  alternarStatusUsuario: (usuarioId: string) => AuthActionResult;
 }
 
 export const useAuth = create<AuthState>()(
   persist(
     (set, get) => ({
       usuarioAtual: null,
-      usuarios: USUARIOS_PADRAO,
-      convites: CONVITES_PADRAO,
+      usuarios: IS_PROD ? [] : USUARIOS_PADRAO,
+      convites: IS_PROD ? [] : CONVITES_PADRAO,
 
-      login: (loginOuEmail, senha) => {
+      login: async (loginOuEmail, senha) => {
         const cleanLogin = loginOuEmail.trim().toLowerCase();
         const cleanSenha = senha.trim();
 
-        const usuario = get().usuarios.find(
-          (u) => u.emailOuLogin.toLowerCase() === cleanLogin && u.senha === cleanSenha
-        );
+        const candidatos = get().usuarios.filter((u) => u.emailOuLogin.toLowerCase() === cleanLogin);
+        let usuario: Usuario | null = null;
+        let precisaMigrar = false;
+
+        for (const cand of candidatos) {
+          const check = await verifyPassword(cleanSenha, cand.senha);
+          if (check.valid) {
+            usuario = cand;
+            precisaMigrar = check.needsMigration;
+            break;
+          }
+        }
 
         if (!usuario) {
           return { ok: false, error: 'Credenciais inválidas. Verifique o login/e-mail e senha.' };
@@ -301,41 +355,70 @@ export const useAuth = create<AuthState>()(
           return { ok: false, error: 'Este usuário está inativo. Contate o administrador.' };
         }
 
+        let usuarioFinal = usuario;
+        if (precisaMigrar) {
+          const hashed = await hashPassword(cleanSenha);
+          const agora = Math.max(
+            Date.now(),
+            obterMaiorTimestampAuth(get().usuarios, get().convites, usuario) + 1,
+          );
+          usuarioFinal = { ...usuario, senha: hashed, atualizadoEm: agora };
+          const novaLista = get().usuarios.map((u) => (u.id === usuario!.id ? usuarioFinal : u));
+          set({ usuarios: novaLista, usuarioAtual: usuarioFinal });
+          void sincronizarAuthNuvem(novaLista, get().convites, usuarioFinal);
+        } else {
+          set({ usuarioAtual: usuarioFinal });
+        }
+
+        useUi.getState().setPerfil(usuarioFinal.perfil);
+        return { ok: true };
+      },
+
+      loginRapido: (perfil) => {
+        if (!IS_DEV || IS_PROD) {
+          return { ok: false, error: 'Acesso rápido disponível apenas em ambiente de desenvolvimento.' };
+        }
+        const usuario = get().usuarios.find((u) => u.perfil === perfil && u.ativo);
+        if (!usuario) {
+          return { ok: false, error: 'Nenhum usuário ativo encontrado para este perfil.' };
+        }
+
         set({ usuarioAtual: usuario });
         useUi.getState().setPerfil(usuario.perfil);
         return { ok: true };
       },
 
-      loginRapido: (perfil) => {
-        let usuario = get().usuarios.find((u) => u.perfil === perfil && u.ativo);
-        if (!usuario) {
-          usuario = USUARIOS_PADRAO.find((u) => u.perfil === perfil);
-        }
-        if (!usuario) return false;
-
-        set({ usuarioAtual: usuario });
-        useUi.getState().setPerfil(usuario.perfil);
-        return true;
-      },
-
       logout: () => {
         set({ usuarioAtual: null });
+        useUi.getState().setPerfil('encarregado');
+        limparStorageSensivel();
       },
 
-      atualizarPerfil: (dados) => {
+      atualizarPerfil: async (dados) => {
         const atual = get().usuarioAtual;
-        if (!atual) return;
+        if (!atual) return { ok: false, error: 'Usuário não autenticado.' };
+
+        const novoLogin = dados.emailOuLogin?.trim() || atual.emailOuLogin;
+        const loginEmUso = get().usuarios.some(
+          (u) => u.id !== atual.id && u.emailOuLogin.toLowerCase() === novoLogin.toLowerCase(),
+        );
+        if (loginEmUso) {
+          return { ok: false, error: 'Este login/e-mail já está em uso por outro usuário.' };
+        }
 
         const agora = Math.max(
           Date.now(),
           obterMaiorTimestampAuth(get().usuarios, get().convites, atual) + 1,
         );
 
+        const senhaLimpa = dados.senha?.trim();
+        const novaSenha = senhaLimpa ? await hashPassword(senhaLimpa) : atual.senha;
+
         const atualizado: Usuario = {
           ...atual,
           nome: dados.nome?.trim() || atual.nome,
-          emailOuLogin: dados.emailOuLogin?.trim() || atual.emailOuLogin,
-          senha: dados.senha?.trim() || atual.senha,
+          emailOuLogin: novoLogin,
+          senha: novaSenha,
           atualizadoEm: agora,
         };
 
@@ -350,15 +433,20 @@ export const useAuth = create<AuthState>()(
         });
 
         void sincronizarAuthNuvem(novaLista, get().convites, atualizado);
+        return { ok: true };
       },
 
       criarConvite: (perfil) => {
-        const aleatorio = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const prefixo = perfil === 'admin' ? 'ADM' : 'OBRA';
-        const codigo = `${prefixo}-${aleatorio}`;
+        const atual = get().usuarioAtual;
+        if (!atual || atual.perfil !== 'admin') {
+          return { ok: false, error: 'Apenas administradores podem gerar convites.' };
+        }
+
+        const prefixo = perfil === 'admin' ? 'ADM-' : 'OBRA-';
+        const codigo = gerarCodigoSeguro(prefixo, 6);
         const agora = Math.max(
           Date.now(),
-          obterMaiorTimestampAuth(get().usuarios, get().convites, get().usuarioAtual) + 1,
+          obterMaiorTimestampAuth(get().usuarios, get().convites, atual) + 1,
         );
 
         const novoConvite: ConviteAcesso = {
@@ -373,8 +461,8 @@ export const useAuth = create<AuthState>()(
         const novosConvites = [novoConvite, ...get().convites];
         set({ convites: novosConvites });
 
-        void sincronizarAuthNuvem(get().usuarios, novosConvites, get().usuarioAtual);
-        return novoConvite;
+        void sincronizarAuthNuvem(get().usuarios, novosConvites, atual);
+        return { ok: true, convite: novoConvite };
       },
 
       validarConvite: (codigo) => {
@@ -382,7 +470,7 @@ export const useAuth = create<AuthState>()(
         return get().convites.find((c) => c.codigo.toUpperCase() === clean && !c.usado) || null;
       },
 
-      cadastrarComConvite: (codigo, dados) => {
+      cadastrarComConvite: async (codigo, dados) => {
         const convite = get().validarConvite(codigo);
         if (!convite) {
           return { ok: false, error: 'Código de convite inválido ou já utilizado.' };
@@ -399,11 +487,12 @@ export const useAuth = create<AuthState>()(
           Date.now(),
           obterMaiorTimestampAuth(get().usuarios, get().convites, get().usuarioAtual) + 1,
         );
+        const senhaHash = await hashPassword(dados.senha.trim());
         const novoUsuario: Usuario = {
           id: uid('usr'),
           nome: dados.nome.trim(),
           emailOuLogin: dados.emailOuLogin.trim(),
-          senha: dados.senha.trim(),
+          senha: senhaHash,
           perfil: convite.perfil,
           ativo: true,
           criadoEm: new Date(agora).toISOString(),
@@ -429,20 +518,25 @@ export const useAuth = create<AuthState>()(
       },
 
       alternarStatusUsuario: (usuarioId) => {
+        const atual = get().usuarioAtual;
+        if (!atual || atual.perfil !== 'admin') {
+          return { ok: false, error: 'Apenas administradores podem alterar o status de usuários.' };
+        }
+
         const agora = Math.max(
           Date.now(),
-          obterMaiorTimestampAuth(get().usuarios, get().convites, get().usuarioAtual) + 1,
+          obterMaiorTimestampAuth(get().usuarios, get().convites, atual) + 1,
         );
         const novosUsuarios = get().usuarios.map((u) =>
           u.id === usuarioId ? { ...u, ativo: !u.ativo, atualizadoEm: agora } : u
         );
-        const atual = get().usuarioAtual;
         const novoUsuarioAtual =
-          atual && atual.id === usuarioId
+          atual.id === usuarioId
             ? novosUsuarios.find((u) => u.id === usuarioId) ?? atual
             : atual;
         set({ usuarios: novosUsuarios, usuarioAtual: novoUsuarioAtual });
         void sincronizarAuthNuvem(novosUsuarios, get().convites, novoUsuarioAtual);
+        return { ok: true };
       },
     }),
     {
@@ -490,6 +584,7 @@ try {
           });
           if (usuarioAtualSincronizado && usuarioAtualSincronizado.ativo === false) {
             useAuth.setState({ usuarioAtual: null });
+            useUi.getState().setPerfil('encarregado');
           } else if (usuarioAtualSincronizado) {
             useUi.getState().setPerfil(usuarioAtualSincronizado.perfil);
           }

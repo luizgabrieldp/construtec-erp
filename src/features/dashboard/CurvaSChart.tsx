@@ -11,7 +11,7 @@ import {
   AreaChart,
   Area,
 } from 'recharts';
-import { Card, Select, Badge } from '@/components/ui';
+import { Card, Select } from '@/components/ui';
 import { useData } from '@/data/store';
 import { useHoje, useResumo } from '@/hooks';
 import { SEDE } from '@/domain/types';
@@ -127,10 +127,7 @@ export function CurvaSChart() {
     <Card className="p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <div className="flex items-center gap-2">
-            <h3 className="text-base font-bold text-fg">Curva S — Desembolso e Avanço Financeiro</h3>
-            <Badge tone="orange">Recharts</Badge>
-          </div>
+          <h3 className="text-base font-bold text-fg">Curva S — Desembolso e Avanço Financeiro</h3>
           <p className="mt-0.5 text-xs text-muted">
             Comparativo acumulado: Planejado (Orçado) × Comprometido (Competência) × Realizado (Caixa)
           </p>
@@ -147,16 +144,20 @@ export function CurvaSChart() {
           </Select>
           <div className="flex rounded-lg border border-line bg-surface-2 p-0.5 text-xs">
             <button
+              type="button"
+              aria-pressed={tipoVisualizacao === 'area'}
               onClick={() => setTipoVisualizacao('area')}
-              className={`rounded px-2.5 py-1 font-medium transition-colors ${
+              className={`rounded px-2.5 py-1 font-medium transition-colors cursor-pointer ${
                 tipoVisualizacao === 'area' ? 'bg-surface font-semibold text-fg shadow-xs' : 'text-muted'
               }`}
             >
               Área
             </button>
             <button
+              type="button"
+              aria-pressed={tipoVisualizacao === 'linha'}
               onClick={() => setTipoVisualizacao('linha')}
-              className={`rounded px-2.5 py-1 font-medium transition-colors ${
+              className={`rounded px-2.5 py-1 font-medium transition-colors cursor-pointer ${
                 tipoVisualizacao === 'linha' ? 'bg-surface font-semibold text-fg shadow-xs' : 'text-muted'
               }`}
             >

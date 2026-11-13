@@ -2,11 +2,9 @@ import type {
   CategoriaFornecedor,
   CategoriaGasto,
   FormaPagamento,
-  Funcao,
   Obra,
   ObraStatus,
   ObraFase,
-  FaseCustomizada,
   PeriodicidadeRecebimento,
   StatusPresenca,
   StatusServico,
@@ -90,11 +88,11 @@ export const LABEL_OBRA_FASE: Record<ObraFase, string> = {
 };
 
 export const FASES_OBRA_LISTA: { id: ObraFase; label: string; ordem: number; cor: string }[] = [
-  { id: 'fundacao', label: 'Fundação', ordem: 1, cor: '#8B5CF6' },
-  { id: 'estrutura', label: 'Estrutura', ordem: 2, cor: '#3B82F6' },
-  { id: 'alvenaria', label: 'Alvenaria', ordem: 3, cor: '#F59E0B' },
-  { id: 'instalacoes', label: 'Instalações', ordem: 4, cor: '#06B6D4' },
-  { id: 'acabamento', label: 'Acabamento & Entrega', ordem: 5, cor: '#10B981' },
+  { id: 'fundacao', label: 'Fundação', ordem: 1, cor: '#475569' },
+  { id: 'estrutura', label: 'Estrutura', ordem: 2, cor: '#2563EB' },
+  { id: 'alvenaria', label: 'Alvenaria', ordem: 3, cor: '#D97706' },
+  { id: 'instalacoes', label: 'Instalações', ordem: 4, cor: '#0284C7' },
+  { id: 'acabamento', label: 'Acabamento & Entrega', ordem: 5, cor: '#059669' },
 ];
 
 export function getFasesObra(obra?: Obra | null): { id: string; label: string; cor?: string }[] {

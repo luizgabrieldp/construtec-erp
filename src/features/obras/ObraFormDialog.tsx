@@ -9,7 +9,7 @@ import type { Obra, ObraStatus } from '@/domain/types';
 import { LABEL_OBRA_STATUS } from '@/domain/labels';
 import { today, addMonths } from '@/lib/dates';
 import { uid } from '@/lib/utils';
-import { fmtBRL, round2 } from '@/lib/format';
+import { parseMoedaBR, round2 } from '@/lib/format';
 import { FaseObraStepper } from './FaseObraStepper';
 import { ConfirmarExclusaoObraDialog } from './ConfirmarExclusaoObraDialog';
 
@@ -19,7 +19,7 @@ interface ObraFormDialogProps {
   obraParaEditar?: Obra | null;
 }
 
-const CORES_DISPONIVEIS = ['#FF6B00', '#38BDF8', '#A78BFA', '#10B981', '#F59E0B', '#EC4899', '#6366F1'];
+const CORES_DISPONIVEIS = ['#EA580C', '#0284C7', '#0D9488', '#059669', '#D97706', '#2563EB', '#475569'];
 
 export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialogProps) {
   const data = useData();
@@ -53,8 +53,8 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
       setArquiteto(obraAtual.arquiteto || '');
       setDataInicio(obraAtual.dataInicio);
       setPrevisaoEntrega(obraAtual.previsaoEntrega);
-      setOrcamento(obraAtual.orcamento ? String(obraAtual.orcamento) : '');
-      setValorContrato(obraAtual.valorContrato ? String(obraAtual.valorContrato) : '');
+      setOrcamento(isAdmin && obraAtual.orcamento ? String(obraAtual.orcamento) : '');
+      setValorContrato(isAdmin && obraAtual.valorContrato ? String(obraAtual.valorContrato) : '');
       setStatus(obraAtual.status);
       setFase(obraAtual.fase || 'fundacao');
       setCor(obraAtual.cor);
@@ -76,18 +76,24 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
 
   const salvar = (e: React.FormEvent) => {
     e.preventDefault();
-    const orcNum = round2(Number(orcamento.replace(',', '.')) || 0);
-    const contratoNum = round2(Number(valorContrato.replace(',', '.')) || 0);
+    const orcNum = round2(parseMoedaBR(orcamento));
+    const contratoNum = round2(parseMoedaBR(valorContrato));
 
     if (!nome.trim()) return;
+
+    if (previsaoEntrega < dataInicio) {
+      toast('A previsão de entrega não pode ser anterior à data de início.', 'error');
+      return;
+    }
 
     if (obraParaEditar) {
       mutate(
         (d) => {
           const idx = d.obras.findIndex((o) => o.id === obraParaEditar.id);
           if (idx !== -1) {
+            const atual = d.obras[idx];
             d.obras[idx] = {
-              ...d.obras[idx],
+              ...atual,
               nome: nome.trim(),
               cliente: cliente.trim(),
               endereco: endereco.trim(),
@@ -95,8 +101,8 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
               arquiteto: arquiteto.trim() || undefined,
               dataInicio,
               previsaoEntrega,
-              orcamento: orcNum,
-              valorContrato: contratoNum,
+              orcamento: isAdmin ? orcNum : atual.orcamento,
+              valorContrato: isAdmin ? contratoNum : atual.valorContrato,
               status,
               fase,
               cor,
@@ -107,6 +113,10 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
       );
       toast(`Obra "${nome.trim()}" atualizada com sucesso`);
     } else {
+      if (!isAdmin) {
+        toast('Apenas administradores podem cadastrar novas obras.', 'error');
+        return;
+      }
       const nova: Obra = {
         id: uid('o'),
         nome: nome.trim(),
@@ -190,23 +200,27 @@ export function ObraFormDialog({ open, onClose, obraParaEditar }: ObraFormDialog
           <Input type="date" required value={previsaoEntrega} onChange={(e) => setPrevisaoEntrega(e.target.value)} />
         </Field>
 
-        <Field label="Orçamento Previsto (R$) (opcional)">
-          <Input
-            inputMode="decimal"
-            placeholder="Ex.: 500000"
-            value={orcamento}
-            onChange={(e) => setOrcamento(e.target.value.replace(/[^\d,.]/g, ''))}
-          />
-        </Field>
+        {isAdmin && (
+          <>
+            <Field label="Orçamento Previsto (R$) (opcional)">
+              <Input
+                inputMode="decimal"
+                placeholder="Ex.: 500000"
+                value={orcamento}
+                onChange={(e) => setOrcamento(e.target.value.replace(/[^\d,.]/g, ''))}
+              />
+            </Field>
 
-        <Field label="Valor do Contrato (R$) (opcional)">
-          <Input
-            inputMode="decimal"
-            placeholder="Ex.: 680000"
-            value={valorContrato}
-            onChange={(e) => setValorContrato(e.target.value.replace(/[^\d,.]/g, ''))}
-          />
-        </Field>
+            <Field label="Valor do Contrato (R$) (opcional)">
+              <Input
+                inputMode="decimal"
+                placeholder="Ex.: 680000"
+                value={valorContrato}
+                onChange={(e) => setValorContrato(e.target.value.replace(/[^\d,.]/g, ''))}
+              />
+            </Field>
+          </>
+        )}
 
         <Field label="Cor de Identificação">
           <div className="flex items-center gap-2 pt-1">

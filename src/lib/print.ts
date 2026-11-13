@@ -1,5 +1,7 @@
 import { fmtBRL, fmtDate } from './format';
 import { today } from './dates';
+import { escapeHtml } from './crypto';
+import type { ConfigEmpresa } from '@/domain/types';
 import type { DadosRecibo } from '@/features/folha/RecibosFolhaDialog';
 
 export interface DadosEmpreiteiroImpressao {
@@ -22,6 +24,39 @@ export interface DadosEmpreiteiroImpressao {
   totalGeral: number;
 }
 
+interface EmpresaResolvida {
+  nome: string;
+  metaHtml: string;
+}
+
+function resolverEmpresaImpressao(empresa?: ConfigEmpresa | string): EmpresaResolvida {
+  if (typeof empresa === 'string') {
+    return {
+      nome: empresa.trim() || 'CONSTRUTEC',
+      metaHtml: '',
+    };
+  }
+  const nome =
+    empresa?.nomeFantasia?.trim() ||
+    empresa?.nome?.trim() ||
+    empresa?.razaoSocial?.trim() ||
+    'CONSTRUTEC';
+  const cidade = empresa?.cidadeUf?.trim() || empresa?.cidade?.trim() || '';
+  const razaoSocial =
+    empresa?.razaoSocial?.trim() && empresa.razaoSocial.trim() !== nome
+      ? empresa.razaoSocial.trim()
+      : '';
+  const partes = [
+    razaoSocial,
+    empresa?.cnpj?.trim() ? `CNPJ: ${empresa.cnpj.trim()}` : '',
+    cidade,
+    empresa?.telefone?.trim() || '',
+    empresa?.endereco?.trim() || '',
+  ].filter(Boolean);
+  const metaHtml = partes.length > 0 ? `<div class="company-meta">${escapeHtml(partes.join(' • '))}</div>` : '';
+  return { nome, metaHtml };
+}
+
 /**
  * Imprime HTML diretamente através de um iframe isolado de alta performance.
  * - Não afeta o DOM da aplicação React principal
@@ -29,7 +64,7 @@ export interface DadosEmpreiteiroImpressao {
  * - Não sofre com timeouts prematuros durante o diálogo do navegador
  * - 100% compatível com iOS Safari, Android Chrome e Desktop
  */
-export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Recibo de Pagamento CONSTRUTEC') {
+export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Recibo de Pagamento') {
   // Remove qualquer iframe de impressão antigo pendente
   const antigo = document.getElementById('construtec-print-iframe');
   if (antigo) {
@@ -40,12 +75,18 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
 
   const iframe = document.createElement('iframe');
   iframe.id = 'construtec-print-iframe';
-  iframe.setAttribute('style', 'position:fixed;right:-9999px;bottom:-9999px;width:10px;height:10px;opacity:0;pointer-events:none;border:none;');
+  iframe.setAttribute(
+    'style',
+    'position:fixed;right:-9999px;bottom:-9999px;width:10px;height:10px;opacity:0;pointer-events:none;border:none;',
+  );
 
   document.body.appendChild(iframe);
 
   const doc = iframe.contentWindow?.document;
   if (!doc) {
+    try {
+      iframe.remove();
+    } catch {}
     window.print();
     return;
   }
@@ -255,7 +296,7 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>${tituloDoc}</title>
+        <title>${escapeHtml(tituloDoc)}</title>
         <style>${css}</style>
       </head>
       <body>
@@ -265,13 +306,38 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
   `);
   doc.close();
 
+  let cleaned = false;
+  let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    if (fallbackTimer) {
+      clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    }
+    try {
+      iframe.contentWindow?.removeEventListener('afterprint', cleanup);
+    } catch {}
+    try {
+      window.removeEventListener('afterprint', cleanup);
+    } catch {}
+    try {
+      iframe.remove();
+    } catch {}
+  };
+
   const disparar = () => {
     try {
+      iframe.contentWindow?.addEventListener('afterprint', cleanup, { once: true });
+      window.addEventListener('afterprint', cleanup, { once: true });
       iframe.contentWindow?.focus();
       iframe.contentWindow?.print();
     } catch (err) {
       console.warn('Erro ao acionar impressão no iframe, tentando window.print:', err);
       window.print();
+    } finally {
+      fallbackTimer = setTimeout(cleanup, 60_000);
     }
   };
 
@@ -289,8 +355,8 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
               img.onload = () => resolve(true);
               img.onerror = () => resolve(true);
             }
-          })
-      )
+          }),
+      ),
     ).then(() => {
       setTimeout(disparar, 60);
     });
@@ -300,8 +366,13 @@ export function imprimirHtmlIframe(conteudoHtml: string, tituloDoc: string = 'Re
 /**
  * Converte a lista de recibos individuais em HTML ultra leve para impressão instantânea.
  */
-export function gerarHtmlRecibosIndividuais(recibos: DadosRecibo[]): string {
+export function gerarHtmlRecibosIndividuais(
+  recibos: DadosRecibo[],
+  empresa?: ConfigEmpresa | string,
+): string {
   const dataAtual = today();
+  const emp = resolverEmpresaImpressao(empresa);
+  const nomeEmpresaSafe = escapeHtml(emp.nome);
 
   return recibos
     .map((r) => {
@@ -310,50 +381,64 @@ export function gerarHtmlRecibosIndividuais(recibos: DadosRecibo[]): string {
         .map(
           (aj) => `
           <tr>
-            <td>${aj.descricao}</td>
+            <td>${escapeHtml(aj.descricao)}</td>
             <td style="text-align:center;">-</td>
-            <td style="text-align:right;">${aj.valor >= 0 ? `+${fmtBRL(aj.valor)}` : fmtBRL(aj.valor)}</td>
+            <td style="text-align:right;">${escapeHtml(aj.valor >= 0 ? `+${fmtBRL(aj.valor)}` : fmtBRL(aj.valor))}</td>
           </tr>
-        `
+        `,
         )
         .join('');
+
+      const numRecibo = escapeHtml(r.id.slice(-6).toUpperCase());
+      const nomeColab = escapeHtml(r.funcionarioNome);
+      const funcaoColab = escapeHtml(r.funcionarioFuncao);
+      const regimeColab = escapeHtml(r.funcionarioRegime);
+      const telColab = escapeHtml(r.funcionarioTelefone || 'Não informado');
+      const tipoSafe = escapeHtml(r.tipo);
+      const tipoUpperSafe = escapeHtml(r.tipo.toUpperCase());
+      const emissaoSafe = escapeHtml(fmtDate(r.dataEmissao || dataAtual));
+      const inicioSafe = escapeHtml(fmtDate(r.inicio));
+      const fimSafe = escapeHtml(fmtDate(r.fim));
+      const diasSafe = escapeHtml(r.diasTrabalhados);
+      const valorBaseSafe = escapeHtml(fmtBRL(r.valorBase));
+      const totalSafe = escapeHtml(fmtBRL(r.total));
 
       return `
         <div class="receipt-page">
           <img src="/logo-emblema-trim.png" alt="" class="watermark-emblem" style="opacity: 0.06; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; z-index: 0; pointer-events: none;" />
           <div class="header-box">
             <div class="header-brand">
-              <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" class="logo-img" />
+              <img src="/logo-emblema-trim.png" alt="${nomeEmpresaSafe}" class="logo-img" />
               <div>
-                <div class="company-title">CONSTRUTEC</div>
-                <div class="company-sub">Construção Civil & Reformas em Geral</div>
-                <div class="company-meta">CNPJ: 35.477.198/0001-83 • Petrolina - PE</div>
+                <div class="company-title">${nomeEmpresaSafe}</div>
+                <div class="company-sub">Construção Civil &amp; Reformas em Geral</div>
+                ${emp.metaHtml}
               </div>
             </div>
             <div class="header-meta">
-              <div class="tag-num">RECIBO DE PAGAMENTO #${r.id.slice(-6).toUpperCase()}</div>
-              <div class="meta-line"><strong>Emissão:</strong> ${fmtDate(r.dataEmissao || dataAtual)}</div>
-              <div class="meta-line"><strong>Período:</strong> ${fmtDate(r.inicio)} a ${fmtDate(r.fim)}</div>
-              <div class="meta-line"><strong>Regime:</strong> ${r.tipo.toUpperCase()}</div>
+              <div class="tag-num">RECIBO DE PAGAMENTO #${numRecibo}</div>
+              <div class="meta-line"><strong>Emissão:</strong> ${emissaoSafe}</div>
+              <div class="meta-line"><strong>Período:</strong> ${inicioSafe} a ${fimSafe}</div>
+              <div class="meta-line"><strong>Regime:</strong> ${tipoUpperSafe}</div>
             </div>
           </div>
 
           <div class="info-grid">
             <div>
               <span class="info-label">Colaborador / Beneficiário:</span>
-              <span class="info-val" style="font-size:11px;">${r.funcionarioNome}</span>
+              <span class="info-val" style="font-size:11px;">${nomeColab}</span>
             </div>
             <div>
               <span class="info-label">Função / Regime:</span>
-              <span class="info-val">${r.funcionarioFuncao} (${r.funcionarioRegime})</span>
+              <span class="info-val">${funcaoColab} (${regimeColab})</span>
             </div>
             <div>
               <span class="info-label">Telefone / Chave Pix:</span>
-              <span class="info-val">${r.funcionarioTelefone || 'Não informado'}</span>
+              <span class="info-val">${telColab}</span>
             </div>
             <div>
               <span class="info-label">Canteiro(s) Atuado(s):</span>
-              <span class="info-val">${obrasStr}</span>
+              <span class="info-val">${escapeHtml(obrasStr)}</span>
             </div>
           </div>
 
@@ -367,34 +452,34 @@ export function gerarHtmlRecibosIndividuais(recibos: DadosRecibo[]): string {
             </thead>
             <tbody>
               <tr>
-                <td>Remuneração Base apurada no período (${r.tipo})</td>
-                <td style="text-align:center;font-weight:600;">${r.diasTrabalhados} dias trabalhados</td>
-                <td style="text-align:right;font-weight:600;">${fmtBRL(r.valorBase)}</td>
+                <td>Remuneração Base apurada no período (${tipoSafe})</td>
+                <td style="text-align:center;font-weight:600;">${diasSafe} dias trabalhados</td>
+                <td style="text-align:right;font-weight:600;">${valorBaseSafe}</td>
               </tr>
               ${ajustesRows}
             </tbody>
             <tfoot>
               <tr>
                 <td colspan="2" style="text-align:right;text-transform:uppercase;">VALOR LÍQUIDO A RECEBER:</td>
-                <td style="text-align:right;font-weight:900;font-size:12px;">${fmtBRL(r.total)}</td>
+                <td style="text-align:right;font-weight:900;font-size:12px;">${totalSafe}</td>
               </tr>
             </tfoot>
           </table>
 
           <div class="termo-quitacao">
-            Declaro que recebi da empresa <strong>CONSTRUTEC</strong> a quantia líquida de 
-            <strong>${fmtBRL(r.total)}</strong> discriminada neste comprovante, correspondente à quitação integral
-            dos serviços e diárias prestados no período de <strong>${fmtDate(r.inicio)} a ${fmtDate(r.fim)}</strong>, 
+            Declaro que recebi da empresa <strong>${nomeEmpresaSafe}</strong> a quantia líquida de 
+            <strong>${totalSafe}</strong> discriminada neste comprovante, correspondente à quitação integral
+            dos serviços e diárias prestados no período de <strong>${inicioSafe} a ${fimSafe}</strong>, 
             dando plena, rasa e irrevogável quitação.
           </div>
 
           <div class="signatures-grid">
             <div>
-              <div class="sig-line">${r.funcionarioNome}</div>
+              <div class="sig-line">${nomeColab}</div>
               <div class="sig-sub">Assinatura do Colaborador</div>
             </div>
             <div>
-              <div class="sig-line">CONSTRUTEC</div>
+              <div class="sig-line">${nomeEmpresaSafe}</div>
               <div class="sig-sub">Encarregado / Responsável Financeiro</div>
             </div>
           </div>
@@ -407,58 +492,73 @@ export function gerarHtmlRecibosIndividuais(recibos: DadosRecibo[]): string {
 /**
  * Converte os dados do empreiteiro em HTML otimizado para impressão A4 sem travamentos.
  */
-export function gerarHtmlReciboEmpreiteiro(dados: DadosEmpreiteiroImpressao): string {
+export function gerarHtmlReciboEmpreiteiro(
+  dados: DadosEmpreiteiroImpressao,
+  empresa?: ConfigEmpresa | string,
+): string {
   const dataAtual = today();
+  const emp = resolverEmpresaImpressao(empresa);
+  const nomeEmpresaSafe = escapeHtml(emp.nome);
 
   const itensRows = dados.itens
     .map(
       (item) => `
       <tr>
-        <td style="font-weight:600;">${item.nome} ${item.isEmpreiteiroProprio ? '(Empreiteiro)' : ''}</td>
-        <td>${item.funcao}</td>
-        <td style="text-align:center;font-weight:bold;">${item.diasTrabalhados}</td>
-        <td style="text-align:right;">${fmtBRL(item.diaria)}</td>
-        <td style="text-align:right;font-weight:bold;">${fmtBRL(item.total)}</td>
+        <td style="font-weight:600;">${escapeHtml(item.nome)} ${item.isEmpreiteiroProprio ? '(Empreiteiro)' : ''}</td>
+        <td>${escapeHtml(item.funcao)}</td>
+        <td style="text-align:center;font-weight:bold;">${escapeHtml(item.diasTrabalhados)}</td>
+        <td style="text-align:right;">${escapeHtml(fmtBRL(item.diaria))}</td>
+        <td style="text-align:right;font-weight:bold;">${escapeHtml(fmtBRL(item.total))}</td>
       </tr>
-    `
+    `,
     )
     .join('');
+
+  const empreiteiroNomeSafe = escapeHtml(dados.empreiteiroNome);
+  const empreiteiroCpfSafe = escapeHtml(dados.empreiteiroCpf || 'Não informado');
+  const empreiteiroTelSafe = escapeHtml(dados.empreiteiroTelefone || 'Não informado');
+  const empreiteiroPixSafe = escapeHtml(dados.empreiteiroPix || 'Não informada');
+  const tipoUpperSafe = escapeHtml(dados.tipo.toUpperCase());
+  const emissaoSafe = escapeHtml(fmtDate(dados.dataEmissao || dataAtual));
+  const inicioSafe = escapeHtml(fmtDate(dados.inicio));
+  const fimSafe = escapeHtml(fmtDate(dados.fim));
+  const totalGeralSafe = escapeHtml(fmtBRL(dados.totalGeral));
 
   return `
     <div class="receipt-page">
       <img src="/logo-emblema-trim.png" alt="" class="watermark-emblem" style="opacity: 0.06; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 280px; z-index: 0; pointer-events: none;" />
       <div class="header-box">
         <div class="header-brand">
-          <img src="/logo-emblema-trim.png" alt="CONSTRUTEC" class="logo-img" />
+          <img src="/logo-emblema-trim.png" alt="${nomeEmpresaSafe}" class="logo-img" />
           <div>
-            <div class="company-title">CONSTRUTEC</div>
-            <div class="company-sub">Construção Civil & Reformas em Geral</div>
-            <div class="company-meta">CNPJ: 35.477.198/0001-83 • Petrolina - PE</div>
+            <div class="company-title">${nomeEmpresaSafe}</div>
+            <div class="company-sub">Construção Civil &amp; Reformas em Geral</div>
+            ${emp.metaHtml}
           </div>
         </div>
         <div class="header-meta">
-          <div class="tag-num">RECIBO CONSOLIDADO DO EMPREITEIRO (${dados.tipo.toUpperCase()})</div>
-          <div class="meta-line"><strong>Emissão:</strong> ${fmtDate(dados.dataEmissao || dataAtual)}</div>
-          <div class="meta-line"><strong>Período:</strong> ${fmtDate(dados.inicio)} a ${fmtDate(dados.fim)}</div>
+          <div class="tag-num">RECIBO CONSOLIDADO DO EMPREITEIRO (${tipoUpperSafe})</div>
+          <div class="meta-line"><strong>Emissão:</strong> ${emissaoSafe}</div>
+          <div class="meta-line"><strong>Período:</strong> ${inicioSafe} a ${fimSafe}</div>
         </div>
       </div>
 
       <div class="info-grid">
         <div>
           <span class="info-label">Empreiteiro Responsável:</span>
-          <span class="info-val" style="font-size:11px;">${dados.empreiteiroNome}</span>
+          <span class="info-val" style="font-size:11px;">${empreiteiroNomeSafe}</span>
         </div>
         <div>
           <span class="info-label">CPF / CNPJ:</span>
-          <span class="info-val">${dados.empreiteiroCpf || 'Não informado'}</span>
+          <span class="info-val">${empreiteiroCpfSafe}</span>
         </div>
         <div>
           <span class="info-label">Telefone / WhatsApp:</span>
-          <span class="info-val">${dados.empreiteiroTelefone || 'Não informado'}</span>
+          <span class="info-val">${empreiteiroTelSafe}</span>
         </div>
         <div>
           <span class="info-label">Chave Pix para Repasse:</span>
-          <span class="info-val">${dados.empreiteiroPix || 'Não informada'}</span>
+          <span class="info-val">${empreiteiroPixSafe}</span>
         </div>
       </div>
 
@@ -478,25 +578,25 @@ export function gerarHtmlReciboEmpreiteiro(dados: DadosEmpreiteiroImpressao): st
         <tfoot>
           <tr>
             <td colspan="4" style="text-align:right;text-transform:uppercase;">VALOR TOTAL CONSOLIDADO PARA REPASSE:</td>
-            <td style="text-align:right;font-weight:900;font-size:12px;">${fmtBRL(dados.totalGeral)}</td>
+            <td style="text-align:right;font-weight:900;font-size:12px;">${totalGeralSafe}</td>
           </tr>
         </tfoot>
       </table>
 
       <div class="termo-quitacao">
-        Declaro que recebi da empresa <strong>CONSTRUTEC</strong> a quantia total consolidada de 
-        <strong>${fmtBRL(dados.totalGeral)}</strong> discriminada neste comprovante, correspondente
+        Declaro que recebi da empresa <strong>${nomeEmpresaSafe}</strong> a quantia total consolidada de 
+        <strong>${totalGeralSafe}</strong> discriminada neste comprovante, correspondente
         ao repasse integral de diárias e serviços prestados pela equipe sob minha coordenação no período de 
-        <strong>${fmtDate(dados.inicio)} a ${fmtDate(dados.fim)}</strong>, dando plena, rasa e irrevogável quitação.
+        <strong>${inicioSafe} a ${fimSafe}</strong>, dando plena, rasa e irrevogável quitação.
       </div>
 
       <div class="signatures-grid">
         <div>
-          <div class="sig-line">${dados.empreiteiroNome}</div>
+          <div class="sig-line">${empreiteiroNomeSafe}</div>
           <div class="sig-sub">Assinatura do Empreiteiro</div>
         </div>
         <div>
-          <div class="sig-line">CONSTRUTEC</div>
+          <div class="sig-line">${nomeEmpresaSafe}</div>
           <div class="sig-sub">Construtora / Responsável Financeiro</div>
         </div>
       </div>

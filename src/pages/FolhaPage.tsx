@@ -10,21 +10,23 @@ import {
   Plus,
   RotateCcw,
   ShieldAlert,
+  Undo2,
   Users,
   Layers,
   Printer,
 } from 'lucide-react';
-import { Badge, Button, Card, CardHeader, PageHeader, Select } from '@/components/ui';
+import { Badge, Button, Card, CardHeader, Field, Input, PageHeader, Select } from '@/components/ui';
+import { Dialog } from '@/components/ui/Dialog';
 import { StatCard } from '@/components/ui/StatCard';
 import { toast } from '@/components/ui/Toast';
 import { useData, useErp } from '@/data/store';
 import { useHoje, useIsAdmin } from '@/hooks';
-import type { FechamentoFolha } from '@/domain/types';
-import { LABEL_FUNCAO } from '@/domain/labels';
-import { chaveApontamento, FATOR_PRESENCA } from '@/domain/engine';
-import { eachDay, startOfWeek } from '@/lib/dates';
+import type { FechamentoFolha, FormaPagamento } from '@/domain/types';
+import { getLabelFuncao, LABEL_FORMA_PAGAMENTO, LABEL_REGIME } from '@/domain/labels';
+import { chaveApontamento, FATOR_PRESENCA, valorDia } from '@/domain/engine';
+import { eachDay, startOfWeek, today } from '@/lib/dates';
 import { TableWatermark } from '@/components/brand/TableWatermark';
-import { fmtBRL, fmtDateShort } from '@/lib/format';
+import { fmtBRL, fmtDate, fmtDateShort, round2 } from '@/lib/format';
 import { FechamentoFolhaDialog } from '@/features/folha/FechamentoFolhaDialog';
 import { FechamentoFolhaLoteDialog } from '@/features/folha/FechamentoFolhaLoteDialog';
 import { RecibosFolhaDialog, type DadosRecibo } from '@/features/folha/RecibosFolhaDialog';
@@ -43,6 +45,10 @@ export function FolhaPage() {
   const [dialogLoteOpen, setDialogLoteOpen] = useState(false);
   const [dialogEmpreiteiroOpen, setDialogEmpreiteiroOpen] = useState(false);
   const [fechamentoParaReabrir, setFechamentoParaReabrir] = useState<FechamentoFolha | null>(null);
+  const [fechamentoParaBaixa, setFechamentoParaBaixa] = useState<FechamentoFolha | null>(null);
+  const [baixaData, setBaixaData] = useState(() => today());
+  const [baixaForma, setBaixaForma] = useState<FormaPagamento>('pix');
+  const [fechamentoParaEstornar, setFechamentoParaEstornar] = useState<FechamentoFolha | null>(null);
   const [recibosParaVisualizar, setRecibosParaVisualizar] = useState<DadosRecibo[] | null>(null);
 
   const gerarDadosRecibo = (fech: FechamentoFolha): DadosRecibo => {
@@ -55,7 +61,7 @@ export function FolhaPage() {
     return {
       id: fech.id,
       funcionarioNome: f?.nome || 'Colaborador',
-      funcionarioFuncao: f ? LABEL_FUNCAO[f.funcao] : 'Operário',
+      funcionarioFuncao: f ? getLabelFuncao(f.funcao) : 'Operário',
       funcionarioRegime: f?.regime || 'diarista',
       funcionarioTelefone: f?.telefone,
       tipo: fech.tipo,
@@ -133,7 +139,7 @@ export function FolhaPage() {
         }
       });
 
-      const valorPrevisto = f.regime !== 'mensalista' ? diasTrabalhados * f.diaria : (f.salario / 30) * diasTrabalhados;
+      const valorPrevisto = round2(diasTrabalhados * valorDia(f, hoje));
 
       return {
         funcionario: f,
@@ -143,28 +149,93 @@ export function FolhaPage() {
       };
     });
 
-  // Ação de estornar/reabrir fechamento
+  // Ação de dar baixa (liquidar pagamento) na própria Folha
+  const abrirModalBaixa = (fech: FechamentoFolha) => {
+    setBaixaData(hoje);
+    setBaixaForma('pix');
+    setFechamentoParaBaixa(fech);
+  };
+
+  const executarBaixa = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fechamentoParaBaixa) return;
+    const contaAtual = data.contasPagar.find((c) => c.id === fechamentoParaBaixa.contaPagarId);
+    if (!contaAtual) {
+      toast('Conta a pagar vinculada não encontrada.', 'error');
+      setFechamentoParaBaixa(null);
+      return;
+    }
+    const nomeColab = data.funcionarios.find((f) => f.id === fechamentoParaBaixa.funcionarioId)?.nome || 'Colaborador';
+    mutate(
+      (d) => {
+        const conta = d.contasPagar.find((c) => c.id === fechamentoParaBaixa.contaPagarId);
+        if (!conta) return;
+        conta.status = 'pago';
+        conta.dataPagamento = baixaData;
+        conta.formaPagamento = baixaForma;
+      },
+      {
+        acao: 'Folha',
+        descricao: `Liquidou pagamento da folha de ${nomeColab} (${fmtBRL(fechamentoParaBaixa.total)}) via ${LABEL_FORMA_PAGAMENTO[baixaForma]}`,
+      },
+    );
+    toast(`Pagamento de ${nomeColab} registrado com sucesso!`, 'success');
+    setFechamentoParaBaixa(null);
+  };
+
+  // Ação de estornar pagamento na própria Folha
+  const executarEstorno = (fech: FechamentoFolha) => {
+    const contaAtual = data.contasPagar.find((c) => c.id === fech.contaPagarId);
+    if (!contaAtual || contaAtual.status !== 'pago') {
+      setFechamentoParaEstornar(null);
+      return;
+    }
+    const nomeColab = data.funcionarios.find((f) => f.id === fech.funcionarioId)?.nome || 'Colaborador';
+    mutate(
+      (d) => {
+        const conta = d.contasPagar.find((c) => c.id === fech.contaPagarId);
+        if (!conta) return;
+        conta.status = 'pendente';
+        delete conta.dataPagamento;
+        delete conta.formaPagamento;
+      },
+      {
+        acao: 'Folha',
+        descricao: `Estornou pagamento da folha de ${nomeColab} (${fmtBRL(fech.total)})`,
+      },
+    );
+    toast('Pagamento estornado para pendente.', 'success');
+    setFechamentoParaEstornar(null);
+  };
+
+  // Ação de reabrir fechamento
   const executarReabertura = (fech: FechamentoFolha) => {
-    mutate((d) => {
-      const idxF = d.fechamentos.findIndex((x) => x.id === fech.id);
-      if (idxF < 0) return;
+    const contaAtual = data.contasPagar.find((c) => c.id === fech.contaPagarId);
+    if (contaAtual && contaAtual.status === 'pago') {
+      toast('Esta folha já foi paga e não pode ser reaberta diretamente. Estorne o pagamento primeiro usando o botão Estornar.', 'error');
+      return;
+    }
 
-      const cIndex = d.contasPagar.findIndex((c) => c.id === fech.contaPagarId);
-      if (cIndex >= 0) {
-        const conta = d.contasPagar[cIndex];
-        if (conta.status === 'pago') {
-          toast('Esta folha já foi paga e não pode ser reaberta diretamente. Estorne o pagamento primeiro no Financeiro.', 'error');
-          return;
+    const nomeColab = data.funcionarios.find((f) => f.id === fech.funcionarioId)?.nome || 'Colaborador';
+    mutate(
+      (d) => {
+        const idxF = d.fechamentos.findIndex((x) => x.id === fech.id);
+        if (idxF < 0) return;
+
+        const cIndex = d.contasPagar.findIndex((c) => c.id === fech.contaPagarId);
+        if (cIndex >= 0 && d.contasPagar[cIndex].status !== 'pago') {
+          d.contasPagar.splice(cIndex, 1);
         }
-        // Remove a conta a pagar pendente
-        d.contasPagar.splice(cIndex, 1);
-      }
 
-      // Remove o fechamento
-      d.fechamentos.splice(idxF, 1);
-      toast('Folha reaberta com sucesso. O período pode ser recalculado.', 'success');
-      setFechamentoParaReabrir(null);
-    });
+        d.fechamentos.splice(idxF, 1);
+      },
+      {
+        acao: 'Folha',
+        descricao: `Reabriu fechamento de folha de ${nomeColab} (${fmtDateShort(fech.inicio)} a ${fmtDateShort(fech.fim)})`,
+      },
+    );
+    toast('Folha reaberta com sucesso. O período pode ser recalculado.', 'success');
+    setFechamentoParaReabrir(null);
   };
 
   return (
@@ -291,6 +362,7 @@ export function FolhaPage() {
                   <option value="semanal">Semanal</option>
                   <option value="quinzenal">Quinzenal</option>
                   <option value="mensal">Mensal</option>
+                  <option value="personalizado">Personalizado</option>
                 </Select>
                 <Button
                   size="sm"
@@ -331,7 +403,7 @@ export function FolhaPage() {
                       <td className="py-3.5 pr-4">
                         <div className="font-semibold text-fg">{funcionario?.nome || 'Desconhecido'}</div>
                         <div className="text-xs text-muted">
-                          {funcionario ? LABEL_FUNCAO[funcionario.funcao] : ''}
+                          {funcionario ? getLabelFuncao(funcionario.funcao) : ''}
                         </div>
                       </td>
                       <td className="py-3.5 pr-4">
@@ -341,6 +413,8 @@ export function FolhaPage() {
                               ? 'blue'
                               : fech.tipo === 'quinzenal'
                               ? 'orange'
+                              : fech.tipo === 'personalizado'
+                              ? 'neutral'
                               : 'green'
                           }
                         >
@@ -348,6 +422,8 @@ export function FolhaPage() {
                             ? 'Semanal'
                             : fech.tipo === 'quinzenal'
                             ? 'Quinzenal'
+                            : fech.tipo === 'personalizado'
+                            ? 'Personalizado'
                             : 'Mensal'}
                         </Badge>
                         <div className="mt-1 text-xs tabular-nums text-muted">
@@ -389,15 +465,49 @@ export function FolhaPage() {
                       </td>
                       <td className="py-3.5 pr-4">
                         {conta ? (
-                          <Badge tone={conta.status === 'pago' ? 'green' : 'amber'}>
-                            {conta.status === 'pago' ? 'Pago' : 'Pendente'}
-                          </Badge>
+                          <div>
+                            <Badge tone={conta.status === 'pago' ? 'green' : 'amber'}>
+                              {conta.status === 'pago' ? 'Pago' : 'Pendente'}
+                            </Badge>
+                            {conta.status === 'pago' && conta.dataPagamento ? (
+                              <div className="mt-1 text-xs text-muted">
+                                {fmtDateShort(conta.dataPagamento)}
+                                {conta.formaPagamento ? ` · ${LABEL_FORMA_PAGAMENTO[conta.formaPagamento]}` : ''}
+                              </div>
+                            ) : (
+                              <div className="mt-1 text-xs text-muted">
+                                Venc. {fmtDateShort(conta.vencimento)}
+                              </div>
+                            )}
+                          </div>
                         ) : (
                           <Badge tone="neutral">Desvinculado</Badge>
                         )}
                       </td>
                       <td className="py-3.5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex flex-wrap items-center justify-end gap-1.5">
+                          {conta && conta.status === 'pendente' && (
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              icon={<CheckCircle className="size-3.5" />}
+                              onClick={() => abrirModalBaixa(fech)}
+                              title="Registrar pagamento desta folha"
+                            >
+                              Dar Baixa
+                            </Button>
+                          )}
+                          {conta && conta.status === 'pago' && (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              icon={<Undo2 className="size-3.5 text-amber-500" />}
+                              onClick={() => setFechamentoParaEstornar(fech)}
+                              title="Estornar pagamento desta folha para pendente"
+                            >
+                              Estornar
+                            </Button>
+                          )}
                           <Button
                             variant="secondary"
                             size="sm"
@@ -412,7 +522,11 @@ export function FolhaPage() {
                             size="sm"
                             icon={<RotateCcw className="size-3.5" />}
                             onClick={() => setFechamentoParaReabrir(fech)}
-                            title="Reabrir este fechamento"
+                            title={
+                              conta?.status === 'pago'
+                                ? 'Estorne o pagamento antes de reabrir'
+                                : 'Reabrir este fechamento'
+                            }
                           >
                             Reabrir
                           </Button>
@@ -463,8 +577,8 @@ export function FolhaPage() {
                     <td className="py-3.5 pr-4 font-semibold text-fg">{f.nome}</td>
                     <td className="py-3.5 pr-4">
                       <div className="flex items-center gap-2">
-                        <Badge tone="blue">{LABEL_FUNCAO[f.funcao]}</Badge>
-                        <span className="text-xs text-muted capitalize">{f.regime}</span>
+                        <Badge tone="blue">{getLabelFuncao(f.funcao)}</Badge>
+                        <span className="text-xs text-muted">{LABEL_REGIME[f.regime] || f.regime}</span>
                       </div>
                     </td>
                     <td className="py-3.5 pr-4">
@@ -508,29 +622,124 @@ export function FolhaPage() {
       {/* Diálogo de Fechamento em Lote / Bloco */}
       <FechamentoFolhaLoteDialog open={dialogLoteOpen} onClose={() => setDialogLoteOpen(false)} />
 
-      {/* Confirmação de Reabertura */}
-      {fechamentoParaReabrir && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="w-full max-w-md rounded-2xl border border-line bg-surface p-6 shadow-2xl">
-            <div className="flex items-center gap-3 text-amber-500">
-              <AlertTriangle className="size-6 shrink-0" />
-              <h3 className="text-lg font-bold text-fg">Reabrir Fechamento?</h3>
+      {/* Modal Dar Baixa de Pagamento */}
+      <Dialog
+        open={!!fechamentoParaBaixa}
+        onClose={() => setFechamentoParaBaixa(null)}
+        title="Confirmar Pagamento da Folha"
+        subtitle={
+          fechamentoParaBaixa
+            ? `${data.funcionarios.find((f) => f.id === fechamentoParaBaixa.funcionarioId)?.nome || 'Colaborador'} · ${fmtBRL(fechamentoParaBaixa.total)}`
+            : undefined
+        }
+      >
+        {fechamentoParaBaixa && (
+          <form onSubmit={executarBaixa} className="space-y-4">
+            <div className="rounded-lg border border-line bg-surface-2/60 p-3 text-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-muted">Período apurado</span>
+                <span className="font-medium text-fg">
+                  {fmtDate(fechamentoParaBaixa.inicio)} a {fmtDate(fechamentoParaBaixa.fim)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between">
+                <span className="text-muted">Valor líquido a liquidar</span>
+                <span className="font-bold text-emerald-500">{fmtBRL(fechamentoParaBaixa.total)}</span>
+              </div>
             </div>
-            <p className="mt-3 text-sm text-muted">
-              Ao reabrir este fechamento de folha, a conta a pagar associada será removida (se ainda estiver pendente)
-              e você poderá realizar um novo fechamento para este colaborador.
-            </p>
-            <div className="mt-6 flex justify-end gap-3">
-              <Button variant="ghost" onClick={() => setFechamentoParaReabrir(null)}>
+
+            <Field label="Data do Pagamento">
+              <Input
+                type="date"
+                required
+                value={baixaData}
+                onChange={(e) => setBaixaData(e.target.value)}
+              />
+            </Field>
+
+            <Field label="Forma de Pagamento">
+              <Select
+                value={baixaForma}
+                onChange={(e) => setBaixaForma(e.target.value as FormaPagamento)}
+              >
+                {(Object.keys(LABEL_FORMA_PAGAMENTO) as FormaPagamento[]).map((fp) => (
+                  <option key={fp} value={fp}>
+                    {LABEL_FORMA_PAGAMENTO[fp]}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="secondary" onClick={() => setFechamentoParaBaixa(null)}>
                 Cancelar
               </Button>
-              <Button variant="danger" onClick={() => executarReabertura(fechamentoParaReabrir)}>
+              <Button type="submit" variant="primary" icon={<CheckCircle className="size-4" />}>
+                Confirmar Baixa
+              </Button>
+            </div>
+          </form>
+        )}
+      </Dialog>
+
+      {/* Modal Estornar Pagamento */}
+      <Dialog
+        open={!!fechamentoParaEstornar}
+        onClose={() => setFechamentoParaEstornar(null)}
+        title="Estornar Pagamento?"
+        subtitle={
+          fechamentoParaEstornar
+            ? `${data.funcionarios.find((f) => f.id === fechamentoParaEstornar.funcionarioId)?.nome || 'Colaborador'} · ${fmtBRL(fechamentoParaEstornar.total)}`
+            : undefined
+        }
+      >
+        {fechamentoParaEstornar && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-fg">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-500" />
+              <p className="text-muted">
+                O status do pagamento voltará para <strong className="text-fg">Pendente</strong>, removendo a data e a
+                forma de quitação registradas. Caso deseje alterar dias ou valores, depois você poderá reabrir o fechamento.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setFechamentoParaEstornar(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" variant="danger" onClick={() => executarEstorno(fechamentoParaEstornar)}>
+                Confirmar Estorno
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
+
+      {/* Confirmação de Reabertura */}
+      <Dialog
+        open={!!fechamentoParaReabrir}
+        onClose={() => setFechamentoParaReabrir(null)}
+        title="Reabrir Fechamento?"
+      >
+        {fechamentoParaReabrir && (
+          <div className="space-y-4">
+            <div className="flex items-start gap-3 text-sm text-muted">
+              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-amber-500" />
+              <p>
+                Ao reabrir este fechamento de folha, a conta a pagar associada será removida (se ainda estiver pendente)
+                e você poderá realizar um novo fechamento para este colaborador.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="secondary" onClick={() => setFechamentoParaReabrir(null)}>
+                Cancelar
+              </Button>
+              <Button type="button" variant="danger" onClick={() => executarReabertura(fechamentoParaReabrir)}>
                 Confirmar Reabertura
               </Button>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </Dialog>
 
       {/* Modal de Recibos Profissionais de Pagamento */}
       {recibosParaVisualizar && (

@@ -32,18 +32,23 @@ try {
     'Todas as versões no histórico devem ser a partir da v1.7.0'
   );
 
-  const v187 = ATUALIZACOES_SISTEMA[0];
-  assert.equal(v187.versao, 'v1.8.7', 'A versão mais recente deve ser v1.8.7');
-  assert.ok(v187.titulo.includes('Correção de Coordenadas'), 'Título da v1.8.7 deve mencionar Correção de Coordenadas');
-  assert.ok(v187.descricao.length > 50, 'Descrição da v1.8.7 deve ser rica e no estilo App Store');
-  assert.ok(v187.mudancas.length >= 3, 'v1.8.7 deve listar as mudanças detalhadas');
-  assert.ok(v187.passosVisuais.length >= 2, 'v1.8.7 deve conter passos ilustrados');
+  const v200 = ATUALIZACOES_SISTEMA[0];
+  assert.equal(v200.versao, 'v2.0.0', 'A versão mais recente deve ser v2.0.0');
+  assert.ok(v200.titulo.includes('Design Industrial'), 'Título da v2.0.0 deve mencionar Design Industrial');
+  assert.ok(v200.descricao.length > 50, 'Descrição da v2.0.0 deve ser detalhada');
+  assert.ok(v200.mudancas.length >= 4, 'v2.0.0 deve listar as mudanças detalhadas');
+  assert.ok(v200.passosVisuais.length >= 3, 'v2.0.0 deve conter passos ilustrados');
 
   const tagsValidas = ['Novo', 'Melhoria', 'Correção'];
-  v187.mudancas.forEach((m) => {
+  v200.mudancas.forEach((m) => {
     assert.ok(tagsValidas.includes(m.tag), `Tag inválida: ${m.tag}`);
     assert.ok(m.texto.length > 5, 'Texto da mudança deve ser descritivo');
   });
+
+  const v187 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.7');
+  assert.ok(v187, 'v1.8.7 deve estar presente no histórico');
+  assert.equal(v187.versao, 'v1.8.7', 'A versão deve ser v1.8.7');
+  assert.ok(v187.titulo.includes('Correção de Coordenadas'), 'Título da v1.8.7 deve mencionar Correção de Coordenadas');
 
   const v186 = ATUALIZACOES_SISTEMA.find((r) => r.versao === 'v1.8.6');
   assert.ok(v186, 'v1.8.6 deve estar presente no histórico');
@@ -103,25 +108,25 @@ try {
 
   console.log('   ✅ Histórico de versões estruturado e validado com sucesso (v1.8.2, v1.8.1 e v1.8.0)!');
 
-  // Teste 2: Validar aba Atualizações em ConfiguracoesPage.tsx
-  console.log('2. Validando posicionamento da aba "Atualizações" em ConfiguracoesPage.tsx...');
+  // Teste 2: Validar abas de Configurações e suporte à aba Atualizações em ConfiguracoesPage.tsx
+  console.log('2. Validando estrutura de abas e seleção "atualizacoes" em ConfiguracoesPage.tsx...');
   const configCode = readFileSync(resolve('src/pages/ConfiguracoesPage.tsx'), 'utf-8');
 
   assert.ok(
-    configCode.includes("type TabConfig = 'atualizacoes' | 'perfil' | 'usuarios' | 'notificacoes'"),
-    'TabConfig deve definir atualizacoes como primeira opção'
+    configCode.includes("type TabConfig = 'perfil' | 'empresa' | 'usuarios' | 'notificacoes' | 'atualizacoes'"),
+    'TabConfig deve incluir perfil, empresa, usuarios, notificacoes e atualizacoes'
   );
   assert.ok(
-    configCode.includes("const [abaAtiva, setAbaAtiva] = useState<TabConfig>('atualizacoes')"),
-    'Aba ativa padrão deve ser atualizacoes'
+    configCode.includes("useState<TabConfig>(abaInicial)") && configCode.includes(": 'perfil'"),
+    'ConfiguracoesPage deve iniciar em perfil por padrão e aceitar seleção via abaInicial'
   );
 
-  // Verificar se o botão de Atualizações vem antes de Meu Perfil no JSX
+  // Verificar presença dos botões das abas no JSX
   const idxBtnAtualizacoes = configCode.indexOf("setAbaAtiva('atualizacoes')");
   const idxBtnPerfil = configCode.indexOf("setAbaAtiva('perfil')");
   assert.ok(
-    idxBtnAtualizacoes !== -1 && idxBtnAtualizacoes < idxBtnPerfil,
-    'Botão da aba "Atualizações" deve vir antes do botão "Meu Perfil"'
+    idxBtnAtualizacoes !== -1 && idxBtnPerfil !== -1,
+    'Botões das abas "Perfil" e "Atualizações" devem existir em ConfiguracoesPage'
   );
 
   assert.ok(
@@ -130,24 +135,29 @@ try {
   );
   console.log('   ✅ Aba "Atualizações" posicionada e configurada como primeira aba!');
 
-  // Teste 3: Validar ordenação alfabética padrão (A-Z) em ApontamentoGrade.tsx
-  console.log('3. Validando ordenação alfabética por apelido/nome em ApontamentoGrade.tsx...');
+  // Teste 3: Validar ordenação alfabética padrão (A-Z) em apontamentoUtils.ts e ApontamentoGrade.tsx
+  console.log('3. Validando ordenação alfabética por apelido/nome em apontamentoUtils.ts e ApontamentoGrade.tsx...');
   const gradeCode = readFileSync(resolve('src/features/folha/ApontamentoGrade.tsx'), 'utf-8');
+  const apontamentoUtilsCode = readFileSync(resolve('src/features/folha/apontamentoUtils.ts'), 'utf-8');
 
   assert.ok(
-    gradeCode.includes('.sort((a, b) => {'),
-    'ApontamentoGrade deve conter sort()'
+    gradeCode.includes('filtrarColaboradoresGrade'),
+    'ApontamentoGrade deve usar helper filtrarColaboradoresGrade'
   );
   assert.ok(
-    gradeCode.includes('(a.apelido?.trim() || a.nome).trim()'),
+    apontamentoUtilsCode.includes('.sort((a, b) => {'),
+    'apontamentoUtils deve conter sort()'
+  );
+  assert.ok(
+    apontamentoUtilsCode.includes('(a.apelido?.trim() || a.nome).trim()'),
     'Ordenação da grade deve considerar apelido ou nome de a'
   );
   assert.ok(
-    gradeCode.includes('(b.apelido?.trim() || b.nome).trim()'),
+    apontamentoUtilsCode.includes('(b.apelido?.trim() || b.nome).trim()'),
     'Ordenação da grade deve considerar apelido ou nome de b'
   );
   assert.ok(
-    gradeCode.includes("nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' })"),
+    apontamentoUtilsCode.includes("nomeA.localeCompare(nomeB, 'pt-BR', { sensitivity: 'base' })"),
     'Deve ordenar com localeCompare pt-BR e sensitivity base'
   );
   console.log('   ✅ Grade semanal ordenada de A a Z por apelido/nome com sucesso!');
@@ -271,7 +281,8 @@ try {
   const obraDetalhesCode = readFileSync(resolve('src/features/obras/ObraDetalhesDialog.tsx'), 'utf-8');
   assert.ok(!obraDetalhesCode.includes('locacoesObra'), 'ObraDetalhesDialog não deve ter locacoesObra');
   assert.ok(!obraDetalhesCode.includes('Máquinas e Equipamentos Locados'), 'ObraDetalhesDialog não deve ter bloco de máquinas');
-  assert.ok(!obraDetalhesCode.includes('porGrupo?.locacao'), 'ObraDetalhesDialog não deve exibir coluna de locações');
+  assert.ok(!obraDetalhesCode.includes('>Locações<'), 'ObraDetalhesDialog não deve exibir coluna de Locações');
+  assert.ok(obraDetalhesCode.includes('Outros Custos'), 'ObraDetalhesDialog deve exibir Outros Custos quando aplicável');
   assert.ok(!obraDetalhesCode.includes('Construction'), 'ObraDetalhesDialog não deve importar Construction');
   assert.ok(obraDetalhesCode.includes('grid-cols-3'), 'ObraDetalhesDialog deve usar grid-cols-3 no orçamento');
 
@@ -349,18 +360,15 @@ try {
   assert.ok(widgetCode.includes('toast'), 'TarefasWidget deve emitir toast feedback nas ações');
   console.log('   ✅ Gestão Contínua, Exclusão Ágil e Notificações em Segundo Plano validadas com 100% de sucesso!');
 
-  // Teste 12: Validar Marcas d'Água Dinâmicas Sticky Viewport e Emblema na Barra Lateral (v1.8.6)
-  console.log('12. Validando Marcas d\'Água Dinâmicas Sticky Viewport e Emblema na Barra Lateral (v1.8.6)...');
+  // Teste 12: Validar Marcas d'Água Sticky Viewport nas Tabelas e Marca Limpa na Barra Lateral
+  console.log('12. Validando Marcas d\'Água Sticky Viewport nas Tabelas e Marca Limpa na Barra Lateral...');
   const appShellAtual = readFileSync(resolve('src/components/layout/AppShell.tsx'), 'utf-8');
-  assert.ok(appShellAtual.includes('logo-emblema-trim.png'), 'AppShell deve carregar o emblema oficial CONSTRUTEC');
-  assert.ok(appShellAtual.includes('opacity-[0.035]'), 'AppShell deve conter marca d\'água calibrada com opacity-[0.035]');
-  assert.ok(appShellAtual.includes('pointer-events-none'), 'Marca d\'água deve ter pointer-events-none');
-  assert.ok(appShellAtual.includes('print:hidden'), 'Marca d\'água de tela no AppShell deve ter print:hidden');
+  assert.ok(!appShellAtual.includes('w-[520px]'), 'AppShell não deve exibir marca d\'água fixa gigante atrás de <main>');
+  assert.ok(!appShellAtual.includes('opacity-[0.035]'), 'AppShell não deve usar watermark fixa de página');
 
   const sidebarCode = readFileSync(resolve('src/components/layout/Sidebar.tsx'), 'utf-8');
-  assert.ok(sidebarCode.includes('logo-emblema-trim.png'), 'Sidebar deve usar emblema oficial');
-  assert.ok(sidebarCode.includes('w-36 h-36'), 'Sidebar deve exibir o emblema grandão');
-  assert.ok(sidebarCode.includes('opacity-[0.06]'), 'Sidebar deve conter marca d\'água translúcida calibrada');
+  assert.ok(sidebarCode.includes('<Logo'), 'Sidebar deve exibir o emblema oficial no topo');
+  assert.ok(!sidebarCode.includes('w-36 h-36'), 'Sidebar não deve duplicar marca d\'água gigante no rodapé');
   assert.ok(!sidebarCode.includes('role="region"'), 'Sidebar não deve exibir o antigo banner textual acima do administrador');
 
   const tableWatermarkCode = readFileSync(resolve('src/components/brand/TableWatermark.tsx'), 'utf-8');
@@ -375,14 +383,11 @@ try {
   assert.ok(equipePageCode.includes('TableWatermark'), 'EquipePage deve usar TableWatermark');
 
   const obrasPageCodeAtual = readFileSync(resolve('src/pages/ObrasPage.tsx'), 'utf-8');
-  assert.ok(obrasPageCodeAtual.includes('AntigravityParticlesCanvas'), 'ObrasPage deve integrar AntigravityParticlesCanvas nos cards');
+  assert.ok(!obrasPageCodeAtual.includes('AntigravityParticlesCanvas'), 'ObrasPage não deve conter partículas ornamentais estilo IA');
   assert.ok(obrasPageCodeAtual.includes('TableWatermark'), 'ObrasPage deve usar TableWatermark na lista');
 
   const folhaPageCode = readFileSync(resolve('src/pages/FolhaPage.tsx'), 'utf-8');
   assert.ok(folhaPageCode.includes('TableWatermark'), 'FolhaPage deve usar TableWatermark');
-
-  const extratoPageCode = readFileSync(resolve('src/pages/ExtratoPage.tsx'), 'utf-8');
-  assert.ok(extratoPageCode.includes('TableWatermark'), 'ExtratoPage deve usar TableWatermark');
 
   const tarefasPageCodeAtual = readFileSync(resolve('src/pages/TarefasPage.tsx'), 'utf-8');
   assert.ok(tarefasPageCodeAtual.includes('TableWatermark'), 'TarefasPage deve usar TableWatermark');
